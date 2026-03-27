@@ -1,18 +1,22 @@
 /**
- * Main application component
- * Thin composition layer — logic lives in hooks, display in components.
+ * Main application component.
+ * Thin composition — logic in hooks, display in components.
  */
 
-import { useReducer } from "react"
+import { useReducer, useMemo, useCallback } from "react"
 import { Shell } from "./components/Shell"
 import { Header } from "./components/Header"
 import { FilterBar } from "./components/FilterBar"
 import { Loading } from "./components/Loading"
-import { CollectionList } from "./components/CollectionList"
-import { theme } from "./theme"
+import { ErrorView } from "./components/ErrorView"
+import { DocumentView } from "./components/DocumentView"
+import { CommandPalette } from "./components/CommandPalette"
 import { appReducer, createInitialState } from "./state"
 import { useMongoConnection } from "./hooks/useMongoConnection"
 import { useKeyboardNav } from "./hooks/useKeyboardNav"
+import { useDocumentLoader } from "./hooks/useDocumentLoader"
+import { buildCollectionCommands } from "./commands/collections"
+import type { Command } from "./commands/types"
 
 interface AppProps {
   uri: string
@@ -23,10 +27,29 @@ export function App({ uri }: AppProps) {
 
   useMongoConnection({ uri, dispatch })
   useKeyboardNav({ state, dispatch })
+  useDocumentLoader({ state, dispatch })
 
-  const headerRight = state.view === "collections"
-    ? `${state.collections.length} collections`
-    : `${state.documentCount.toLocaleString()} docs`
+  const paletteCommands = useMemo(
+    () => buildCollectionCommands(state.collections),
+    [state.collections],
+  )
+
+  const handlePaletteSelect = useCallback((cmd: Command) => {
+    dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+    if (cmd.id.startsWith("open:")) {
+      dispatch({ type: "OPEN_TAB", collectionName: cmd.id.slice(5) })
+    }
+  }, [])
+
+  const handlePaletteClose = useCallback(() => {
+    dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+  }, [])
+
+  // Show palette automatically when no tab is open
+  const paletteVisible = state.commandPaletteVisible ||
+    (state.view === "collections" && !state.collectionsLoading && !state.error)
+
+  const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
 
   return (
     <Shell>
@@ -34,48 +57,31 @@ export function App({ uri }: AppProps) {
         dbName={state.dbName}
         host={state.host}
         loading={state.collectionsLoading || state.documentsLoading}
-        right={headerRight}
+        right={activeTab ? `${state.documentCount.toLocaleString()} docs` : ""}
       />
 
       <box flexGrow={1} overflow="hidden">
         {state.error ? (
-          <box flexGrow={1} justifyContent="center" alignItems="center" flexDirection="column">
-            <text>
-              <span fg={theme.error}>Error: {state.error}</span>
-            </text>
-            <box marginTop={1}>
-              <text>
-                <span fg={theme.textDim}>Check your --uri and try again</span>
-              </text>
-            </box>
-          </box>
+          <ErrorView message={state.error} />
         ) : state.collectionsLoading ? (
           <Loading message="Connecting to MongoDB..." />
-        ) : state.view === "collections" ? (
-          <CollectionList
-            collections={state.collections}
-            selectedIndex={state.collectionSelectedIndex}
+        ) : activeTab ? (
+          <DocumentView
+            collectionName={activeTab.collectionName}
+            documentCount={state.documentCount}
+            loading={state.documentsLoading}
           />
-        ) : state.view === "documents" ? (
-          <box flexGrow={1} justifyContent="center" alignItems="center">
-            {state.documentsLoading ? (
-              <Loading message="Loading documents..." />
-            ) : (
-              <text>
-                <span fg={theme.textDim}>
-                  {state.tabs.find((t) => t.id === state.activeTabId)?.collectionName ?? ""}
-                  {" "}- {state.documentCount} documents
-                </span>
-              </text>
-            )}
-          </box>
         ) : null}
       </box>
 
-      <FilterBar
-        query={state.queryInput}
-        mode={state.queryMode}
-        editing={state.queryVisible}
+      <FilterBar query={state.queryInput} mode={state.queryMode} editing={state.queryVisible} />
+
+      <CommandPalette
+        visible={paletteVisible}
+        commands={paletteCommands}
+        onSelect={handlePaletteSelect}
+        onClose={handlePaletteClose}
+        placeholder="Open collection..."
       />
     </Shell>
   )
