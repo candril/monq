@@ -1,6 +1,12 @@
-import { createCliRenderer, ConsolePosition } from "@opentui/core"
+import { createCliRenderer, ConsolePosition, getTreeSitterClient } from "@opentui/core"
 import { createRoot } from "@opentui/react"
 import { App } from "./App"
+import { registerSyntaxParsers } from "./syntax-parsers"
+
+// Register tree-sitter parsers (JSON for document preview)
+registerSyntaxParsers()
+const tsClient = getTreeSitterClient()
+await tsClient.initialize()
 
 const renderer = await createCliRenderer({
   exitOnCtrlC: false,

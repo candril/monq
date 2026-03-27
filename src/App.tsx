@@ -10,6 +10,7 @@ import { FilterBar } from "./components/FilterBar"
 import { Loading } from "./components/Loading"
 import { ErrorView } from "./components/ErrorView"
 import { DocumentList } from "./components/DocumentList"
+import { DocumentPreview } from "./components/DocumentPreview"
 import { CommandPalette } from "./components/CommandPalette"
 import { appReducer, createInitialState } from "./state"
 import { useMongoConnection } from "./hooks/useMongoConnection"
@@ -50,6 +51,7 @@ export function App({ uri }: AppProps) {
     (state.view === "collections" && !state.collectionsLoading && !state.error)
 
   const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+  const selectedDoc = state.documents[state.selectedIndex] ?? null
 
   return (
     <Shell>
@@ -60,19 +62,38 @@ export function App({ uri }: AppProps) {
         right={activeTab ? `${state.documentCount.toLocaleString()} docs` : ""}
       />
 
-      <box flexGrow={1} overflow="hidden">
+      <box
+        flexGrow={1}
+        overflow="hidden"
+        flexDirection={state.previewPosition === "bottom" ? "column" : "row"}
+      >
         {state.error ? (
           <ErrorView message={state.error} />
         ) : state.collectionsLoading ? (
           <Loading message="Connecting to MongoDB..." />
         ) : activeTab ? (
-          <DocumentList
-            documents={state.documents}
-            columns={state.columns}
-            selectedIndex={state.selectedIndex}
-            selectedColumnIndex={state.selectedColumnIndex}
-          />
+          <box
+            flexGrow={1}
+            width={state.previewPosition === "right" ? "50%" : "100%"}
+            height={state.previewPosition === "bottom" ? "50%" : "100%"}
+            overflow="hidden"
+          >
+            <DocumentList
+              documents={state.documents}
+              columns={state.columns}
+              selectedIndex={state.selectedIndex}
+              selectedColumnIndex={state.selectedColumnIndex}
+            />
+          </box>
         ) : null}
+
+        {activeTab && (
+          <DocumentPreview
+            document={selectedDoc}
+            position={state.previewPosition}
+            scrollOffset={state.previewScrollOffset}
+          />
+        )}
       </box>
 
       <FilterBar query={state.queryInput} mode={state.queryMode} editing={state.queryVisible} />

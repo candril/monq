@@ -84,6 +84,16 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
             })
           break
         }
+        case "d":
+          if (key.ctrl && state.previewPosition) {
+            dispatch({ type: "SCROLL_PREVIEW", delta: 10 })
+          }
+          break
+        case "u":
+          if (key.ctrl && state.previewPosition) {
+            dispatch({ type: "SCROLL_PREVIEW", delta: -10 })
+          }
+          break
         case "p":
           if (key.shift) {
             dispatch({ type: "CYCLE_PREVIEW_POSITION" })
