@@ -45,6 +45,9 @@ export interface Tab {
 // Document Display
 // ============================================================================
 
+/** Column display mode: normal (auto-fit), full (no truncation), minimized (3 chars) */
+export type ColumnDisplayMode = "normal" | "full" | "minimized"
+
 /** A detected column from document sampling */
 export interface DetectedColumn {
   field: string
@@ -52,6 +55,8 @@ export interface DetectedColumn {
   frequency: number
   /** Whether this column is currently visible */
   visible: boolean
+  /** Display mode */
+  displayMode: ColumnDisplayMode
 }
 
 /** Value types for display coloring */

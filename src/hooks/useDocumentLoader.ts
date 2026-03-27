@@ -28,6 +28,7 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
           field,
           frequency: 1,
           visible: true,
+          displayMode: "normal" as const,
         }))
         dispatch({ type: "SET_DOCUMENTS", documents, count })
         dispatch({ type: "SET_COLUMNS", columns })

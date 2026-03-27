@@ -10,11 +10,12 @@ import { useTerminalDimensions } from "@opentui/react"
 import type { Document } from "mongodb"
 import type { DetectedColumn } from "../types"
 import { theme } from "../theme"
-import { formatValue, valueColor, detectValueType, padRight } from "../utils/format"
+import { formatValue, valueColor, detectValueType, padRight, truncate } from "../utils/format"
 
 const SCROLL_MARGIN = 3
 const MIN_COL_WIDTH = 6
 const MAX_COL_WIDTH = 40
+const MINIMIZED_COL_WIDTH = 3
 
 interface DocumentListProps {
   documents: Document[]
@@ -23,7 +24,7 @@ interface DocumentListProps {
   selectedColumnIndex: number
 }
 
-/** Calculate column widths based on content */
+/** Calculate column widths based on content and display mode */
 function computeColumnWidths(
   documents: Document[],
   columns: DetectedColumn[],
@@ -33,38 +34,67 @@ function computeColumnWidths(
   if (visible.length === 0) return new Map()
 
   const widths = new Map<string, number>()
+  const sample = documents.slice(0, 50)
+
+  // First pass: compute natural width per column
   for (const col of visible) {
+    if (col.displayMode === "minimized") {
+      widths.set(col.field, MINIMIZED_COL_WIDTH)
+      continue
+    }
+
+    // Measure content width
     let maxW = col.field.length
-    const sample = documents.slice(0, 50)
     for (const doc of sample) {
       const val = getNestedValue(doc, col.field)
-      const formatted = formatValue(val, MAX_COL_WIDTH)
+      // Full mode: no max cap; normal mode: cap at MAX_COL_WIDTH
+      const cap = col.displayMode === "full" ? 200 : MAX_COL_WIDTH
+      const formatted = formatValue(val, cap)
       maxW = Math.max(maxW, formatted.length)
     }
-    widths.set(col.field, Math.min(MAX_COL_WIDTH, Math.max(MIN_COL_WIDTH, maxW)))
+
+    if (col.displayMode === "full") {
+      widths.set(col.field, Math.max(MIN_COL_WIDTH, maxW))
+    } else {
+      widths.set(col.field, Math.min(MAX_COL_WIDTH, Math.max(MIN_COL_WIDTH, maxW)))
+    }
   }
 
+  // Second pass: distribute remaining space among "normal" columns
   const padding = 2
   const gaps = visible.length - 1
   const totalColWidth = [...widths.values()].reduce((a, b) => a + b, 0)
   const available = totalWidth - padding - gaps
 
-  if (totalColWidth > available) {
-    const ratio = available / totalColWidth
-    for (const [field, w] of widths) {
-      widths.set(field, Math.max(MIN_COL_WIDTH, Math.floor(w * ratio)))
-    }
-  } else if (totalColWidth < available) {
-    const extra = available - totalColWidth
-    const entries = [...widths.entries()]
-    let distributed = 0
-    for (let i = 0; i < entries.length; i++) {
-      const [field, w] = entries[i]
-      const share = i === entries.length - 1
-        ? extra - distributed
-        : Math.floor(extra * (w / totalColWidth))
-      widths.set(field, w + share)
-      distributed += share
+  // Only resize "normal" columns — full and minimized keep their width
+  const normalCols = visible.filter((c) => c.displayMode === "normal")
+  const fixedWidth = visible
+    .filter((c) => c.displayMode !== "normal")
+    .reduce((sum, c) => sum + (widths.get(c.field) ?? 0), 0)
+  const normalTotal = normalCols.reduce((sum, c) => sum + (widths.get(c.field) ?? 0), 0)
+  const availableForNormal = available - fixedWidth
+
+  if (normalCols.length > 0 && normalTotal > 0) {
+    if (normalTotal > availableForNormal) {
+      // Shrink normal columns proportionally
+      const ratio = availableForNormal / normalTotal
+      for (const col of normalCols) {
+        const w = widths.get(col.field) ?? MIN_COL_WIDTH
+        widths.set(col.field, Math.max(MIN_COL_WIDTH, Math.floor(w * ratio)))
+      }
+    } else if (normalTotal < availableForNormal) {
+      // Distribute extra space among normal columns
+      const extra = availableForNormal - normalTotal
+      let distributed = 0
+      for (let i = 0; i < normalCols.length; i++) {
+        const col = normalCols[i]
+        const w = widths.get(col.field) ?? MIN_COL_WIDTH
+        const share = i === normalCols.length - 1
+          ? extra - distributed
+          : Math.floor(extra * (w / normalTotal))
+        widths.set(col.field, w + share)
+        distributed += share
+      }
     }
   }
 
@@ -150,9 +180,14 @@ function HeaderRow({
         {columns.map((col, i) => {
           const w = colWidths.get(col.field) ?? MIN_COL_WIDTH
           const isSelectedCol = i === selectedColumnIndex
-          const color = isSelectedCol ? theme.primary : theme.textMuted
+          const label = col.displayMode === "minimized"
+            ? truncate(col.field, MINIMIZED_COL_WIDTH)
+            : col.field
+          const color = isSelectedCol
+            ? theme.primary
+            : col.displayMode === "minimized" ? theme.textMuted : theme.textDim
           const sep = i < columns.length - 1 ? " " : ""
-          return <><span fg={color}>{padRight(col.field, w)}</span>{sep ? <span>{sep}</span> : null}</>
+          return <><span fg={color}>{padRight(label, w)}</span>{sep ? <span>{sep}</span> : null}</>
         })}
       </text>
     </box>

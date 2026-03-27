@@ -40,6 +40,7 @@ export type AppAction =
   | { type: "MOVE_DOCUMENT"; delta: number }
   | { type: "SET_COLUMNS"; columns: DetectedColumn[] }
   | { type: "MOVE_COLUMN"; delta: number }
+  | { type: "CYCLE_COLUMN_MODE" }
   // Query
   | { type: "OPEN_QUERY" }
   | { type: "CLOSE_QUERY" }
@@ -276,6 +277,20 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         Math.min(visibleCols.length - 1, state.selectedColumnIndex + action.delta)
       )
       return { ...state, selectedColumnIndex: newColIndex }
+    }
+
+    case "CYCLE_COLUMN_MODE": {
+      const visibleCols = state.columns.filter((c) => c.visible)
+      const targetCol = visibleCols[state.selectedColumnIndex]
+      if (!targetCol) return state
+
+      const nextMode = { normal: "full", full: "minimized", minimized: "normal" } as const
+      const columns = state.columns.map((c) =>
+        c.field === targetCol.field
+          ? { ...c, displayMode: nextMode[c.displayMode] }
+          : c
+      )
+      return { ...state, columns }
     }
 
     // Query

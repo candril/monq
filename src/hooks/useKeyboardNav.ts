@@ -46,6 +46,12 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           dispatch({ type: "MOVE_DOCUMENT", delta: -1 })
           break
         case "h":
+          if (key.ctrl) {
+            dispatch({ type: "CYCLE_COLUMN_MODE" })
+          } else {
+            dispatch({ type: "MOVE_COLUMN", delta: -1 })
+          }
+          break
         case "left":
           dispatch({ type: "MOVE_COLUMN", delta: -1 })
           break
