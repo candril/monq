@@ -30,8 +30,9 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
 
     // Quit
     if (key.name === "q") {
-      disconnect().finally(() => renderer.destroy())
-      return
+      disconnect().catch(() => {})
+      renderer.destroy()
+      process.exit(0)
     }
 
     // Document view
@@ -46,18 +47,15 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           dispatch({ type: "MOVE_DOCUMENT", delta: -1 })
           break
         case "h":
-          if (key.ctrl) {
-            dispatch({ type: "CYCLE_COLUMN_MODE" })
-          } else {
-            dispatch({ type: "MOVE_COLUMN", delta: -1 })
-          }
-          break
         case "left":
           dispatch({ type: "MOVE_COLUMN", delta: -1 })
           break
         case "l":
         case "right":
           dispatch({ type: "MOVE_COLUMN", delta: 1 })
+          break
+        case "w":
+          dispatch({ type: "CYCLE_COLUMN_MODE" })
           break
         case "p":
           if (key.shift) {

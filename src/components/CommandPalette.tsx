@@ -78,9 +78,9 @@ export function CommandPalette({
       if (filtered[selectedIndex]) {
         onSelect(filtered[selectedIndex])
       }
-    } else if (key.name === "up" || (key.ctrl && key.name === "k")) {
+    } else if (key.name === "up" || (key.ctrl && key.name === "p") || (key.ctrl && key.name === "k")) {
       setSelectedIndex((i) => Math.max(0, i - 1))
-    } else if (key.name === "down" || (key.ctrl && key.name === "j")) {
+    } else if (key.name === "down" || (key.ctrl && key.name === "n") || (key.ctrl && key.name === "j")) {
       setSelectedIndex((i) => Math.min(filtered.length - 1, i + 1))
     } else if (key.name === "backspace") {
       setQuery((q) => q.slice(0, -1))
