@@ -9,7 +9,7 @@ import { Header } from "./components/Header"
 import { FilterBar } from "./components/FilterBar"
 import { Loading } from "./components/Loading"
 import { ErrorView } from "./components/ErrorView"
-import { DocumentView } from "./components/DocumentView"
+import { DocumentList } from "./components/DocumentList"
 import { CommandPalette } from "./components/CommandPalette"
 import { appReducer, createInitialState } from "./state"
 import { useMongoConnection } from "./hooks/useMongoConnection"
@@ -65,11 +65,13 @@ export function App({ uri }: AppProps) {
           <ErrorView message={state.error} />
         ) : state.collectionsLoading ? (
           <Loading message="Connecting to MongoDB..." />
+        ) : activeTab && state.documentsLoading ? (
+          <Loading message={`Loading ${activeTab.collectionName}...`} />
         ) : activeTab ? (
-          <DocumentView
-            collectionName={activeTab.collectionName}
-            documentCount={state.documentCount}
-            loading={state.documentsLoading}
+          <DocumentList
+            documents={state.documents}
+            columns={state.columns}
+            selectedIndex={state.selectedIndex}
           />
         ) : null}
       </box>

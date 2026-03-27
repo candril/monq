@@ -1,13 +1,16 @@
 /**
  * Generic Ctrl+P command palette.
- * Fuzzy search over a list of commands, grouped by category.
+ * Fuzzy search over a list of commands, scrollable results.
  */
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { useKeyboard } from "@opentui/react"
+import type { ScrollBoxRenderable } from "@opentui/core"
 import type { Command } from "../commands/types"
 import { fuzzyFilter } from "../utils/fuzzy"
 import { theme } from "../theme"
+
+const SCROLL_MARGIN = 2
 
 interface CommandPaletteProps {
   visible: boolean
@@ -26,6 +29,7 @@ export function CommandPalette({
 }: CommandPaletteProps) {
   const [query, setQuery] = useState("")
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const scrollRef = useRef<ScrollBoxRenderable>(null)
 
   // Reset state when opened
   useEffect(() => {
@@ -48,16 +52,21 @@ export function CommandPalette({
     }
   }, [filtered.length])
 
-  // Group by category (preserving filter order within each group)
-  const grouped = useMemo(() => {
-    const map = new Map<string, Command[]>()
-    for (const cmd of filtered) {
-      const list = map.get(cmd.category) ?? []
-      list.push(cmd)
-      map.set(cmd.category, list)
+  // Auto-scroll to keep selection visible
+  useEffect(() => {
+    const scrollbox = scrollRef.current
+    if (!scrollbox) return
+
+    const viewportHeight = scrollbox.viewport?.height ?? 20
+    const scrollTop = scrollbox.scrollTop
+    const scrollBottom = scrollTop + viewportHeight
+
+    if (selectedIndex < scrollTop + SCROLL_MARGIN) {
+      scrollbox.scrollTo(Math.max(0, selectedIndex - SCROLL_MARGIN))
+    } else if (selectedIndex >= scrollBottom - SCROLL_MARGIN) {
+      scrollbox.scrollTo(selectedIndex - viewportHeight + SCROLL_MARGIN + 1)
     }
-    return map
-  }, [filtered])
+  }, [selectedIndex])
 
   // Keyboard handling
   useKeyboard((key) => {
@@ -69,9 +78,9 @@ export function CommandPalette({
       if (filtered[selectedIndex]) {
         onSelect(filtered[selectedIndex])
       }
-    } else if (key.name === "up" || (key.ctrl && key.name === "p")) {
+    } else if (key.name === "up" || (key.ctrl && key.name === "k")) {
       setSelectedIndex((i) => Math.max(0, i - 1))
-    } else if (key.name === "down" || (key.ctrl && key.name === "n")) {
+    } else if (key.name === "down" || (key.ctrl && key.name === "j")) {
       setSelectedIndex((i) => Math.min(filtered.length - 1, i + 1))
     } else if (key.name === "backspace") {
       setQuery((q) => q.slice(0, -1))
@@ -108,6 +117,7 @@ export function CommandPalette({
         top={2}
         left="25%"
         width="50%"
+        height="70%"
         flexDirection="column"
         backgroundColor={theme.modalBg}
       >
@@ -124,39 +134,24 @@ export function CommandPalette({
           />
         </box>
 
-        {/* Results */}
-        <box flexDirection="column" paddingBottom={1}>
-          {filtered.length === 0 ? (
-            <box paddingLeft={2}>
-              <text>
-                <span fg={theme.textMuted}>No results</span>
-              </text>
-            </box>
-          ) : (
-            [...grouped.entries()].map(([category, cmds]) => (
-              <box key={category} flexDirection="column">
-                {/* Category header */}
-                <box paddingLeft={2} paddingTop={1}>
-                  <text>
-                    <span fg={theme.secondary}>{category.toUpperCase()}</span>
-                  </text>
-                </box>
-                {/* Commands */}
-                {cmds.map((cmd) => {
-                  const globalIndex = filtered.indexOf(cmd)
-                  const selected = globalIndex === selectedIndex
-                  return (
-                    <PaletteRow
-                      key={cmd.id}
-                      command={cmd}
-                      selected={selected}
-                    />
-                  )
-                })}
-              </box>
-            ))
-          )}
-        </box>
+        {/* Scrollable results */}
+        {filtered.length === 0 ? (
+          <box paddingLeft={2} paddingBottom={1}>
+            <text>
+              <span fg={theme.textMuted}>No results</span>
+            </text>
+          </box>
+        ) : (
+          <scrollbox ref={scrollRef} flexGrow={1}>
+            {filtered.map((cmd, i) => (
+              <PaletteRow
+                key={cmd.id}
+                command={cmd}
+                selected={i === selectedIndex}
+              />
+            ))}
+          </scrollbox>
+        )}
       </box>
     </box>
   )

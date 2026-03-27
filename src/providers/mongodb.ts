@@ -72,14 +72,26 @@ export async function fetchDocuments(
   return { documents, count }
 }
 
-/** Detect columns from a sample of documents */
+/** Detect columns from a sample of documents, sorted: _id first, scalars before complex, then alphabetically */
 export function detectColumns(documents: Document[]): string[] {
   if (documents.length === 0) return []
 
   const fieldCounts = new Map<string, number>()
+  const fieldIsComplex = new Map<string, boolean>()
+
   for (const doc of documents) {
-    for (const key of Object.keys(doc)) {
+    for (const [key, value] of Object.entries(doc)) {
       fieldCounts.set(key, (fieldCounts.get(key) ?? 0) + 1)
+      // Mark as complex if any value is object/array (not null, not Date, not ObjectId)
+      if (
+        value !== null &&
+        typeof value === "object" &&
+        !(value instanceof Date) &&
+        !((value as { _bsontype?: string })._bsontype === "ObjectId") &&
+        !((value as { _bsontype?: string })._bsontype === "ObjectID")
+      ) {
+        fieldIsComplex.set(key, true)
+      }
     }
   }
 
@@ -87,9 +99,14 @@ export function detectColumns(documents: Document[]): string[] {
   return [...fieldCounts.entries()]
     .filter(([, count]) => count >= threshold)
     .sort((a, b) => {
+      // _id always first
       if (a[0] === "_id") return -1
       if (b[0] === "_id") return 1
-      if (b[1] !== a[1]) return b[1] - a[1]
+      // Scalars before complex
+      const aComplex = fieldIsComplex.get(a[0]) ?? false
+      const bComplex = fieldIsComplex.get(b[0]) ?? false
+      if (aComplex !== bComplex) return aComplex ? 1 : -1
+      // Alphabetically
       return a[0].localeCompare(b[0])
     })
     .map(([field]) => field)
