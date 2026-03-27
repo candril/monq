@@ -284,8 +284,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, selectedIndex: newIndex }
     }
 
-    case "SET_COLUMNS":
-      return { ...state, columns: action.columns, selectedColumnIndex: 0 }
+    case "SET_COLUMNS": {
+      // Preserve column index if within bounds, reset only if columns changed drastically
+      const visibleCount = action.columns.filter((c) => c.visible).length
+      const clampedIndex = Math.min(state.selectedColumnIndex, Math.max(0, visibleCount - 1))
+      return { ...state, columns: action.columns, selectedColumnIndex: clampedIndex }
+    }
 
     case "SET_SCHEMA":
       return { ...state, schemaMap: action.schemaMap }

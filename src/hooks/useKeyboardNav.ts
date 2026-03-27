@@ -8,7 +8,7 @@ import type { Dispatch } from "react"
 import { useKeyboard, useRenderer } from "@opentui/react"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
-import { disconnect } from "../providers/mongodb"
+import { disconnect, serializeDocument } from "../providers/mongodb"
 import { editDocument } from "../actions/edit"
 import { formatValue } from "../utils/format"
 
@@ -89,6 +89,29 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           const sortCol = visCols[state.selectedColumnIndex]
           if (sortCol) {
             dispatch({ type: "CYCLE_SORT", field: sortCol.field })
+          }
+          break
+        }
+        case "y": {
+          const doc = state.documents[state.selectedIndex]
+          if (!doc) break
+
+          if (key.shift) {
+            // Y: yank full document
+            const json = serializeDocument(doc)
+            const b64 = btoa(json)
+            process.stdout.write(`\x1b]52;c;${b64}\x07`)
+          } else {
+            // y: yank current cell value
+            const visCols = state.columns.filter((c) => c.visible)
+            const col = visCols[state.selectedColumnIndex]
+            if (!col) break
+            const val = getNestedValue(doc as Record<string, unknown>, col.field)
+            const text = val === undefined ? ""
+              : typeof val === "object" && val !== null ? JSON.stringify(val, null, 2)
+              : String(val)
+            const b64 = btoa(text)
+            process.stdout.write(`\x1b]52;c;${b64}\x07`)
           }
           break
         }

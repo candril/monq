@@ -9,7 +9,7 @@ export function buildCollectionCommands(collections: CollectionInfo[]): Command[
   return collections.map((col) => ({
     id: `open:${col.name}`,
     label: col.name,
-    category: "collections",
+    category: "collection",
     shortcut: col.type !== "collection" ? col.type : undefined,
   }))
 }

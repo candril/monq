@@ -9,3 +9,12 @@ export interface Command {
   /** Optional keyboard shortcut hint (display only) */
   shortcut?: string
 }
+
+/** Standard command categories (controls display order) */
+export const CATEGORY_ORDER = [
+  "navigation",
+  "document",
+  "view",
+  "query",
+  "collection",
+] as const
