@@ -42,6 +42,7 @@ export type AppAction =
   | { type: "SET_COLUMNS"; columns: DetectedColumn[] }
   | { type: "MOVE_COLUMN"; delta: number }
   | { type: "CYCLE_COLUMN_MODE" }
+  | { type: "SET_SCHEMA"; schemaMap: import("./query/schema").SchemaMap }
   // Query
   | { type: "OPEN_QUERY" }
   | { type: "CLOSE_QUERY" }
@@ -83,6 +84,7 @@ export function createInitialState(): AppState {
     selectedIndex: 0,
     selectedColumnIndex: 0,
     columns: [],
+    schemaMap: new Map(),
     queryVisible: false,
     queryMode: "simple",
     queryInput: "",
@@ -281,6 +283,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "SET_COLUMNS":
       return { ...state, columns: action.columns, selectedColumnIndex: 0 }
+
+    case "SET_SCHEMA":
+      return { ...state, schemaMap: action.schemaMap }
 
     case "MOVE_COLUMN": {
       const visibleCols = state.columns.filter((c) => c.visible)

@@ -106,6 +106,7 @@ export function App({ uri }: AppProps) {
         visible={state.queryVisible}
         query={state.queryInput}
         columns={state.columns}
+        schemaMap={state.schemaMap}
         onChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
       />
 

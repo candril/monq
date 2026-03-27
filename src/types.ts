@@ -3,6 +3,7 @@
  */
 
 import type { Document, ObjectId } from "mongodb"
+import type { SchemaMap } from "./query/schema"
 
 // ============================================================================
 // Views
@@ -102,6 +103,8 @@ export interface AppState {
   selectedIndex: number
   selectedColumnIndex: number
   columns: DetectedColumn[]
+  /** Schema map for dot-notation suggestions and smart query generation */
+  schemaMap: SchemaMap
 
   // Query
   queryVisible: boolean

@@ -1,12 +1,14 @@
 /**
  * Filter suggestions popup — shows above the filter bar.
- * Suggests field names from detected columns.
- * Only handles suggestion navigation — text input handled by FilterBar's <input>.
+ * Suggests field names from columns and subfields from schema map.
+ * Handles dot-notation: typing "Members." suggests Members' subfields.
  */
 
 import { useState, useMemo, useEffect } from "react"
 import { useKeyboard } from "@opentui/react"
 import type { DetectedColumn } from "../types"
+import type { SchemaMap } from "../query/schema"
+import { getSubfieldSuggestions } from "../query/schema"
 import { theme } from "../theme"
 import { getLastToken } from "../query/parser"
 import { fuzzyFilter } from "../utils/fuzzy"
@@ -15,16 +17,23 @@ interface Suggestion {
   label: string
   /** Full query string after accepting this suggestion */
   value: string
+  /** Type hint to show (e.g. "array", "object") */
+  hint?: string
 }
 
 interface FilterSuggestionsProps {
   visible: boolean
   query: string
   columns: DetectedColumn[]
+  schemaMap: SchemaMap
   onChange: (query: string) => void
 }
 
-function buildSuggestions(query: string, columns: DetectedColumn[]): Suggestion[] {
+function buildSuggestions(
+  query: string,
+  columns: DetectedColumn[],
+  schemaMap: SchemaMap,
+): Suggestion[] {
   const { prefix, lastToken } = getLastToken(query)
 
   // If last token contains ":" we're typing a value — no field suggestions
@@ -35,16 +44,62 @@ function buildSuggestions(query: string, columns: DetectedColumn[]): Suggestion[
   const search = negated ? lastToken.slice(1) : lastToken
   const negPrefix = negated ? "-" : ""
 
-  // Build field name suggestions
-  const fieldNames = columns.map((c) => c.field)
-  const filtered = search
-    ? fuzzyFilter(search, fieldNames, (f) => [f])
-    : fieldNames
+  // Check if we're in dot-notation: "Members." or "Members.Na"
+  const dotIndex = search.lastIndexOf(".")
+  if (dotIndex >= 0) {
+    const parentPath = search.slice(0, dotIndex)
+    const subSearch = search.slice(dotIndex + 1)
+    const subfields = getSubfieldSuggestions(schemaMap, parentPath)
 
-  return filtered.map((field) => ({
-    label: negPrefix + field,
-    value: prefix + negPrefix + field + ":",
-  }))
+    if (subfields.length === 0) return []
+
+    const filtered = subSearch
+      ? fuzzyFilter(subSearch, subfields, (f) => [f])
+      : subfields
+
+    return filtered.map((sub) => {
+      const fullPath = `${parentPath}.${sub}`
+      const info = schemaMap.get(fullPath)
+      const hasChildren = info && info.children.length > 0
+
+      return {
+        label: negPrefix + fullPath,
+        // If the subfield has children, append "." so user can drill deeper
+        // Otherwise append ":" to start typing a value
+        value: prefix + negPrefix + fullPath + (hasChildren ? "." : ":"),
+        hint: info?.type,
+      }
+    })
+  }
+
+  // Top-level field suggestions
+  const fieldNames = columns.map((c) => c.field)
+
+  // Also include schema paths that have children (for drill-down)
+  const allFields = new Set(fieldNames)
+  for (const [path, info] of schemaMap) {
+    if (!path.includes(".") && info.children.length > 0) {
+      allFields.add(path)
+    }
+  }
+
+  const candidates = [...allFields]
+  const filtered = search
+    ? fuzzyFilter(search, candidates, (f) => [f])
+    : candidates
+
+  return filtered.map((field) => {
+    const info = schemaMap.get(field)
+    const hasChildren = info && info.children.length > 0
+
+    return {
+      label: negPrefix + field,
+      // Fields with children: append "." for drill-down
+      // Leaf fields: append ":" for value
+      value: prefix + negPrefix + field + (hasChildren ? "." : ":"),
+      hint: info?.type,
+    }
+  })
 }
 
 const MAX_VISIBLE = 15
@@ -53,21 +108,20 @@ export function FilterSuggestions({
   visible,
   query,
   columns,
+  schemaMap,
   onChange,
 }: FilterSuggestionsProps) {
   const [selectedIndex, setSelectedIndex] = useState(0)
 
   const suggestions = useMemo(
-    () => buildSuggestions(query, columns),
-    [query, columns],
+    () => buildSuggestions(query, columns, schemaMap),
+    [query, columns, schemaMap],
   )
 
-  // Reset selection when suggestions change
   useEffect(() => {
     setSelectedIndex(0)
   }, [suggestions.length])
 
-  // Only handle suggestion navigation keys
   useKeyboard((key) => {
     if (!visible || suggestions.length === 0) return
 
@@ -108,12 +162,19 @@ export function FilterSuggestions({
               height={1}
               backgroundColor={selected ? theme.selection : undefined}
               paddingLeft={1}
+              flexDirection="row"
+              justifyContent="space-between"
             >
               <text>
                 <span fg={selected ? theme.primary : theme.textDim}>
                   {suggestion.label}
                 </span>
               </text>
+              {suggestion.hint && (
+                <text>
+                  <span fg={theme.textMuted}>{suggestion.hint}</span>
+                </text>
+              )}
             </box>
           )
         })}

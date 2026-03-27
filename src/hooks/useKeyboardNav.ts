@@ -97,7 +97,9 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           const val = getNestedValue(doc as Record<string, unknown>, col.field)
           if (val === undefined) break
 
-          const formatted = typeof val === "string" ? val : String(val)
+          const raw = typeof val === "string" ? val : String(val)
+          // Quote values containing spaces
+          const formatted = raw.includes(" ") ? `"${raw}"` : raw
           const token = `${col.field}:${formatted}`
           const newQuery = state.queryInput
             ? `${state.queryInput} ${token}`

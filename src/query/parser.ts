@@ -10,6 +10,43 @@
  */
 
 import type { Filter, Document } from "mongodb"
+import { getArrayAncestor, type SchemaMap } from "./schema"
+
+/**
+ * Set a filter value, using $elemMatch if the field path crosses an array.
+ * e.g. Members.Name:peter where Members is array ->
+ *   { Members: { $elemMatch: { Name: "peter" } } }
+ */
+function setFilterValue(
+  filter: Record<string, unknown>,
+  field: string,
+  value: unknown,
+  schemaMap?: SchemaMap,
+): void {
+  if (!schemaMap || !field.includes(".")) {
+    filter[field] = value
+    return
+  }
+
+  const arrayAncestor = getArrayAncestor(schemaMap, field)
+  if (!arrayAncestor) {
+    // Plain dot-notation (object path)
+    filter[field] = value
+    return
+  }
+
+  // Build $elemMatch: split at the array boundary
+  const subField = field.slice(arrayAncestor.length + 1)
+  const existing = filter[arrayAncestor]
+
+  if (existing && typeof existing === "object" && "$elemMatch" in (existing as object)) {
+    // Append to existing $elemMatch
+    const elemMatch = (existing as { $elemMatch: Record<string, unknown> }).$elemMatch
+    elemMatch[subField] = value
+  } else {
+    filter[arrayAncestor] = { $elemMatch: { [subField]: value } }
+  }
+}
 
 /** Coerce a string value to its natural type */
 function coerceValue(value: string): string | number | boolean | null {
@@ -52,8 +89,12 @@ function tokenize(input: string): string[] {
   return tokens
 }
 
-/** Parse a simple query string into a MongoDB filter */
-export function parseSimpleQuery(input: string): Filter<Document> {
+/** Parse a simple query string into a MongoDB filter.
+ *  If schemaMap is provided, uses $elemMatch for fields under array ancestors. */
+export function parseSimpleQuery(
+  input: string,
+  schemaMap?: import("./schema").SchemaMap,
+): Filter<Document> {
   const trimmed = input.trim()
   if (!trimmed) return {}
 
@@ -70,7 +111,7 @@ export function parseSimpleQuery(input: string): Filter<Document> {
     if (regexMatch) {
       const [, field, pattern, flags] = regexMatch
       const val = { $regex: pattern, ...(flags ? { $options: flags } : {}) }
-      filter[field] = negated ? { $not: val } : val
+      setFilterValue(filter, field, negated ? { $not: val } : val, schemaMap)
       continue
     }
 
@@ -85,7 +126,7 @@ export function parseSimpleQuery(input: string): Filter<Document> {
         "<=": "$lte",
         "!=": "$ne",
       }[op]!
-      filter[field] = { [mongoOp]: coerceValue(rawValue) }
+      setFilterValue(filter, field, { [mongoOp]: coerceValue(rawValue) }, schemaMap)
       continue
     }
 
@@ -95,14 +136,14 @@ export function parseSimpleQuery(input: string): Filter<Document> {
       const [, field, rawValue] = colonMatch
       // Special values
       if (rawValue === "null") {
-        filter[field] = negated ? { $ne: null } : null
+        setFilterValue(filter, field, negated ? { $ne: null } : null, schemaMap)
       } else if (rawValue === "exists") {
-        filter[field] = { $exists: !negated }
+        setFilterValue(filter, field, { $exists: !negated }, schemaMap)
       } else if (rawValue === "!exists") {
-        filter[field] = { $exists: negated }
+        setFilterValue(filter, field, { $exists: negated }, schemaMap)
       } else {
         const val = coerceValue(rawValue)
-        filter[field] = negated ? { $ne: val } : val
+        setFilterValue(filter, field, negated ? { $ne: val } : val, schemaMap)
       }
       continue
     }

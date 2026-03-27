@@ -9,6 +9,7 @@ import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import { fetchDocuments, detectColumns } from "../providers/mongodb"
 import { parseSimpleQuery, parseBsonQuery } from "../query/parser"
+import { buildSchemaMap } from "../query/schema"
 
 interface UseDocumentLoaderOptions {
   state: AppState
@@ -30,7 +31,7 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
       if (queryInput.trim()) {
         filter = queryMode === "bson"
           ? parseBsonQuery(queryInput)
-          : parseSimpleQuery(queryInput)
+          : parseSimpleQuery(queryInput, state.schemaMap)
       }
     } catch {
       // Invalid query — fetch unfiltered
@@ -52,6 +53,7 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
 
         dispatch({ type: "SET_DOCUMENTS", documents, count, totalCount })
         dispatch({ type: "SET_COLUMNS", columns })
+        dispatch({ type: "SET_SCHEMA", schemaMap: buildSchemaMap(documents) })
       })
       .catch((err: Error) => {
         if (!cancelled) dispatch({ type: "SET_ERROR", error: err.message })
