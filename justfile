@@ -3,12 +3,12 @@ default:
     @just --list
 
 # Run the TUI application
-run *args:
-    bun src/index.tsx {{args}}
+run uri:
+    bun src/index.tsx --uri "{{uri}}"
 
 # Run with hot reload (watches for changes)
-dev *args:
-    bun --watch src/index.tsx {{args}}
+dev uri:
+    bun --watch src/index.tsx --uri "{{uri}}"
 
 # Install dependencies
 install:

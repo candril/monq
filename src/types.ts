@@ -21,13 +21,10 @@ export type QueryMode = "simple" | "bson"
 // Collection Types
 // ============================================================================
 
-/** Collection info from listCollections + stats */
+/** Collection info from listCollections */
 export interface CollectionInfo {
   name: string
   type: "collection" | "view" | "timeseries"
-  documentCount: number
-  /** Size in bytes */
-  size: number
 }
 
 // ============================================================================

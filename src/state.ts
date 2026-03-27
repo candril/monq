@@ -108,7 +108,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, dbName: action.dbName, host: action.host }
 
     case "SET_ERROR":
-      return { ...state, error: action.error }
+      return { ...state, error: action.error, collectionsLoading: false, documentsLoading: false }
 
     // Collections
     case "SET_COLLECTIONS":

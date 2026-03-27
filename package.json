@@ -21,9 +21,10 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@opentui/core": "^0.1.81",
-    "@opentui/react": "^0.1.81",
+    "@opentui/core": "0.1.87",
+    "@opentui/react": "0.1.87",
     "mongodb": "^6.12.0",
-    "react": "19"
+    "react": "19",
+    "snappy": "^7.3.3"
   }
 }
