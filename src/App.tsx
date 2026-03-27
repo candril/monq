@@ -11,6 +11,7 @@ import { Loading } from "./components/Loading"
 import { ErrorView } from "./components/ErrorView"
 import { DocumentList } from "./components/DocumentList"
 import { DocumentPreview } from "./components/DocumentPreview"
+import { FilterSuggestions } from "./components/FilterSuggestions"
 import { CommandPalette } from "./components/CommandPalette"
 import { appReducer, createInitialState } from "./state"
 import { useMongoConnection } from "./hooks/useMongoConnection"
@@ -59,7 +60,12 @@ export function App({ uri }: AppProps) {
         dbName={state.dbName}
         host={state.host}
         loading={state.collectionsLoading || state.documentsLoading}
-        right={activeTab ? `${state.documentCount.toLocaleString()} docs` : ""}
+        right={activeTab
+          ? state.queryInput
+            ? `${state.documentCount.toLocaleString()} / ${state.totalDocumentCount.toLocaleString()} docs`
+            : `${state.documentCount.toLocaleString()} docs`
+          : ""
+        }
       />
 
       <box
@@ -96,7 +102,19 @@ export function App({ uri }: AppProps) {
         )}
       </box>
 
-      <FilterBar query={state.queryInput} mode={state.queryMode} editing={state.queryVisible} />
+      <FilterSuggestions
+        visible={state.queryVisible}
+        query={state.queryInput}
+        columns={state.columns}
+        onChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
+      />
+
+      <FilterBar
+        query={state.queryInput}
+        editing={state.queryVisible}
+        onChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
+        onSubmit={() => dispatch({ type: "SUBMIT_QUERY" })}
+      />
 
       <CommandPalette
         visible={paletteVisible}

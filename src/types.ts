@@ -93,7 +93,10 @@ export interface AppState {
   // Document list (per-tab, but stored here for active tab)
   documents: Document[]
   documentsLoading: boolean
+  /** Count matching current filter */
   documentCount: number
+  /** Total count (unfiltered) — set on initial load, preserved during filtering */
+  totalDocumentCount: number
   /** Incremented to force a reload */
   reloadCounter: number
   selectedIndex: number

@@ -61,16 +61,19 @@ export async function fetchDocuments(
   collectionName: string,
   filter: Filter<Document> = {},
   options: { skip?: number; limit?: number; sort?: Record<string, 1 | -1> } = {}
-): Promise<{ documents: Document[]; count: number }> {
+): Promise<{ documents: Document[]; count: number; totalCount: number }> {
   const collection = getDb().collection(collectionName)
   const { skip = 0, limit = 50, sort } = options
 
-  const [documents, count] = await Promise.all([
+  const hasFilter = Object.keys(filter).length > 0
+
+  const [documents, count, totalCount] = await Promise.all([
     collection.find(filter).sort(sort ?? { _id: -1 }).skip(skip).limit(limit).toArray(),
     collection.countDocuments(filter),
+    hasFilter ? collection.estimatedDocumentCount() : Promise.resolve(0),
   ])
 
-  return { documents, count }
+  return { documents, count, totalCount: hasFilter ? totalCount : count }
 }
 
 /** Replace a document by its original _id */

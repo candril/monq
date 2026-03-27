@@ -33,7 +33,7 @@ export type AppAction =
   | { type: "CLOSE_TAB"; tabId: string }
   | { type: "SWITCH_TAB"; tabId: string }
   // Documents
-  | { type: "SET_DOCUMENTS"; documents: Document[]; count: number }
+  | { type: "SET_DOCUMENTS"; documents: Document[]; count: number; totalCount?: number }
   | { type: "APPEND_DOCUMENTS"; documents: Document[] }
   | { type: "SET_DOCUMENTS_LOADING"; loading: boolean }
   | { type: "RELOAD_DOCUMENTS" }
@@ -78,6 +78,7 @@ export function createInitialState(): AppState {
     documents: [],
     documentsLoading: false,
     documentCount: 0,
+    totalDocumentCount: 0,
     reloadCounter: 0,
     selectedIndex: 0,
     selectedColumnIndex: 0,
@@ -166,7 +167,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         documents: [],
         documentsLoading: true,
         documentCount: 0,
+        totalDocumentCount: 0,
         selectedIndex: 0,
+        selectedColumnIndex: 0,
         columns: [],
         queryInput: "",
         previewScrollOffset: 0,
@@ -183,6 +186,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           view: "collections",
           documents: [],
           documentCount: 0,
+          totalDocumentCount: 0,
           selectedIndex: 0,
           columns: [],
           queryInput: "",
@@ -207,6 +211,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         documents: [],
         documentsLoading: true,
         documentCount: 0,
+        totalDocumentCount: 0,
         selectedIndex: 0,
       }
     }
@@ -235,6 +240,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         documents: [],
         documentsLoading: true,
         documentCount: 0,
+        totalDocumentCount: 0,
       }
     }
 
@@ -244,6 +250,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         documents: action.documents,
         documentCount: action.count,
+        totalDocumentCount: action.totalCount ?? state.totalDocumentCount,
         documentsLoading: false,
         selectedIndex: Math.min(state.selectedIndex, Math.max(0, action.documents.length - 1)),
       }
@@ -299,8 +306,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     // Query
-    case "OPEN_QUERY":
-      return { ...state, queryVisible: true }
+    case "OPEN_QUERY": {
+      // Append space if query exists (so suggestions show new tokens, not completions)
+      const queryWithSpace = state.queryInput && !state.queryInput.endsWith(" ")
+        ? state.queryInput + " "
+        : state.queryInput
+      return { ...state, queryVisible: true, queryInput: queryWithSpace }
+    }
 
     case "CLOSE_QUERY":
       return { ...state, queryVisible: false }
@@ -322,8 +334,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         queryVisible: false,
         documentsLoading: true,
+        reloadCounter: state.reloadCounter + 1,
         selectedIndex: 0,
-        // Update active tab's query
         tabs: state.tabs.map((t) =>
           t.id === state.activeTabId
             ? { ...t, query: state.queryInput, queryMode: state.queryMode }
@@ -337,6 +349,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         queryInput: "",
         queryVisible: false,
         documentsLoading: true,
+        reloadCounter: state.reloadCounter + 1,
         selectedIndex: 0,
         tabs: state.tabs.map((t) =>
           t.id === state.activeTabId ? { ...t, query: "" } : t

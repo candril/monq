@@ -10,10 +10,22 @@ import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import { disconnect } from "../providers/mongodb"
 import { editDocument } from "../actions/edit"
+import { formatValue } from "../utils/format"
 
 interface UseKeyboardNavOptions {
   state: AppState
   dispatch: Dispatch<AppAction>
+}
+
+/** Get a nested value from a document */
+function getNestedValue(doc: Record<string, unknown>, field: string): unknown {
+  const parts = field.split(".")
+  let current: unknown = doc
+  for (const part of parts) {
+    if (current == null || typeof current !== "object") return undefined
+    current = (current as Record<string, unknown>)[part]
+  }
+  return current
 }
 
 export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
@@ -26,14 +38,28 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       return
     }
 
-    // Don't handle keys when overlays are open
-    if (state.commandPaletteVisible || state.queryVisible) return
+    // Filter bar: only handle Escape to close
+    if (state.queryVisible) {
+      if (key.name === "escape") {
+        dispatch({ type: "CLOSE_QUERY" })
+      }
+      return
+    }
+
+    // Don't handle keys when command palette is open
+    if (state.commandPaletteVisible) return
 
     // Quit
     if (key.name === "q") {
       disconnect().catch(() => {})
       renderer.destroy()
       process.exit(0)
+    }
+
+    // Backspace clears filter when bar is closed
+    if (key.name === "backspace" && state.queryInput && state.view === "documents") {
+      dispatch({ type: "CLEAR_QUERY" })
+      return
     }
 
     // Document view
@@ -61,6 +87,25 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         case "r":
           dispatch({ type: "RELOAD_DOCUMENTS" })
           break
+        case "f": {
+          // Filter from current cell value
+          const doc = state.documents[state.selectedIndex]
+          const visibleCols = state.columns.filter((c) => c.visible)
+          const col = visibleCols[state.selectedColumnIndex]
+          if (!doc || !col) break
+
+          const val = getNestedValue(doc as Record<string, unknown>, col.field)
+          if (val === undefined) break
+
+          const formatted = typeof val === "string" ? val : String(val)
+          const token = `${col.field}:${formatted}`
+          const newQuery = state.queryInput
+            ? `${state.queryInput} ${token}`
+            : token
+          dispatch({ type: "SET_QUERY_INPUT", input: newQuery })
+          dispatch({ type: "SUBMIT_QUERY" })
+          break
+        }
         case "e": {
           const doc = state.documents[state.selectedIndex]
           const activeTab = state.tabs.find((t) => t.id === state.activeTabId)

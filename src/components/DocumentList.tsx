@@ -297,7 +297,7 @@ function DocumentRow({
     const text = formatValue(val, w)
     const type = detectValueType(val)
     const isActiveCell = selected && i === selectedColumnIndex
-    const color = isActiveCell ? theme.primary : selected ? theme.text : valueColor(type)
+    const color = isActiveCell ? theme.primary : valueColor(type)
     return { text, color }
   })
 
