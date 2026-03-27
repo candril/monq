@@ -1,4 +1,5 @@
 import { theme } from "../theme"
+import { Spinner } from "./Loading"
 
 interface HeaderProps {
   dbName: string
@@ -24,12 +25,10 @@ export function Header({ dbName, host, loading, right }: HeaderProps) {
       {/* Spacer */}
       <box flexGrow={1} />
 
-      {/* Loading indicator */}
+      {/* Loading spinner */}
       {loading && (
         <box marginRight={1}>
-          <text>
-            <span fg={theme.warning}>...</span>
-          </text>
+          <Spinner />
         </box>
       )}
 

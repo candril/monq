@@ -9,6 +9,7 @@ import { useKeyboard, useRenderer } from "@opentui/react"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import { disconnect } from "../providers/mongodb"
+import { editDocument } from "../actions/edit"
 
 interface UseKeyboardNavOptions {
   state: AppState
@@ -57,6 +58,32 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         case "w":
           dispatch({ type: "CYCLE_COLUMN_MODE" })
           break
+        case "r":
+          dispatch({ type: "RELOAD_DOCUMENTS" })
+          break
+        case "e": {
+          const doc = state.documents[state.selectedIndex]
+          const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+          if (!doc || !activeTab) break
+
+          renderer.suspend()
+          editDocument(activeTab.collectionName, doc)
+            .then((result) => {
+              if (result.error) {
+                dispatch({ type: "SHOW_MESSAGE", message: result.error })
+              } else if (result.updated) {
+                dispatch({ type: "SHOW_MESSAGE", message: "Document updated" })
+              }
+            })
+            .catch((err: Error) => {
+              dispatch({ type: "SHOW_MESSAGE", message: `Edit failed: ${err.message}` })
+            })
+            .finally(() => {
+              renderer.resume()
+              dispatch({ type: "RELOAD_DOCUMENTS" })
+            })
+          break
+        }
         case "p":
           if (key.shift) {
             dispatch({ type: "CYCLE_PREVIEW_POSITION" })

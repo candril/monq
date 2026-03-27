@@ -65,8 +65,6 @@ export function App({ uri }: AppProps) {
           <ErrorView message={state.error} />
         ) : state.collectionsLoading ? (
           <Loading message="Connecting to MongoDB..." />
-        ) : activeTab && state.documentsLoading ? (
-          <Loading message={`Loading ${activeTab.collectionName}...`} />
         ) : activeTab ? (
           <DocumentList
             documents={state.documents}

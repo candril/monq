@@ -3,6 +3,7 @@
  */
 
 import { MongoClient, type Db, type Document, type Filter } from "mongodb"
+import { EJSON } from "bson"
 import type { CollectionInfo } from "../types"
 
 let client: MongoClient | null = null
@@ -70,6 +71,27 @@ export async function fetchDocuments(
   ])
 
   return { documents, count }
+}
+
+/** Replace a document by its original _id */
+export async function replaceDocument(
+  collectionName: string,
+  originalId: unknown,
+  newDoc: Document,
+): Promise<void> {
+  const collection = getDb().collection(collectionName)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await collection.replaceOne({ _id: originalId as any }, newDoc)
+}
+
+/** Serialize a document to EJSON string (preserves BSON types) */
+export function serializeDocument(doc: Document): string {
+  return EJSON.stringify(doc, undefined, 2, { relaxed: false })
+}
+
+/** Deserialize EJSON string back to a document */
+export function deserializeDocument(json: string): Document {
+  return EJSON.deserialize(JSON.parse(json)) as Document
 }
 
 /** Detect columns from a sample of documents, sorted: _id first, scalars before complex, then alphabetically */

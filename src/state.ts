@@ -36,6 +36,7 @@ export type AppAction =
   | { type: "SET_DOCUMENTS"; documents: Document[]; count: number }
   | { type: "APPEND_DOCUMENTS"; documents: Document[] }
   | { type: "SET_DOCUMENTS_LOADING"; loading: boolean }
+  | { type: "RELOAD_DOCUMENTS" }
   | { type: "SELECT_DOCUMENT"; index: number }
   | { type: "MOVE_DOCUMENT"; delta: number }
   | { type: "SET_COLUMNS"; columns: DetectedColumn[] }
@@ -77,6 +78,7 @@ export function createInitialState(): AppState {
     documents: [],
     documentsLoading: false,
     documentCount: 0,
+    reloadCounter: 0,
     selectedIndex: 0,
     selectedColumnIndex: 0,
     columns: [],
@@ -255,6 +257,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "SET_DOCUMENTS_LOADING":
       return { ...state, documentsLoading: action.loading }
+
+    case "RELOAD_DOCUMENTS":
+      return { ...state, documentsLoading: true, reloadCounter: state.reloadCounter + 1 }
 
     case "SELECT_DOCUMENT":
       return { ...state, selectedIndex: Math.max(0, action.index) }

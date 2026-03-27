@@ -94,6 +94,8 @@ export interface AppState {
   documents: Document[]
   documentsLoading: boolean
   documentCount: number
+  /** Incremented to force a reload */
+  reloadCounter: number
   selectedIndex: number
   selectedColumnIndex: number
   columns: DetectedColumn[]

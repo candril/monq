@@ -15,9 +15,10 @@ interface UseDocumentLoaderOptions {
 
 export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions) {
   const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+  const { documentsLoading, reloadCounter } = state
 
   useEffect(() => {
-    if (!activeTab || !state.documentsLoading) return
+    if (!activeTab || !documentsLoading) return
 
     let cancelled = false
 
@@ -38,5 +39,5 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
       })
 
     return () => { cancelled = true }
-  }, [activeTab?.id, state.documentsLoading])
+  }, [activeTab?.id, documentsLoading, reloadCounter])
 }
