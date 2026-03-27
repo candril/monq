@@ -72,6 +72,7 @@ export function App({ uri }: AppProps) {
             documents={state.documents}
             columns={state.columns}
             selectedIndex={state.selectedIndex}
+            selectedColumnIndex={state.selectedColumnIndex}
           />
         ) : null}
       </box>

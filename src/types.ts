@@ -90,6 +90,7 @@ export interface AppState {
   documentsLoading: boolean
   documentCount: number
   selectedIndex: number
+  selectedColumnIndex: number
   columns: DetectedColumn[]
 
   // Query

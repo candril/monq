@@ -39,6 +39,7 @@ export type AppAction =
   | { type: "SELECT_DOCUMENT"; index: number }
   | { type: "MOVE_DOCUMENT"; delta: number }
   | { type: "SET_COLUMNS"; columns: DetectedColumn[] }
+  | { type: "MOVE_COLUMN"; delta: number }
   // Query
   | { type: "OPEN_QUERY" }
   | { type: "CLOSE_QUERY" }
@@ -76,6 +77,7 @@ export function createInitialState(): AppState {
     documentsLoading: false,
     documentCount: 0,
     selectedIndex: 0,
+    selectedColumnIndex: 0,
     columns: [],
     queryVisible: false,
     queryMode: "simple",
@@ -265,7 +267,16 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case "SET_COLUMNS":
-      return { ...state, columns: action.columns }
+      return { ...state, columns: action.columns, selectedColumnIndex: 0 }
+
+    case "MOVE_COLUMN": {
+      const visibleCols = state.columns.filter((c) => c.visible)
+      const newColIndex = Math.max(
+        0,
+        Math.min(visibleCols.length - 1, state.selectedColumnIndex + action.delta)
+      )
+      return { ...state, selectedColumnIndex: newColIndex }
+    }
 
     // Query
     case "OPEN_QUERY":

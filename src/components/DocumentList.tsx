@@ -1,6 +1,7 @@
 /**
  * Document list — tabular display with auto-detected columns.
  * Presto-style: scrollbox, header row, subtle row highlight.
+ * h/l moves column selection, j/k moves row selection.
  */
 
 import { useRef, useEffect, useMemo } from "react"
@@ -19,6 +20,7 @@ interface DocumentListProps {
   documents: Document[]
   columns: DetectedColumn[]
   selectedIndex: number
+  selectedColumnIndex: number
 }
 
 /** Calculate column widths based on content */
@@ -30,44 +32,36 @@ function computeColumnWidths(
   const visible = columns.filter((c) => c.visible)
   if (visible.length === 0) return new Map()
 
-  // Sample content widths
   const widths = new Map<string, number>()
   for (const col of visible) {
-    // Start with header width
     let maxW = col.field.length
-
-    // Sample first 50 docs for content width
     const sample = documents.slice(0, 50)
     for (const doc of sample) {
       const val = getNestedValue(doc, col.field)
       const formatted = formatValue(val, MAX_COL_WIDTH)
       maxW = Math.max(maxW, formatted.length)
     }
-
     widths.set(col.field, Math.min(MAX_COL_WIDTH, Math.max(MIN_COL_WIDTH, maxW)))
   }
 
-  // Distribute space to fill 100% width
-  const padding = 2 // left + right padding
-  const gaps = visible.length - 1 // spaces between columns
+  const padding = 2
+  const gaps = visible.length - 1
   const totalColWidth = [...widths.values()].reduce((a, b) => a + b, 0)
   const available = totalWidth - padding - gaps
 
   if (totalColWidth > available) {
-    // Shrink proportionally
     const ratio = available / totalColWidth
     for (const [field, w] of widths) {
       widths.set(field, Math.max(MIN_COL_WIDTH, Math.floor(w * ratio)))
     }
   } else if (totalColWidth < available) {
-    // Distribute extra space proportionally
     const extra = available - totalColWidth
     const entries = [...widths.entries()]
     let distributed = 0
     for (let i = 0; i < entries.length; i++) {
       const [field, w] = entries[i]
       const share = i === entries.length - 1
-        ? extra - distributed // last column gets remainder
+        ? extra - distributed
         : Math.floor(extra * (w / totalColWidth))
       widths.set(field, w + share)
       distributed += share
@@ -88,15 +82,13 @@ function getNestedValue(doc: Document, field: string): unknown {
   return current
 }
 
-export function DocumentList({ documents, columns, selectedIndex }: DocumentListProps) {
+export function DocumentList({ documents, columns, selectedIndex, selectedColumnIndex }: DocumentListProps) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const { width: terminalWidth } = useTerminalDimensions()
 
-  // Auto-scroll to keep selection visible
   useEffect(() => {
     const scrollbox = scrollRef.current
     if (!scrollbox) return
-
     const viewportHeight = scrollbox.viewport?.height ?? 20
     const scrollTop = scrollbox.scrollTop
     const scrollBottom = scrollTop + viewportHeight
@@ -126,7 +118,7 @@ export function DocumentList({ documents, columns, selectedIndex }: DocumentList
 
   return (
     <box flexGrow={1} flexDirection="column" overflow="hidden">
-      <HeaderRow columns={visibleColumns} colWidths={colWidths} />
+      <HeaderRow columns={visibleColumns} colWidths={colWidths} selectedColumnIndex={selectedColumnIndex} />
       <scrollbox ref={scrollRef} flexGrow={1}>
         {documents.map((doc, i) => (
           <DocumentRow
@@ -135,6 +127,7 @@ export function DocumentList({ documents, columns, selectedIndex }: DocumentList
             columns={visibleColumns}
             colWidths={colWidths}
             selected={i === selectedIndex}
+            selectedColumnIndex={selectedColumnIndex}
           />
         ))}
       </scrollbox>
@@ -145,18 +138,22 @@ export function DocumentList({ documents, columns, selectedIndex }: DocumentList
 function HeaderRow({
   columns,
   colWidths,
+  selectedColumnIndex,
 }: {
   columns: DetectedColumn[]
   colWidths: Map<string, number>
+  selectedColumnIndex: number
 }) {
   return (
     <box height={1} width="100%" paddingLeft={1} paddingRight={1}>
-      <text fg={theme.textMuted}>
+      <text>
         {columns.map((col, i) => {
           const w = colWidths.get(col.field) ?? MIN_COL_WIDTH
+          const isSelectedCol = i === selectedColumnIndex
+          const color = isSelectedCol ? theme.primary : theme.textMuted
           const sep = i < columns.length - 1 ? " " : ""
-          return padRight(col.field, w) + sep
-        }).join("")}
+          return <><span fg={color}>{padRight(col.field, w)}</span>{sep ? <span>{sep}</span> : null}</>
+        })}
       </text>
     </box>
   )
@@ -167,11 +164,13 @@ function DocumentRow({
   columns,
   colWidths,
   selected,
+  selectedColumnIndex,
 }: {
   doc: Document
   columns: DetectedColumn[]
   colWidths: Map<string, number>
   selected: boolean
+  selectedColumnIndex: number
 }) {
   return (
     <box
@@ -187,7 +186,8 @@ function DocumentRow({
           const val = getNestedValue(doc, col.field)
           const formatted = padRight(formatValue(val, w), w)
           const type = detectValueType(val)
-          const color = selected ? theme.text : valueColor(type)
+          const isActiveCell = selected && i === selectedColumnIndex
+          const color = isActiveCell ? theme.primary : selected ? theme.text : valueColor(type)
           const sep = i < columns.length - 1 ? " " : ""
           return <><span fg={color}>{formatted}</span>{sep ? <span>{sep}</span> : null}</>
         })}
