@@ -30,8 +30,10 @@ export type AppAction =
   | { type: "SET_VIEW"; view: View }
   // Tabs
   | { type: "OPEN_TAB"; collectionName: string }
+  | { type: "CLONE_TAB" }
   | { type: "CLOSE_TAB"; tabId: string }
   | { type: "SWITCH_TAB"; tabId: string }
+  | { type: "UNDO_CLOSE_TAB" }
   // Documents
   | { type: "SET_DOCUMENTS"; documents: Document[]; count: number; totalCount?: number }
   | { type: "APPEND_DOCUMENTS"; documents: Document[] }
@@ -77,6 +79,7 @@ export function createInitialState(): AppState {
     collectionSelectedIndex: 0,
     tabs: [],
     activeTabId: null,
+    closedTabs: [],
     documents: [],
     documentsLoading: false,
     documentCount: 0,
@@ -106,6 +109,46 @@ export function createInitialState(): AppState {
 let tabIdCounter = 0
 function generateTabId(): string {
   return `tab-${++tabIdCounter}-${Date.now()}`
+}
+
+/** Snapshot current view state into a Tab object */
+function snapshotTab(state: AppState, tabId: string, collectionName: string): Tab {
+  return {
+    id: tabId,
+    collectionName,
+    query: state.queryInput,
+    queryMode: state.queryMode,
+    selectedIndex: state.selectedIndex,
+    selectedColumnIndex: state.selectedColumnIndex,
+    scrollOffset: 0,
+    sortField: state.sortField,
+    sortDirection: state.sortDirection,
+    columns: state.columns,
+    previewPosition: state.previewPosition,
+    previewScrollOffset: state.previewScrollOffset,
+    documents: state.documents,
+    documentCount: state.documentCount,
+    totalDocumentCount: state.totalDocumentCount,
+  }
+}
+
+/** Restore view state from a Tab */
+function restoreFromTab(state: AppState, tab: Tab): Partial<AppState> {
+  return {
+    queryInput: tab.query,
+    queryMode: tab.queryMode,
+    selectedIndex: tab.selectedIndex,
+    selectedColumnIndex: tab.selectedColumnIndex,
+    sortField: tab.sortField,
+    sortDirection: tab.sortDirection,
+    columns: tab.columns,
+    previewPosition: tab.previewPosition,
+    previewScrollOffset: tab.previewScrollOffset,
+    documents: tab.documents,
+    documentCount: tab.documentCount,
+    totalDocumentCount: tab.totalDocumentCount,
+    documentsLoading: false,
+  }
 }
 
 // ============================================================================
@@ -149,11 +192,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     // Tabs
     case "OPEN_TAB": {
-      // Check if tab for this collection already exists
-      const existing = state.tabs.find((t) => t.collectionName === action.collectionName)
-      if (existing) {
-        return { ...state, activeTabId: existing.id, view: "documents" }
-      }
+      // Save current tab state first
+      const savedTabs = state.activeTabId
+        ? state.tabs.map((t) =>
+            t.id === state.activeTabId ? snapshotTab(state, t.id, t.collectionName) : t
+          )
+        : state.tabs
 
       const newTab: Tab = {
         id: generateTabId(),
@@ -161,14 +205,22 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         query: "",
         queryMode: "simple",
         selectedIndex: 0,
+        selectedColumnIndex: 0,
         scrollOffset: 0,
+        sortField: null,
+        sortDirection: -1,
+        columns: [],
+        previewPosition: null,
+        previewScrollOffset: 0,
+        documents: [],
+        documentCount: 0,
+        totalDocumentCount: 0,
       }
       return {
         ...state,
-        tabs: [...state.tabs, newTab],
+        tabs: [...savedTabs, newTab],
         activeTabId: newTab.id,
         view: "documents",
-        // Reset document state for new tab
         documents: [],
         documentsLoading: true,
         documentCount: 0,
@@ -176,25 +228,65 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         selectedIndex: 0,
         selectedColumnIndex: 0,
         columns: [],
+        sortField: null,
+        sortDirection: -1,
         queryInput: "",
+        previewPosition: null,
         previewScrollOffset: 0,
       }
     }
 
+    case "CLONE_TAB": {
+      const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+      if (!activeTab) return state
+
+      // Save current state to active tab, then clone it
+      const savedTabs = state.tabs.map((t) =>
+        t.id === state.activeTabId ? snapshotTab(state, t.id, t.collectionName) : t
+      )
+
+      const newTab: Tab = {
+        ...snapshotTab(state, generateTabId(), activeTab.collectionName),
+      }
+      return {
+        ...state,
+        tabs: [...savedTabs, newTab],
+        activeTabId: newTab.id,
+        // Keep current view state (cloned), trigger reload
+        documents: [],
+        documentsLoading: true,
+        documentCount: 0,
+        totalDocumentCount: 0,
+        reloadCounter: state.reloadCounter + 1,
+      }
+    }
+
     case "CLOSE_TAB": {
+      const closingTab = state.tabs.find((t) => t.id === action.tabId)
+      if (!closingTab) return state
+
+      // Snapshot the closing tab for undo
+      const savedClosing = action.tabId === state.activeTabId
+        ? snapshotTab(state, closingTab.id, closingTab.collectionName)
+        : closingTab
+      const closedTabs = [...state.closedTabs, savedClosing].slice(-10) // Keep last 10
+
       if (state.tabs.length <= 1) {
-        // Closing last tab → go back to collection browser
         return {
           ...state,
           tabs: [],
           activeTabId: null,
+          closedTabs,
           view: "collections",
           documents: [],
           documentCount: 0,
           totalDocumentCount: 0,
           selectedIndex: 0,
+          selectedColumnIndex: 0,
           columns: [],
           queryInput: "",
+          sortField: null,
+          sortDirection: -1,
         }
       }
 
@@ -208,16 +300,44 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         newActiveId = newTabs[newIndex].id
       }
 
+      // Restore target tab's state
+      const targetTab = newTabs.find((t) => t.id === newActiveId)
+      const restored = targetTab && needNewActive ? restoreFromTab(state, targetTab) : {}
+
       return {
         ...state,
+        ...restored,
         tabs: newTabs,
         activeTabId: newActiveId,
-        // Will trigger document reload via effect
-        documents: [],
-        documentsLoading: true,
-        documentCount: 0,
-        totalDocumentCount: 0,
-        selectedIndex: 0,
+        closedTabs,
+        documents: needNewActive ? [] : state.documents,
+        documentsLoading: needNewActive,
+        documentCount: needNewActive ? 0 : state.documentCount,
+        totalDocumentCount: needNewActive ? 0 : state.totalDocumentCount,
+        reloadCounter: needNewActive ? state.reloadCounter + 1 : state.reloadCounter,
+      }
+    }
+
+    case "UNDO_CLOSE_TAB": {
+      if (state.closedTabs.length === 0) return state
+
+      const restoredTab = state.closedTabs[state.closedTabs.length - 1]
+      const closedTabs = state.closedTabs.slice(0, -1)
+
+      // Save current tab state
+      const savedTabs = state.activeTabId
+        ? state.tabs.map((t) =>
+            t.id === state.activeTabId ? snapshotTab(state, t.id, t.collectionName) : t
+          )
+        : state.tabs
+
+      return {
+        ...state,
+        ...restoreFromTab(state, restoredTab),
+        tabs: [...savedTabs, restoredTab],
+        activeTabId: restoredTab.id,
+        closedTabs,
+        view: "documents",
       }
     }
 
@@ -226,9 +346,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
       // Save current tab state before switching
       const tabs = state.tabs.map((t) =>
-        t.id === state.activeTabId
-          ? { ...t, selectedIndex: state.selectedIndex, query: state.queryInput }
-          : t
+        t.id === state.activeTabId ? snapshotTab(state, t.id, t.collectionName) : t
       )
 
       const targetTab = tabs.find((t) => t.id === action.tabId)
@@ -236,16 +354,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
       return {
         ...state,
+        ...restoreFromTab(state, targetTab),
         tabs,
         activeTabId: action.tabId,
-        queryInput: targetTab.query,
-        queryMode: targetTab.queryMode,
-        selectedIndex: targetTab.selectedIndex,
-        // Will trigger document reload via effect
-        documents: [],
-        documentsLoading: true,
-        documentCount: 0,
-        totalDocumentCount: 0,
       }
     }
 

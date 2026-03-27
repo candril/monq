@@ -39,7 +39,20 @@ export interface Tab {
   query: string
   queryMode: QueryMode
   selectedIndex: number
+  selectedColumnIndex: number
   scrollOffset: number
+  /** Sort state */
+  sortField: string | null
+  sortDirection: 1 | -1
+  /** Column display modes */
+  columns: DetectedColumn[]
+  /** Preview state */
+  previewPosition: PreviewPosition
+  previewScrollOffset: number
+  /** Cached documents */
+  documents: Document[]
+  documentCount: number
+  totalDocumentCount: number
 }
 
 // ============================================================================
@@ -90,6 +103,8 @@ export interface AppState {
   // Tabs
   tabs: Tab[]
   activeTabId: string | null
+  /** Stack of recently closed tabs for undo */
+  closedTabs: Tab[]
 
   // Document list (per-tab, but stored here for active tab)
   documents: Document[]

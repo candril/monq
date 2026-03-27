@@ -62,6 +62,50 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       return
     }
 
+    // Tab management (available in document view)
+    if (state.view === "documents") {
+      // t: clone current tab
+      if (key.name === "t") {
+        dispatch({ type: "CLONE_TAB" })
+        return
+      }
+      // d: close current tab
+      if (key.name === "d" && !key.ctrl) {
+        if (state.activeTabId) {
+          dispatch({ type: "CLOSE_TAB", tabId: state.activeTabId })
+        }
+        return
+      }
+      // u: undo close tab (not Ctrl+U which scrolls preview)
+      if (key.name === "u" && !key.ctrl) {
+        dispatch({ type: "UNDO_CLOSE_TAB" })
+        return
+      }
+      // 1-9: switch to tab by number
+      if (key.sequence && /^[1-9]$/.test(key.sequence)) {
+        const tabIndex = parseInt(key.sequence) - 1
+        if (tabIndex < state.tabs.length) {
+          dispatch({ type: "SWITCH_TAB", tabId: state.tabs[tabIndex].id })
+        }
+        return
+      }
+      // [/]: previous/next tab
+      if (key.name === "[" || (key.sequence === "[")) {
+        const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId)
+        if (currentIndex > 0) {
+          dispatch({ type: "SWITCH_TAB", tabId: state.tabs[currentIndex - 1].id })
+        }
+        return
+      }
+      if (key.name === "]" || (key.sequence === "]")) {
+        const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId)
+        if (currentIndex < state.tabs.length - 1) {
+          dispatch({ type: "SWITCH_TAB", tabId: state.tabs[currentIndex + 1].id })
+        }
+        return
+      }
+    }
+
     // Document view
     if (state.view === "documents") {
       switch (key.name) {

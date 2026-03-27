@@ -14,6 +14,7 @@ import { DocumentList } from "./components/DocumentList"
 import { DocumentPreview } from "./components/DocumentPreview"
 import { FilterSuggestions } from "./components/FilterSuggestions"
 import { CommandPalette } from "./components/CommandPalette"
+import { TabBar } from "./components/TabBar"
 import { appReducer, createInitialState } from "./state"
 import { useMongoConnection } from "./hooks/useMongoConnection"
 import { useKeyboardNav } from "./hooks/useKeyboardNav"
@@ -167,6 +168,7 @@ export function App({ uri }: AppProps) {
       <Header
         dbName={state.dbName}
         host={state.host}
+        collectionName={state.tabs.length === 1 ? activeTab?.collectionName : undefined}
         loading={state.collectionsLoading || state.documentsLoading}
         right={activeTab
           ? state.queryInput
@@ -175,6 +177,8 @@ export function App({ uri }: AppProps) {
           : ""
         }
       />
+
+      <TabBar tabs={state.tabs} activeTabId={state.activeTabId} />
 
       <box
         flexGrow={1}
@@ -228,6 +232,7 @@ export function App({ uri }: AppProps) {
       />
 
       <CommandPalette
+        key={effectivePaletteMode}
         visible={paletteVisible}
         commands={effectiveCommands}
         onSelect={handlePaletteSelect}
