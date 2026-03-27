@@ -225,29 +225,37 @@ Gets parsed to: `{ "Author": "Peter", "State": "Closed" }`
 
 ```
 src/
-├── index.tsx              # Entry point with --uri flag parsing
-├── App.tsx                # Main app component
-├── state.ts               # App state (useReducer pattern)
+├── index.tsx              # Entry point, tree-sitter init, renderer, arg parsing
+├── App.tsx                # Main app component (thin composition layer)
+├── state.ts               # App state with useReducer (all actions)
 ├── types.ts               # Type definitions
-├── theme.ts               # Tokyo Night theme
+├── theme.ts               # Tokyo Night color palette
+├── syntax-parsers.ts      # Tree-sitter JSON parser registration
 ├── hooks/
-│   ├── useMongoData.ts    # MongoDB data fetching
-│   ├── useFiltering.ts    # Query/filter logic
-│   ├── useKeyboardNav.ts  # Navigation
-│   └── usePreview.ts      # Document preview
+│   ├── useMongoConnection.ts  # Connection lifecycle, loads collections
+│   ├── useKeyboardNav.ts      # All keyboard handling
+│   └── useDocumentLoader.ts   # Fetches documents on tab change/reload
 ├── components/
-│   ├── Shell.tsx           # Root layout
-│   ├── Header.tsx          # Title bar with connection info
+│   ├── Shell.tsx           # Root layout wrapper
+│   ├── Header.tsx          # Title bar with connection info + spinner
 │   ├── FilterBar.tsx       # Bottom bar showing active query
-│   ├── TabBar.tsx          # Collection tabs
-│   ├── CollectionList.tsx  # Database/collection browser
-│   ├── DocumentList.tsx    # Document table with auto-columns
-│   ├── DocumentPreview.tsx # JSON tree view
-│   ├── QueryBar.tsx        # Simple + BSON query input
-│   └── CommandPalette.tsx  # Command palette (Ctrl+P)
+│   ├── Loading.tsx         # Full-screen Loading + inline Spinner
+│   ├── ErrorView.tsx       # Error display
+│   ├── DocumentList.tsx    # Document table with auto-columns, h-scroll
+│   ├── DocumentPreview.tsx # JSON preview via <code> component
+│   ├── CommandPalette.tsx  # Generic Ctrl+P palette with fuzzy search
+│   └── CollectionList.tsx  # (unused, replaced by CommandPalette)
+├── commands/
+│   ├── types.ts            # Generic Command interface
+│   └── collections.ts     # Collection commands for palette
+├── actions/
+│   └── edit.ts             # Edit document in $EDITOR
+├── utils/
+│   ├── fuzzy.ts            # Fuzzy matching for palette
+│   └── format.ts           # Value formatting, type detection, coloring
 ├── providers/
-│   └── mongodb.ts          # MongoDB driver wrapper
-└── query/
+│   └── mongodb.ts          # MongoDB driver wrapper, EJSON, queries
+└── query/                  # (planned for spec 004)
     ├── parser.ts           # Simple query parser (Key:Value -> BSON)
     └── types.ts            # Query types
 ```

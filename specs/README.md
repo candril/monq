@@ -28,24 +28,18 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | # | Name | Status | Description |
 |---|------|--------|-------------|
 | 000 | [Vision](./000-vision.md) | Ready | Overall product vision and goals |
-| 001 | [App Shell](./001-app-shell.md) | Ready | Basic application shell with OpenTUI React |
-| 002 | [Collection Browser](./002-collection-browser.md) | Ready | Browse databases and collections |
-| 003 | [Document List](./003-document-list.md) | Ready | Display documents with auto-detected columns |
+| 001 | [App Shell](./001-app-shell.md) | Done | Basic application shell with OpenTUI React |
+| 002 | [Collection Browser](./002-collection-browser.md) | Done | Ctrl+P collection picker with fuzzy search |
+| 003 | [Document List](./003-document-list.md) | Done | Document table with auto-detected columns, h/l column selection |
 | 004 | [Query Bar](./004-query-bar.md) | Ready | Simple and BSON query modes |
-| 005 | [Document Preview](./005-document-preview.md) | Ready | JSON tree view with drill-down |
-| 006 | [Collection Tabs](./006-collection-tabs.md) | Ready | Open collections in tabs |
-| 007 | [Document Editing](./007-document-editing.md) | Draft | Edit and update documents |
-| 008 | [Command Palette](./008-command-palette.md) | Ready | Ctrl+P palette for all operations |
+| 005 | [Document Preview](./005-document-preview.md) | Done | Syntax-highlighted JSON preview via OpenTUI `<code>` |
+| 006 | [Collection Tabs](./006-collection-tabs.md) | In Progress | Tabs exist in state, UI not built yet |
+| 007 | [Document Editing](./007-document-editing.md) | Done | Edit in $EDITOR with suspend/resume |
+| 008 | [Command Palette](./008-command-palette.md) | Done | Ctrl+P palette with fuzzy search, collection switching |
 
-## MVP Path
+## Next Up
 
-The recommended implementation order for MVP:
-
-1. **001 - App Shell** (P1) - Get the basic app running with --uri connection
-2. **002 - Collection Browser** (P1) - Browse databases and collections
-3. **003 - Document List** (P1) - Display documents with smart columns
-4. **004 - Query Bar** (P1) - Simple key:value and BSON query modes
-5. **005 - Document Preview** (P2) - JSON tree view with drill-down
-6. **006 - Collection Tabs** (P2) - Open multiple collections in tabs
-7. **007 - Document Editing** (P2) - Edit documents inline or in $EDITOR
-8. **008 - Command Palette** (P1) - Ctrl+P for switching collections, databases, operations
+1. **004 - Query Bar** — `/` to open, simple `Key:Value` + BSON mode filtering
+2. **006 - Collection Tabs** — Tab bar UI, switching between open collections
+3. **Filter from value** — press `f` on a cell to filter by that field=value
+4. **More palette commands** — document operations, view operations

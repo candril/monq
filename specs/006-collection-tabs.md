@@ -1,78 +1,52 @@
 # Collection Tabs
 
-**Status**: Ready
+**Status**: In Progress
 
 ## Description
 
-Open multiple collections in tabs, similar to browser tabs or PResto's tab system. Each tab maintains its own query, scroll position, and selected document.
+Open multiple collections in tabs. Each tab maintains its own query, scroll position, and selected document. Tab state exists in the reducer but the tab bar UI is not yet built.
 
-## Out of Scope
+## What's Done
 
-- Cross-collection joins or comparisons
-- Tab persistence across sessions
-- Connection tabs (use separate instances)
+- Tab state in reducer: `Tab[]` with `id`, `collectionName`, `query`, `queryMode`, `selectedIndex`, `scrollOffset`
+- `OPEN_TAB` action: creates tab or switches to existing one
+- `CLOSE_TAB` action: removes tab, switches to adjacent
+- `SWITCH_TAB` action: saves current tab state, restores target tab state
+- Selecting a collection from the palette creates a tab and loads documents
+
+## What's Missing
+
+- **Tab bar UI** — visual bar showing open tabs with active indicator
+- **Tab switching keys** — `1-9` number keys, `[`/`]` for prev/next
+- **Close tab key** — `d` or `x` to close current tab
+- **Per-tab column state** — currently column customizations (display mode) reset on tab switch
 
 ## Capabilities
 
 ### P1 - Must Have
 
-- Open a collection in a new tab (Enter from collection browser)
-- Switch between tabs with `1-9` number keys or `gt`/`gT` (vim-style)
-- Close tab with `x` or `Ctrl+w`
 - Tab bar showing all open tabs with active indicator
-- Each tab maintains independent state:
-  - Query filter
-  - Selected document index
-  - Scroll position
-  - Preview panel state
+- Switch between tabs with `1-9` number keys or `[`/`]`
+- Close tab with `d`
+- Each tab maintains independent state
 
 ### P2 - Should Have
 
-- Duplicate current tab (same collection, same query)
-- Tab shows document count matching current query
-- Close other tabs (keep only active)
+- Tab shows collection name + document count
+- Close other tabs via command palette
 - Undo close tab (`u`)
 
-### P3 - Nice to Have
+## Key Files
 
-- Reorder tabs
-- Tab title shows collection name + active query summary
-- Notification dot when background tab data changes
+- `src/state.ts` — Tab actions: OPEN_TAB, CLOSE_TAB, SWITCH_TAB
+- `src/types.ts` — `Tab` interface
+- `src/components/TabBar.tsx` — Not yet created
 
-## Technical Notes
+## Keyboard (planned)
 
-### Tab State
-
-```typescript
-interface Tab {
-  id: string
-  collectionName: string
-  query: string
-  queryMode: "simple" | "bson"
-  selectedIndex: number
-  scrollOffset: number
-  previewPosition: "right" | "bottom" | null
-}
-```
-
-### Tab Bar Layout
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Mon-Q  mydb@localhost                         1,234 docs    │
-├─────────────────────────────────────────────────────────────┤
-│ [users (1,234)] [orders (45,678)] [products]                │  <- Tab bar
-├─────────────────────────────────────────────────────────────┤
-│   _id          name          email              age  active │
-│ ...                                                         │
-```
-
-## File Structure
-
-### Create
-- `src/components/TabBar.tsx` - Tab bar component
-
-### Modify
-- `src/App.tsx` - Add tab management
-- `src/state.ts` - Add tab state and actions
-- `src/types.ts` - Add Tab type
+| Key | Action |
+|-----|--------|
+| `1-9` | Switch to tab by number |
+| `[` | Previous tab |
+| `]` | Next tab |
+| `d` | Close current tab |

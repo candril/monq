@@ -1,71 +1,38 @@
 # Document Editing
 
-**Status**: Draft
+**Status**: Done
 
 ## Description
 
-Edit MongoDB documents inline or via `$EDITOR`. Supports updating individual fields or the full document. All mutations require confirmation.
+Edit MongoDB documents by opening them in `$EDITOR`. Uses renderer suspend/resume to hand off the terminal. Changes are saved back to the database via `replaceOne`.
 
-## Out of Scope
+## Implementation Notes
 
-- Bulk updates
-- Insert new documents (future spec)
-- Delete documents (future spec)
-- Schema validation
+- Press `e` on selected document to edit
+- Document serialized as EJSON to temp file: `/tmp/monq-{collection}-{_id}.json`
+- Original `_id` used in filename to find the document for update (allows changing _id in the doc)
+- `renderer.suspend()` exits alternate screen, spawns `$EDITOR` with `stdin/stdout/stderr: "inherit"`
+- On editor close, `renderer.resume()` restores the TUI
+- Edited EJSON parsed and compared to original — only updates if changed
+- `replaceOne` with original `_id` to save changes
+- Always reloads documents after returning from editor (via `RELOAD_DOCUMENTS`)
+- Error messages shown via `SHOW_MESSAGE` dispatch
+- Falls back to `vi` if `$EDITOR` and `$VISUAL` are unset
 
-## Capabilities
+## Key Files
 
-### P1 - Must Have
+- `src/actions/edit.ts` — `editDocument()`: write temp file, spawn editor, parse result, update DB
+- `src/hooks/useKeyboardNav.ts` — `e` key handler with suspend/resume
+- `src/providers/mongodb.ts` — `replaceDocument()`, `serializeDocument()`, `deserializeDocument()`
 
-- Open selected document in `$EDITOR` as JSON
-- Parse edited JSON and apply update
-- Confirmation prompt before applying changes
-- Show diff of changes before confirming
+## Keyboard
 
-### P2 - Should Have
+| Key | Action |
+|-----|--------|
+| `e` | Open selected document in $EDITOR |
 
-- Inline field editing (press `e` on a field in preview to edit value)
-- Undo last edit (revert to previous document state)
+## Future (P2)
 
-### P3 - Nice to Have
-
-- Edit history per document
-- Dry-run mode (show what would change without applying)
-
-## Technical Notes
-
-### Edit Flow
-
-1. User presses `e` on selected document
-2. Document exported as formatted JSON to temp file
-3. `$EDITOR` opens the temp file
-4. On save+close, parse the edited JSON
-5. Compute diff between original and edited
-6. Show diff and ask for confirmation
-7. Apply `replaceOne` with the updated document
-
-```typescript
-import { $ } from "bun"
-
-async function editDocument(doc: Document): Promise<Document | null> {
-  const tmpFile = `/tmp/monq-${doc._id}.json`
-  await Bun.write(tmpFile, JSON.stringify(doc, null, 2))
-  
-  const editor = process.env.EDITOR || "vim"
-  await $`${editor} ${tmpFile}`
-  
-  const edited = JSON.parse(await Bun.file(tmpFile).text())
-  await unlink(tmpFile)
-  
-  return edited
-}
-```
-
-## File Structure
-
-### Create
-- `src/components/EditConfirmation.tsx` - Diff and confirmation dialog
-
-### Modify
-- `src/providers/mongodb.ts` - Add update operations
-- `src/state.ts` - Add edit state
+- Inline field editing in preview panel
+- Confirmation prompt with diff before saving
+- Undo last edit

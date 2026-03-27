@@ -1,102 +1,40 @@
 # Document Preview
 
-**Status**: Ready
+**Status**: Done
 
 ## Description
 
-A JSON tree view panel for the selected document, similar to PResto's preview panel. Shows the full document with collapsible nested objects and arrays. Supports drilling into subdocuments.
+A syntax-highlighted JSON preview panel for the selected document, using OpenTUI's `<code>` component with tree-sitter JSON highlighting. Shown as a right or bottom split.
 
-## Out of Scope
+## Implementation Notes
 
-- Document editing (spec 007)
-- Diff between documents
+- Uses OpenTUI `<code>` component with `filetype="json"` and custom `SyntaxStyle`
+- JSON serialized via EJSON (preserves BSON types like ObjectId, Date)
+- Tree-sitter JSON parser registered at startup via `addDefaultParsers()`
+- `drawUnstyledText: false` and `conceal: false` to prevent flicker on document change
+- Right position: 50% width, left border
+- Bottom position: 50% height, top border
+- Scrollbox with externally-controlled scroll offset
+- Preview updates reactively as j/k moves through documents
+- Tokyo Night themed syntax style for JSON tokens
 
-## Capabilities
+## Key Files
 
-### P1 - Must Have
+- `src/components/DocumentPreview.tsx` — Preview panel with `<code>` rendering
+- `src/syntax-parsers.ts` — JSON tree-sitter parser registration
+- `src/providers/mongodb.ts` — `serializeDocument()` (EJSON)
 
-- Toggle preview panel with `p` key
-- Show full JSON of selected document
-- Syntax highlighting for JSON (keys, strings, numbers, booleans, null)
-- Preview position: right side or bottom (cycle with `P`)
-- Scroll preview with `Ctrl+j` / `Ctrl+k`
+## Keyboard
 
-### P2 - Should Have
+| Key | Action |
+|-----|--------|
+| `p` | Toggle preview panel on/off |
+| `P` | Cycle position: right ↔ bottom |
+| `Ctrl+D` | Scroll preview down 10 lines |
+| `Ctrl+U` | Scroll preview up 10 lines |
 
-- **Drill into subdocuments**: Press `Enter` on a nested object/array to "zoom in"
-  - Breadcrumb shows path: `doc > address > coordinates`
-  - Press `Backspace` to go back up
-- Collapsible sections for nested objects/arrays
-- Copy field value to clipboard (press `y` on a field)
-- **Filter from value**: Press `f` on any field to add `field:value` to query bar
+## Future (P2)
 
-### P3 - Nice to Have
-
-- Follow ObjectId references (detect ObjectId values, press `Enter` to look up)
-- Show field types inline
-- Pretty-print dates
-- Show byte size of document
-
-## Technical Notes
-
-### JSON Tree Rendering
-
-```typescript
-interface TreeNode {
-  key: string
-  value: unknown
-  type: "string" | "number" | "boolean" | "null" | "object" | "array" | "objectid" | "date"
-  depth: number
-  expanded: boolean
-  path: string[] // Full path for drill-down and filter-from-value
-}
-
-// Flatten document into tree nodes for rendering
-function flattenDocument(doc: Record<string, unknown>, maxDepth = 3): TreeNode[] {
-  const nodes: TreeNode[] = []
-  
-  function walk(obj: Record<string, unknown>, depth: number, path: string[]) {
-    for (const [key, value] of Object.entries(obj)) {
-      const currentPath = [...path, key]
-      const type = detectType(value)
-      nodes.push({ key, value, type, depth, expanded: depth < 2, path: currentPath })
-      
-      if (type === "object" && depth < maxDepth) {
-        walk(value as Record<string, unknown>, depth + 1, currentPath)
-      }
-    }
-  }
-  
-  walk(doc, 0, [])
-  return nodes
-}
-```
-
-### Layout (right position)
-
-```
-┌──────────────────────────────┬──────────────────────────────┐
-│ Document List                │ Document Preview             │
-│                              │                              │
-│   _id        name      age   │ {                            │
-│ > 507f1f77   John      32    │   "_id": "507f1f77...",      │
-│   507f1f78   Jane      28    │   "name": "John Doe",       │
-│   507f1f79   Bob       45    │   "email": "john@ex.com",   │
-│                              │   "age": 32,                │
-│                              │   "address": {              │
-│                              │     "street": "123 Main",   │
-│                              │     "city": "London",       │
-│                              │   },                        │
-│                              │   "tags": ["admin", "user"] │
-│                              │ }                           │
-└──────────────────────────────┴──────────────────────────────┘
-```
-
-## File Structure
-
-### Create
-- `src/components/DocumentPreview.tsx` - JSON tree view component
-
-### Modify
-- `src/App.tsx` - Integrate preview panel
-- `src/state.ts` - Add preview state (position, scroll, drill path)
+- Drill into subdocuments (Enter on nested object, Backspace to go back)
+- Copy field value to clipboard (`y`)
+- Filter from value (`f` on a field → add to query bar)
