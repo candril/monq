@@ -1,7 +1,7 @@
 /**
  * Document list — tabular display with auto-detected columns.
- * Presto-style: scrollbox, header row, subtle row highlight.
- * h/l moves column selection, j/k moves row selection.
+ * Supports horizontal scrolling when columns exceed terminal width.
+ * h/l moves column cursor, j/k moves row cursor, w cycles column width mode.
  */
 
 import { useRef, useEffect, useMemo } from "react"
@@ -16,6 +16,7 @@ const SCROLL_MARGIN = 3
 const MIN_COL_WIDTH = 6
 const MAX_COL_WIDTH = 40
 const MINIMIZED_COL_WIDTH = 3
+const COL_GAP = 1 // space between columns
 
 interface DocumentListProps {
   documents: Document[]
@@ -24,11 +25,10 @@ interface DocumentListProps {
   selectedColumnIndex: number
 }
 
-/** Calculate column widths based on content and display mode */
+/** Compute natural column widths (no shrinking to fit terminal) */
 function computeColumnWidths(
   documents: Document[],
   columns: DetectedColumn[],
-  totalWidth: number,
 ): Map<string, number> {
   const visible = columns.filter((c) => c.visible)
   if (visible.length === 0) return new Map()
@@ -36,18 +36,15 @@ function computeColumnWidths(
   const widths = new Map<string, number>()
   const sample = documents.slice(0, 50)
 
-  // First pass: compute natural width per column
   for (const col of visible) {
     if (col.displayMode === "minimized") {
       widths.set(col.field, MINIMIZED_COL_WIDTH)
       continue
     }
 
-    // Measure content width
     let maxW = col.field.length
     for (const doc of sample) {
       const val = getNestedValue(doc, col.field)
-      // Full mode: no max cap; normal mode: cap at MAX_COL_WIDTH
       const cap = col.displayMode === "full" ? 200 : MAX_COL_WIDTH
       const formatted = formatValue(val, cap)
       maxW = Math.max(maxW, formatted.length)
@@ -60,45 +57,100 @@ function computeColumnWidths(
     }
   }
 
-  // Second pass: distribute remaining space among "normal" columns
-  const padding = 2
-  const gaps = visible.length - 1
-  const totalColWidth = [...widths.values()].reduce((a, b) => a + b, 0)
-  const available = totalWidth - padding - gaps
+  return widths
+}
 
-  // Only resize "normal" columns — full and minimized keep their width
-  const normalCols = visible.filter((c) => c.displayMode === "normal")
-  const fixedWidth = visible
-    .filter((c) => c.displayMode !== "normal")
-    .reduce((sum, c) => sum + (widths.get(c.field) ?? 0), 0)
-  const normalTotal = normalCols.reduce((sum, c) => sum + (widths.get(c.field) ?? 0), 0)
-  const availableForNormal = available - fixedWidth
+/** Compute horizontal scroll offset to keep selected column visible */
+function computeScrollLeft(
+  columns: DetectedColumn[],
+  colWidths: Map<string, number>,
+  selectedColumnIndex: number,
+  viewportWidth: number,
+): number {
+  const visible = columns.filter((c) => c.visible)
+  if (visible.length === 0) return 0
 
-  if (normalCols.length > 0 && normalTotal > 0) {
-    if (normalTotal > availableForNormal) {
-      // Shrink normal columns proportionally
-      const ratio = availableForNormal / normalTotal
-      for (const col of normalCols) {
-        const w = widths.get(col.field) ?? MIN_COL_WIDTH
-        widths.set(col.field, Math.max(MIN_COL_WIDTH, Math.floor(w * ratio)))
-      }
-    } else if (normalTotal < availableForNormal) {
-      // Distribute extra space among normal columns
-      const extra = availableForNormal - normalTotal
-      let distributed = 0
-      for (let i = 0; i < normalCols.length; i++) {
-        const col = normalCols[i]
-        const w = widths.get(col.field) ?? MIN_COL_WIDTH
-        const share = i === normalCols.length - 1
-          ? extra - distributed
-          : Math.floor(extra * (w / normalTotal))
-        widths.set(col.field, w + share)
-        distributed += share
-      }
-    }
+  // Calculate total width
+  let totalWidth = 0
+  const colPositions: { left: number; right: number }[] = []
+  for (const col of visible) {
+    const w = colWidths.get(col.field) ?? MIN_COL_WIDTH
+    colPositions.push({ left: totalWidth, right: totalWidth + w })
+    totalWidth += w + COL_GAP
+  }
+  totalWidth -= COL_GAP // no gap after last
+
+  // No scrolling needed if everything fits
+  const available = viewportWidth - 2 // padding
+  if (totalWidth <= available) return 0
+
+  // Ensure selected column is visible
+  const sel = colPositions[selectedColumnIndex]
+  if (!sel) return 0
+
+  // If selected is to the right of the viewport, scroll right
+  // If selected is to the left, scroll left
+  // Keep some context around the selected column
+  let scrollLeft = 0
+  if (sel.right > available) {
+    scrollLeft = sel.left - 2 // small margin on left
+  }
+  if (sel.left < scrollLeft) {
+    scrollLeft = sel.left - 2
   }
 
-  return widths
+  return Math.max(0, scrollLeft)
+}
+
+/** Build segments for a row: each column padded to width, separated by gaps */
+function buildRowSegments(
+  values: { text: string; color: string }[],
+  colWidths: number[],
+): { text: string; color: string }[] {
+  const segments: { text: string; color: string }[] = []
+  for (let i = 0; i < values.length; i++) {
+    const w = colWidths[i]
+    segments.push({ text: padRight(values[i].text, w), color: values[i].color })
+    if (i < values.length - 1) {
+      segments.push({ text: " ", color: theme.bg })
+    }
+  }
+  return segments
+}
+
+/** Slice segments to fit in a horizontal viewport */
+function sliceSegments(
+  segments: { text: string; color: string }[],
+  scrollLeft: number,
+  viewportWidth: number,
+): { text: string; color: string }[] {
+  const result: { text: string; color: string }[] = []
+  let pos = 0
+
+  for (const seg of segments) {
+    const segEnd = pos + seg.text.length
+
+    if (segEnd <= scrollLeft) {
+      // Entirely before viewport
+      pos = segEnd
+      continue
+    }
+    if (pos >= scrollLeft + viewportWidth) {
+      // Entirely after viewport
+      break
+    }
+
+    // Partially or fully visible
+    const start = Math.max(0, scrollLeft - pos)
+    const end = Math.min(seg.text.length, scrollLeft + viewportWidth - pos)
+    const sliced = seg.text.slice(start, end)
+    if (sliced.length > 0) {
+      result.push({ text: sliced, color: seg.color })
+    }
+    pos = segEnd
+  }
+
+  return result
 }
 
 /** Get a possibly nested value from a document */
@@ -132,8 +184,19 @@ export function DocumentList({ documents, columns, selectedIndex, selectedColumn
 
   const visibleColumns = columns.filter((c) => c.visible)
   const colWidths = useMemo(
-    () => computeColumnWidths(documents, columns, terminalWidth),
-    [documents, columns, terminalWidth],
+    () => computeColumnWidths(documents, columns),
+    [documents, columns],
+  )
+
+  const viewportWidth = terminalWidth - 2 // padding
+  const scrollLeft = useMemo(
+    () => computeScrollLeft(visibleColumns, colWidths, selectedColumnIndex, terminalWidth),
+    [visibleColumns, colWidths, selectedColumnIndex, terminalWidth],
+  )
+
+  const colWidthArray = useMemo(
+    () => visibleColumns.map((c) => colWidths.get(c.field) ?? MIN_COL_WIDTH),
+    [visibleColumns, colWidths],
   )
 
   if (documents.length === 0) {
@@ -148,16 +211,24 @@ export function DocumentList({ documents, columns, selectedIndex, selectedColumn
 
   return (
     <box flexGrow={1} flexDirection="column" overflow="hidden">
-      <HeaderRow columns={visibleColumns} colWidths={colWidths} selectedColumnIndex={selectedColumnIndex} />
+      <HeaderRow
+        columns={visibleColumns}
+        colWidthArray={colWidthArray}
+        selectedColumnIndex={selectedColumnIndex}
+        scrollLeft={scrollLeft}
+        viewportWidth={viewportWidth}
+      />
       <scrollbox ref={scrollRef} flexGrow={1}>
         {documents.map((doc, i) => (
           <DocumentRow
             key={String(doc._id ?? i)}
             doc={doc}
             columns={visibleColumns}
-            colWidths={colWidths}
+            colWidthArray={colWidthArray}
             selected={i === selectedIndex}
             selectedColumnIndex={selectedColumnIndex}
+            scrollLeft={scrollLeft}
+            viewportWidth={viewportWidth}
           />
         ))}
       </scrollbox>
@@ -167,28 +238,37 @@ export function DocumentList({ documents, columns, selectedIndex, selectedColumn
 
 function HeaderRow({
   columns,
-  colWidths,
+  colWidthArray,
   selectedColumnIndex,
+  scrollLeft,
+  viewportWidth,
 }: {
   columns: DetectedColumn[]
-  colWidths: Map<string, number>
+  colWidthArray: number[]
   selectedColumnIndex: number
+  scrollLeft: number
+  viewportWidth: number
 }) {
+  const values = columns.map((col, i) => {
+    const isSelectedCol = i === selectedColumnIndex
+    const label = col.displayMode === "minimized"
+      ? truncate(col.field, MINIMIZED_COL_WIDTH)
+      : col.field
+    const color = isSelectedCol
+      ? theme.primary
+      : col.displayMode === "minimized" ? theme.textMuted : theme.textDim
+    return { text: label, color }
+  })
+
+  const segments = buildRowSegments(values, colWidthArray)
+  const visible = sliceSegments(segments, scrollLeft, viewportWidth)
+
   return (
     <box height={1} width="100%" paddingLeft={1} paddingRight={1}>
       <text>
-        {columns.map((col, i) => {
-          const w = colWidths.get(col.field) ?? MIN_COL_WIDTH
-          const isSelectedCol = i === selectedColumnIndex
-          const label = col.displayMode === "minimized"
-            ? truncate(col.field, MINIMIZED_COL_WIDTH)
-            : col.field
-          const color = isSelectedCol
-            ? theme.primary
-            : col.displayMode === "minimized" ? theme.textMuted : theme.textDim
-          const sep = i < columns.length - 1 ? " " : ""
-          return <><span fg={color}>{padRight(label, w)}</span>{sep ? <span>{sep}</span> : null}</>
-        })}
+        {visible.map((seg, i) => (
+          <span key={i} fg={seg.color}>{seg.text}</span>
+        ))}
       </text>
     </box>
   )
@@ -197,16 +277,33 @@ function HeaderRow({
 function DocumentRow({
   doc,
   columns,
-  colWidths,
+  colWidthArray,
   selected,
   selectedColumnIndex,
+  scrollLeft,
+  viewportWidth,
 }: {
   doc: Document
   columns: DetectedColumn[]
-  colWidths: Map<string, number>
+  colWidthArray: number[]
   selected: boolean
   selectedColumnIndex: number
+  scrollLeft: number
+  viewportWidth: number
 }) {
+  const values = columns.map((col, i) => {
+    const w = colWidthArray[i]
+    const val = getNestedValue(doc, col.field)
+    const text = formatValue(val, w)
+    const type = detectValueType(val)
+    const isActiveCell = selected && i === selectedColumnIndex
+    const color = isActiveCell ? theme.primary : selected ? theme.text : valueColor(type)
+    return { text, color }
+  })
+
+  const segments = buildRowSegments(values, colWidthArray)
+  const visible = sliceSegments(segments, scrollLeft, viewportWidth)
+
   return (
     <box
       height={1}
@@ -216,16 +313,9 @@ function DocumentRow({
       paddingRight={1}
     >
       <text>
-        {columns.map((col, i) => {
-          const w = colWidths.get(col.field) ?? MIN_COL_WIDTH
-          const val = getNestedValue(doc, col.field)
-          const formatted = padRight(formatValue(val, w), w)
-          const type = detectValueType(val)
-          const isActiveCell = selected && i === selectedColumnIndex
-          const color = isActiveCell ? theme.primary : selected ? theme.text : valueColor(type)
-          const sep = i < columns.length - 1 ? " " : ""
-          return <><span fg={color}>{formatted}</span>{sep ? <span>{sep}</span> : null}</>
-        })}
+        {visible.map((seg, i) => (
+          <span key={i} fg={seg.color}>{seg.text}</span>
+        ))}
       </text>
     </box>
   )
