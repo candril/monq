@@ -89,6 +89,8 @@ export function App({ uri }: AppProps) {
               columns={state.columns}
               selectedIndex={state.selectedIndex}
               selectedColumnIndex={state.selectedColumnIndex}
+              sortField={state.sortField}
+              sortDirection={state.sortDirection}
             />
           </box>
         ) : null}

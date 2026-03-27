@@ -105,6 +105,9 @@ export interface AppState {
   columns: DetectedColumn[]
   /** Schema map for dot-notation suggestions and smart query generation */
   schemaMap: SchemaMap
+  /** Current sort: field name and direction, or null for default (_id desc) */
+  sortField: string | null
+  sortDirection: 1 | -1
 
   // Query
   queryVisible: boolean

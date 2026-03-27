@@ -43,6 +43,7 @@ export type AppAction =
   | { type: "MOVE_COLUMN"; delta: number }
   | { type: "CYCLE_COLUMN_MODE" }
   | { type: "SET_SCHEMA"; schemaMap: import("./query/schema").SchemaMap }
+  | { type: "CYCLE_SORT"; field: string }
   // Query
   | { type: "OPEN_QUERY" }
   | { type: "CLOSE_QUERY" }
@@ -85,6 +86,8 @@ export function createInitialState(): AppState {
     selectedColumnIndex: 0,
     columns: [],
     schemaMap: new Map(),
+    sortField: null,
+    sortDirection: -1,
     queryVisible: false,
     queryMode: "simple",
     queryInput: "",
@@ -286,6 +289,32 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "SET_SCHEMA":
       return { ...state, schemaMap: action.schemaMap }
+
+    case "CYCLE_SORT": {
+      let sortField: string | null
+      let sortDirection: 1 | -1
+      if (state.sortField !== action.field) {
+        // New field: start ascending
+        sortField = action.field
+        sortDirection = 1
+      } else if (state.sortDirection === 1) {
+        // Was asc: switch to desc
+        sortField = action.field
+        sortDirection = -1
+      } else {
+        // Was desc: clear sort
+        sortField = null
+        sortDirection = -1
+      }
+      return {
+        ...state,
+        sortField,
+        sortDirection,
+        documentsLoading: true,
+        reloadCounter: state.reloadCounter + 1,
+        selectedIndex: 0,
+      }
+    }
 
     case "MOVE_COLUMN": {
       const visibleCols = state.columns.filter((c) => c.visible)

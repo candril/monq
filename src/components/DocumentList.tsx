@@ -23,6 +23,8 @@ interface DocumentListProps {
   columns: DetectedColumn[]
   selectedIndex: number
   selectedColumnIndex: number
+  sortField: string | null
+  sortDirection: 1 | -1
 }
 
 /** Compute natural column widths (no shrinking to fit terminal) */
@@ -164,7 +166,7 @@ function getNestedValue(doc: Document, field: string): unknown {
   return current
 }
 
-export function DocumentList({ documents, columns, selectedIndex, selectedColumnIndex }: DocumentListProps) {
+export function DocumentList({ documents, columns, selectedIndex, selectedColumnIndex, sortField, sortDirection }: DocumentListProps) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const { width: terminalWidth } = useTerminalDimensions()
 
@@ -217,6 +219,8 @@ export function DocumentList({ documents, columns, selectedIndex, selectedColumn
         selectedColumnIndex={selectedColumnIndex}
         scrollLeft={scrollLeft}
         viewportWidth={viewportWidth}
+        sortField={sortField}
+        sortDirection={sortDirection}
       />
       <scrollbox ref={scrollRef} flexGrow={1}>
         {documents.map((doc, i) => (
@@ -242,21 +246,29 @@ function HeaderRow({
   selectedColumnIndex,
   scrollLeft,
   viewportWidth,
+  sortField,
+  sortDirection,
 }: {
   columns: DetectedColumn[]
   colWidthArray: number[]
   selectedColumnIndex: number
   scrollLeft: number
   viewportWidth: number
+  sortField: string | null
+  sortDirection: 1 | -1
 }) {
   const values = columns.map((col, i) => {
     const isSelectedCol = i === selectedColumnIndex
+    const isSorted = sortField === col.field
+    const sortIndicator = isSorted ? (sortDirection === 1 ? " ▲" : " ▼") : ""
     const label = col.displayMode === "minimized"
       ? truncate(col.field, MINIMIZED_COL_WIDTH)
-      : col.field
+      : col.field + sortIndicator
     const color = isSelectedCol
       ? theme.primary
-      : col.displayMode === "minimized" ? theme.textMuted : theme.textDim
+      : isSorted
+        ? theme.warning
+        : col.displayMode === "minimized" ? theme.textMuted : theme.textDim
     return { text: label, color }
   })
 

@@ -39,7 +39,11 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
 
     const existingColumns = state.columns
 
-    fetchDocuments(activeTab.collectionName, filter)
+    const sort = state.sortField
+      ? { [state.sortField]: state.sortDirection as 1 | -1 }
+      : undefined
+
+    fetchDocuments(activeTab.collectionName, filter, { sort })
       .then(({ documents, count, totalCount }) => {
         if (cancelled) return
         const detectedFields = detectColumns(documents)

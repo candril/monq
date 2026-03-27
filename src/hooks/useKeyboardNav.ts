@@ -84,6 +84,14 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         case "w":
           dispatch({ type: "CYCLE_COLUMN_MODE" })
           break
+        case "s": {
+          const visCols = state.columns.filter((c) => c.visible)
+          const sortCol = visCols[state.selectedColumnIndex]
+          if (sortCol) {
+            dispatch({ type: "CYCLE_SORT", field: sortCol.field })
+          }
+          break
+        }
         case "r":
           dispatch({ type: "RELOAD_DOCUMENTS" })
           break
