@@ -29,7 +29,7 @@ export function ConfirmDialog({ title, lines, options, focusedIndex }: ConfirmDi
   return (
     <box position="absolute" top={0} left={0} width="100%" height="100%" zIndex={200} justifyContent="center" alignItems="center">
       <box position="absolute" top={0} left={0} width="100%" height="100%" backgroundColor={theme.overlayBg} />
-      <box width={72} flexDirection="column" backgroundColor={theme.modalBg}>
+      <box minWidth={72} maxWidth="90%" flexDirection="column" backgroundColor={theme.modalBg}>
         <box paddingX={2} paddingY={1} backgroundColor={theme.headerBg}>
           <text><span fg={theme.warning}>{title}</span></text>
         </box>
@@ -41,7 +41,7 @@ export function ConfirmDialog({ title, lines, options, focusedIndex }: ConfirmDi
           ))}
         </box>
         <box paddingX={2} paddingTop={1} paddingBottom={1} backgroundColor={theme.headerBg} flexDirection="column" gap={1}>
-          <box flexDirection="row" gap={4}>
+          <box flexDirection="row" gap={4} flexWrap="wrap">
             {options.map((opt, i) => {
               const selected = i === focusedIndex
               const bg = selected ? (opt.color ?? theme.primary) : undefined
