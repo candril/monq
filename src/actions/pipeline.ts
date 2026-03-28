@@ -14,7 +14,7 @@ import type { Document } from "mongodb"
 import JSON5 from "json5"
 import { EJSON } from "bson"
 import type { SchemaMap } from "../query/schema"
-import { parseSimpleQuery, splitProjection, parseProjection } from "../query/parser"
+import { parseSimpleQueryFull } from "../query/parser"
 
 // Stages that can be expressed as find(filter, { sort, projection })
 const FIND_COMPATIBLE_STAGES = new Set(["$match", "$sort", "$project"])
@@ -69,12 +69,14 @@ function buildTemplate(
     return JSON.stringify(doc, null, 2) + "\n"
   }
 
-  // Build $match from simple query if present (strip pipe projection first)
-  const { filter: filterStr, projection: projStr } = splitProjection(simpleQuery)
+  // Parse filter + projection from simple query string
   let matchObj: Record<string, unknown> = {}
-  if (filterStr.trim()) {
+  let projObj: Record<string, 0 | 1> | undefined
+  if (simpleQuery.trim()) {
     try {
-      matchObj = parseSimpleQuery(filterStr, schemaMap) as Record<string, unknown>
+      const parsed = parseSimpleQueryFull(simpleQuery, schemaMap)
+      matchObj = parsed.filter as Record<string, unknown>
+      projObj = parsed.projection
     } catch {
       matchObj = {}
     }
@@ -84,9 +86,6 @@ function buildTemplate(
   const sortObj = sortField
     ? { [sortField]: sortDirection }
     : { _id: -1 }
-
-  // Build $project from pipe projection if present
-  const projObj = parseProjection(projStr)
 
   // Compose pipeline stages
   const pipelineStages: Document[] = [

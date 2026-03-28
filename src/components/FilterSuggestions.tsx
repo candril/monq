@@ -1,7 +1,12 @@
 /**
  * Filter suggestions popup — shows above the filter bar.
  * Suggests field names from columns and subfields from schema map.
- * Handles dot-notation: typing "Members." suggests Members' subfields.
+ *
+ * Token modes (detected from the last token being typed):
+ *   +field   → projection include suggestion (field names, no colon suffix)
+ *   -field   → projection exclude suggestion (field names, no colon suffix)
+ *              BUT only bare -field (no operator chars) — -field:value is a filter
+ *   field    → regular filter suggestion (append ":" for leaf, "." for nested)
  */
 
 import { useState, useMemo, useEffect } from "react"
@@ -10,14 +15,12 @@ import type { DetectedColumn } from "../types"
 import type { SchemaMap } from "../query/schema"
 import { getSubfieldSuggestions } from "../query/schema"
 import { theme } from "../theme"
-import { getLastToken, isInProjection, getLastProjectionToken, splitProjection } from "../query/parser"
+import { getLastToken } from "../query/parser"
 import { fuzzyFilter } from "../utils/fuzzy"
 
 interface Suggestion {
   label: string
-  /** Full query string after accepting this suggestion */
   value: string
-  /** Type hint to show (e.g. "array", "object") */
   hint?: string
 }
 
@@ -30,85 +33,14 @@ interface FilterSuggestionsProps {
   onChange: (query: string) => void
 }
 
-function buildBsonSuggestions(
-  columns: DetectedColumn[],
-  schemaMap: SchemaMap,
-): Suggestion[] {
+function buildBsonSuggestions(columns: DetectedColumn[], schemaMap: SchemaMap): Suggestion[] {
   const fields = new Set(columns.map((c) => c.field))
   for (const [path, info] of schemaMap) {
     if (!path.includes(".") && info.children.length > 0) fields.add(path)
   }
   return [...fields].map((field) => {
     const info = schemaMap.get(field)
-    return {
-      label: field,
-      value: field,
-      hint: info?.type,
-    }
-  })
-}
-
-function buildProjectionSuggestions(
-  query: string,
-  columns: DetectedColumn[],
-  schemaMap: SchemaMap,
-): Suggestion[] {
-  const tok = getLastProjectionToken(query)
-  if (!tok) return []
-  const { projPrefix, lastToken } = tok
-
-  // Strip negation for search, preserve for output
-  const negated = lastToken.startsWith("-")
-  const search = negated ? lastToken.slice(1) : lastToken
-  const negPrefix = negated ? "-" : ""
-
-  // Dot-notation drill-down on projection side
-  const dotIndex = search.lastIndexOf(".")
-  if (dotIndex >= 0) {
-    const parentPath = search.slice(0, dotIndex)
-    const subSearch = search.slice(dotIndex + 1)
-    const subfields = getSubfieldSuggestions(schemaMap, parentPath)
-    if (subfields.length === 0) return []
-    const filtered = subSearch
-      ? fuzzyFilter(subSearch, subfields, (f) => [f])
-      : subfields
-    return filtered.map((sub) => {
-      const fullPath = `${parentPath}.${sub}`
-      const info = schemaMap.get(fullPath)
-      const hasChildren = info && info.children.length > 0
-      return {
-        label: negPrefix + fullPath,
-        value: projPrefix + negPrefix + fullPath + (hasChildren ? "." : " "),
-        hint: info?.type,
-      }
-    })
-  }
-
-  // Top-level field suggestions (include schema paths with children for drill-down)
-  const allFields = new Set(columns.map((c) => c.field))
-  for (const [path, info] of schemaMap) {
-    if (!path.includes(".") && info.children.length > 0) allFields.add(path)
-  }
-
-  // Skip fields already present in the projection clause
-  const { projection: projStr } = splitProjection(query)
-  const alreadyUsed = new Set(
-    projStr.trim().split(/\s+/).map((t) => t.replace(/^-/, "")).filter(Boolean)
-  )
-
-  const candidates = [...allFields].filter((f) => !alreadyUsed.has(f))
-  const filtered = search
-    ? fuzzyFilter(search, candidates, (f) => [f])
-    : candidates
-
-  return filtered.map((field) => {
-    const info = schemaMap.get(field)
-    const hasChildren = info && info.children.length > 0
-    return {
-      label: negPrefix + field,
-      value: projPrefix + negPrefix + field + (hasChildren ? "." : " "),
-      hint: info?.type,
-    }
+    return { label: field, value: field, hint: info?.type }
   })
 }
 
@@ -117,74 +49,58 @@ function buildSuggestions(
   columns: DetectedColumn[],
   schemaMap: SchemaMap,
 ): Suggestion[] {
-  // If cursor is in projection part, delegate
-  if (isInProjection(query)) {
-    return buildProjectionSuggestions(query, columns, schemaMap)
-  }
-
   const { prefix, lastToken } = getLastToken(query)
 
-  // If last token contains ":" we're typing a value — no field suggestions
-  if (lastToken.includes(":")) return []
+  // Determine token mode
+  const isProjectionInclude = lastToken.startsWith("+")
+  const isProjectionExclude = lastToken.startsWith("-") && !/[><!:]/.test(lastToken.slice(1))
+  const isProjection = isProjectionInclude || isProjectionExclude
 
-  // Strip negation prefix for matching, preserve it in output
-  const negated = lastToken.startsWith("-")
-  const search = negated ? lastToken.slice(1) : lastToken
-  const negPrefix = negated ? "-" : ""
+  // If it's a filter value token (has colon/operator) — no field suggestions
+  if (!isProjection && lastToken.includes(":")) return []
 
-  // Check if we're in dot-notation: "Members." or "Members.Na"
+  // Strip prefix for search
+  const projPrefix = isProjectionInclude ? "+" : isProjectionExclude ? "-" : ""
+  const search = lastToken.slice(projPrefix.length)
+
+  // Dot-notation drill-down
   const dotIndex = search.lastIndexOf(".")
   if (dotIndex >= 0) {
     const parentPath = search.slice(0, dotIndex)
     const subSearch = search.slice(dotIndex + 1)
     const subfields = getSubfieldSuggestions(schemaMap, parentPath)
-
     if (subfields.length === 0) return []
-
-    const filtered = subSearch
-      ? fuzzyFilter(subSearch, subfields, (f) => [f])
-      : subfields
-
+    const filtered = subSearch ? fuzzyFilter(subSearch, subfields, (f) => [f]) : subfields
     return filtered.map((sub) => {
       const fullPath = `${parentPath}.${sub}`
       const info = schemaMap.get(fullPath)
       const hasChildren = info && info.children.length > 0
-
+      // Projection tokens never get ":" suffix — just field name (or "." for drill-down)
+      const suffix = hasChildren ? "." : (isProjection ? " " : ":")
       return {
-        label: negPrefix + fullPath,
-        // If the subfield has children, append "." so user can drill deeper
-        // Otherwise append ":" to start typing a value
-        value: prefix + negPrefix + fullPath + (hasChildren ? "." : ":"),
+        label: projPrefix + fullPath,
+        value: prefix + projPrefix + fullPath + suffix,
         hint: info?.type,
       }
     })
   }
 
   // Top-level field suggestions
-  const fieldNames = columns.map((c) => c.field)
-
-  // Also include schema paths that have children (for drill-down)
-  const allFields = new Set(fieldNames)
+  const allFields = new Set(columns.map((c) => c.field))
   for (const [path, info] of schemaMap) {
-    if (!path.includes(".") && info.children.length > 0) {
-      allFields.add(path)
-    }
+    if (!path.includes(".") && info.children.length > 0) allFields.add(path)
   }
 
   const candidates = [...allFields]
-  const filtered = search
-    ? fuzzyFilter(search, candidates, (f) => [f])
-    : candidates
+  const filtered = search ? fuzzyFilter(search, candidates, (f) => [f]) : candidates
 
   return filtered.map((field) => {
     const info = schemaMap.get(field)
     const hasChildren = info && info.children.length > 0
-
+    const suffix = hasChildren ? "." : (isProjection ? " " : ":")
     return {
-      label: negPrefix + field,
-      // Fields with children: append "." for drill-down
-      // Leaf fields: append ":" for value
-      value: prefix + negPrefix + field + (hasChildren ? "." : ":"),
+      label: projPrefix + field,
+      value: prefix + projPrefix + field + suffix,
       hint: info?.type,
     }
   })
@@ -209,21 +125,16 @@ export function FilterSuggestions({
     [query, queryMode, columns, schemaMap],
   )
 
-  useEffect(() => {
-    setSelectedIndex(0)
-  }, [suggestions.length])
+  useEffect(() => { setSelectedIndex(0) }, [suggestions.length])
 
   useKeyboard((key) => {
     if (!visible || suggestions.length === 0) return
-
     if (key.name === "up" || (key.ctrl && key.name === "p")) {
       setSelectedIndex((i) => Math.max(0, i - 1))
     } else if (key.name === "down" || (key.ctrl && key.name === "n")) {
       setSelectedIndex((i) => Math.min(suggestions.length - 1, i + 1))
     } else if (key.ctrl && key.name === "y") {
-      if (suggestions[selectedIndex]) {
-        onChange(suggestions[selectedIndex].value)
-      }
+      if (suggestions[selectedIndex]) onChange(suggestions[selectedIndex].value)
     }
   })
 
@@ -232,19 +143,8 @@ export function FilterSuggestions({
   const visibleSuggestions = suggestions.slice(0, MAX_VISIBLE)
 
   return (
-    <box
-      position="absolute"
-      bottom={1}
-      left={0}
-      width="100%"
-      flexDirection="column"
-    >
-      <box
-        backgroundColor={theme.headerBg}
-        flexDirection="column"
-        paddingLeft={1}
-        paddingRight={1}
-      >
+    <box position="absolute" bottom={1} left={0} width="100%" flexDirection="column">
+      <box backgroundColor={theme.headerBg} flexDirection="column" paddingLeft={1} paddingRight={1}>
         {visibleSuggestions.map((suggestion, i) => {
           const selected = i === selectedIndex
           return (
@@ -257,14 +157,10 @@ export function FilterSuggestions({
               justifyContent="space-between"
             >
               <text>
-                <span fg={selected ? theme.primary : theme.textDim}>
-                  {suggestion.label}
-                </span>
+                <span fg={selected ? theme.primary : theme.textDim}>{suggestion.label}</span>
               </text>
               {suggestion.hint && (
-                <text>
-                  <span fg={theme.textMuted}>{suggestion.hint}</span>
-                </text>
+                <text><span fg={theme.textMuted}>{suggestion.hint}</span></text>
               )}
             </box>
           )

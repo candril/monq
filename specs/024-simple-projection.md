@@ -4,9 +4,9 @@
 
 ## Description
 
-Extend the simple filter bar with a projection clause using a pipe (`|`) separator.
-Everything before `|` is the existing filter; everything after is a space-separated list
-of field paths to include or exclude. Dot-notation is supported for nested fields.
+Extend the simple filter bar with inline projection tokens. `+field` includes a field,
+bare `-field` (no operator) excludes it. Tokens coexist in the same query string as
+filter tokens — no separator needed. Dot-notation is supported for nested fields.
 No unwind / array flattening — that is a pipeline concern.
 
 ## Out of Scope
@@ -43,60 +43,41 @@ No unwind / array flattening — that is a pipeline concern.
 
 ### Syntax
 
-```
-<filter-tokens> | <projection-tokens>
-```
-
-Examples:
+Projection tokens live inline in the same query string as filter tokens:
 
 ```
-Author:Peter State:Open | name email createdAt
-Author:Peter            | address.city address.zip
-age>25                  | -_id name score
-                        | name email          (projection only, no filter)
+Author:Peter State:Open +name +email +createdAt
+Author:Peter -_id -DeviceName
+age>25 +name +score -_id
++name +email                    (projection only, no filter)
+Name:/stefan/ +Name -State      (regex filter + projection)
 ```
 
-Projection token rules:
-- `field` or `dot.path` → `{ field: 1 }`
-- `-field` or `-dot.path` → `{ field: 0 }`
-- Mixed inclusion/exclusion follows standard MongoDB rules (only `_id` can be excluded alongside inclusions)
+Token classification:
+- `+field` or `+dot.path` → projection include (`{ field: 1 }`)
+- `-field` (bare, no `:` or operator) → projection exclude (`{ field: 0 }`)
+- `-field:value` → still a filter negation (`$ne`) — existing behaviour preserved
+- Everything else → filter token
 
 ### Parsing
 
-Split `queryInput` on the first `|`:
+`parseSimpleQueryFull(input)` returns `{ filter, projection }`:
 
-```ts
-function splitProjection(input: string): { filter: string; projection: string } {
-  const idx = input.indexOf("|")
-  if (idx === -1) return { filter: input.trim(), projection: "" }
-  return { filter: input.slice(0, idx).trim(), projection: input.slice(idx + 1).trim() }
-}
-
-function parseProjection(projection: string): Record<string, 0 | 1> {
-  const result: Record<string, 0 | 1> = {}
-  for (const token of projection.trim().split(/\s+/)) {
-    if (!token) continue
-    if (token.startsWith("-")) result[token.slice(1)] = 0
-    else result[token] = 1
-  }
-  return result
-}
-```
+- Iterates tokens; `+field` → projection include, bare `-field` → projection exclude
+- All others → existing filter logic unchanged
+- `parseSimpleQuery` wraps it for callers that only need the filter
 
 ### Integration points
 
-- `src/query/parser.ts` — `parseSimpleQuery(input)` should call `splitProjection` first, parse only the filter half, and return projection separately
-- `src/hooks/useDocumentLoader.ts` — pass parsed projection to `fetchDocuments`
-- `src/components/FilterBar.tsx` — render projection tokens after the pipe visually; show projection count in badge
-- `src/components/FilterSuggestions.tsx` — extend to suggest fields when cursor is after `|`
-- `src/state.ts` — no new state fields needed; projection lives inside `queryInput` as part of the string
+- `src/query/parser.ts` — `parseSimpleQueryFull`, `projectionToSimple`
+- `src/hooks/useDocumentLoader.ts` — uses `parseSimpleQueryFull` for both filter and projection
+- `src/components/FilterBar.tsx` — colours `+field` tokens in secondary, bare `-field` in warning
+- `src/components/FilterSuggestions.tsx` — detects `+`/`-` prefix on last token, suggests field names (no `:` suffix for projection tokens)
+- `src/state.ts` — BSON migration uses `parseSimpleQueryFull`; back-migration emits `+`/`-` tokens
 
 ### No new state fields
 
-Projection is encoded directly in `queryInput` (e.g. `"Author:Peter | name email"`). This means:
-- Tab persistence, undo-close, clone-tab all get projection for free
-- BSON migration reads the projection out of the string before populating the textarea
-- Clear query (`CLEAR_QUERY`) wipes both filter and projection in one action
+Projection is encoded directly in `queryInput`. Tab persistence, undo-close, clone-tab, and clear all work for free.
 
 ## File Structure
 

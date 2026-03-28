@@ -24,7 +24,7 @@ import type { BsonSection, QueryMode, DetectedColumn } from "../types"
 import type { SchemaMap } from "../query/schema"
 import { getSubfieldSuggestions } from "../query/schema"
 import { fuzzyFilter } from "../utils/fuzzy"
-import { splitProjection } from "../query/parser"
+import { parseSimpleQueryFull } from "../query/parser"
 
 type BsonKeyBinding = NonNullable<TextareaOptions["keyBindings"]>[number]
 
@@ -190,12 +190,9 @@ export function FilterBar({
   const badgeLabel = queryMode === "simple" ? "simple" : "BSON"
   const badgeBg = queryMode === "simple" ? BADGE_SIMPLE_FG : BADGE_BSON_FG
 
-  // Split filter/projection for simple mode display
-  const { filter: filterPart, projection: projPart } = queryMode === "simple"
-    ? splitProjection(query)
-    : { filter: query, projection: "" }
-  const projTokens = projPart.trim().split(/\s+/).filter(Boolean)
-  const projCount = projTokens.length
+  // Extract projection tokens (+field / -field bare) for display highlighting
+  const simpleProj = queryMode === "simple" ? parseSimpleQueryFull(query).projection : undefined
+  const hasProjTokens = simpleProj != null && Object.keys(simpleProj).length > 0
 
   const sectionCount =
     1 + (bsonSortVisible ? 1 : 0) + (bsonProjectionVisible ? 1 : 0)
@@ -242,7 +239,7 @@ export function FilterBar({
                 value={query}
                 onInput={onQueryChange}
                 onSubmit={onSubmit}
-                placeholder="field:value field:[a,b] ... | col1 col2"
+                placeholder="field:value field:[a,b] +include -exclude ..."
                 focused={true}
                 flexGrow={1}
                 backgroundColor={theme.headerBg}
@@ -252,11 +249,15 @@ export function FilterBar({
             </>
           )
         ) : (
-          queryMode === "simple" && projCount > 0 ? (
+          queryMode === "simple" && hasProjTokens ? (
+            // Colour +field tokens in secondary, -field bare tokens in warning, rest in text
             <text>
-              <span fg={theme.text}>{filterPart}</span>
-              <span fg={theme.textMuted}>{filterPart ? " " : ""}| </span>
-              <span fg={theme.secondary}>{projTokens.join(" ")}</span>
+              {query.trim().split(/\s+/).map((tok, i) => {
+                const sep = i > 0 ? " " : ""
+                if (tok.startsWith("+")) return <span key={i} fg={theme.secondary}>{sep}{tok}</span>
+                if (tok.startsWith("-") && !/[><!:]/.test(tok.slice(1))) return <span key={i} fg={theme.warning}>{sep}{tok}</span>
+                return <span key={i} fg={theme.text}>{sep}{tok}</span>
+              })}
             </text>
           ) : (
             <text>

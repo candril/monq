@@ -27,7 +27,7 @@ import { useDocumentLoader } from "./hooks/useDocumentLoader"
 import { buildCommands } from "./commands/builder"
 import { buildCollectionCommands } from "./commands/collections"
 import { buildDatabaseCommands } from "./commands/databases"
-import { splitProjection } from "./query/parser"
+import { parseSimpleQueryFull, projectionToSimple } from "./query/parser"
 import { editDocument } from "./actions/edit"
 import { openPipelineEditor, writePipelineFile, pipelineFilePaths } from "./actions/pipeline"
 import { startWatching, stopWatching, reloadFromFile, openTmuxSplit } from "./actions/pipelineWatch"
@@ -359,21 +359,25 @@ export function App({ uri }: AppProps) {
         break
       case "view:toggle-column-exclude": {
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
-        // Same logic as `-` key — toggle exclusion of current column
         const visCols = state.columns.filter((c) => c.visible)
         const col = visCols[state.selectedColumnIndex]
         if (!col) break
-        const { filter: filterPart2, projection: projPart2 } = splitProjection(state.queryInput)
-        const tokens2 = projPart2.trim().split(/\s+/).filter(Boolean)
-        const excludeToken2 = `-${col.field}`
-        if (tokens2.includes(excludeToken2)) {
-          const newTokens2 = tokens2.filter((t) => t !== excludeToken2)
-          dispatch({ type: "SET_QUERY_INPUT", input: filterPart2 + (newTokens2.length > 0 ? ` | ${newTokens2.join(" ")}` : "") })
+        const { projection: projObj3 } = parseSimpleQueryFull(state.queryInput)
+        const proj3: Record<string, 0 | 1> = { ...(projObj3 ?? {}) }
+        if (proj3[col.field] === 0) {
+          delete proj3[col.field]
         } else {
-          const newTokens2 = tokens2.filter((t) => t !== col.field)
-          newTokens2.push(excludeToken2)
-          dispatch({ type: "SET_QUERY_INPUT", input: filterPart2 + ` | ${newTokens2.join(" ")}` })
+          delete proj3[col.field]
+          proj3[col.field] = 0
         }
+        const nonProjTokens3 = state.queryInput.trim().split(/\s+/).filter((t: string) => {
+          if (!t) return false
+          if (t.startsWith("+")) return false
+          if (t.startsWith("-") && !/[><!:]/.test(t.slice(1))) return false
+          return true
+        })
+        const projStr3 = Object.keys(proj3).length > 0 ? " " + projectionToSimple(proj3) : ""
+        dispatch({ type: "SET_QUERY_INPUT", input: (nonProjTokens3.join(" ") + projStr3).trim() })
         dispatch({ type: "SUBMIT_QUERY" })
         break
       }

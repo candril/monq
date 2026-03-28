@@ -7,9 +7,16 @@ dist/
 # Bun
 bun.lock
 
+# TypeScript
+tsconfig.tsbuildinfo
+
 # Environment
 .env
 .env.local
 
 # OS
 .DS_Store
+.vim/
+
+# Local editor config
+.vim/

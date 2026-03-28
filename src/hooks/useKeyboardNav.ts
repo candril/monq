@@ -569,9 +569,11 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
               formatted = String(val)
             }
             const token = `${col.field}:${formatted}`
-            const newQuery = state.queryInput
-              ? `${state.queryInput} ${token}`
-              : token
+            // Insert filter token before any +/- projection tokens
+            const existingTokens = state.queryInput.trim().split(/\s+/).filter(Boolean)
+            const filterTokens = existingTokens.filter((t: string) => !t.startsWith("+") && !(t.startsWith("-") && !/[><!:]/.test(t.slice(1))))
+            const projTokens = existingTokens.filter((t: string) => t.startsWith("+") || (t.startsWith("-") && !/[><!:]/.test(t.slice(1))))
+            const newQuery = [...filterTokens, token, ...projTokens].join(" ")
             dispatch({ type: "SET_QUERY_INPUT", input: newQuery })
             dispatch({ type: "SUBMIT_QUERY" })
           }
