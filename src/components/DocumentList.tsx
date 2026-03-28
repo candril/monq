@@ -11,6 +11,7 @@ import type { Document } from "mongodb"
 import type { DetectedColumn, SelectionMode } from "../types"
 import { theme } from "../theme"
 import { formatValue, valueColor, detectValueType, padRight, truncate } from "../utils/format"
+import { Loading } from "./Loading"
 
 const SCROLL_MARGIN = 3
 const MIN_COL_WIDTH = 6
@@ -27,6 +28,7 @@ interface DocumentListProps {
   sortDirection: 1 | -1
   selectionMode: SelectionMode
   selectedRows: Set<number>
+  loading?: boolean
 }
 
 /** Compute natural column widths (no shrinking to fit terminal) */
@@ -168,7 +170,7 @@ function getNestedValue(doc: Document, field: string): unknown {
   return current
 }
 
-export function DocumentList({ documents, columns, selectedIndex, selectedColumnIndex, sortField, sortDirection, selectionMode, selectedRows }: DocumentListProps) {
+export function DocumentList({ documents, columns, selectedIndex, selectedColumnIndex, sortField, sortDirection, selectionMode, selectedRows, loading }: DocumentListProps) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const { width: terminalWidth } = useTerminalDimensions()
 
@@ -204,13 +206,13 @@ export function DocumentList({ documents, columns, selectedIndex, selectedColumn
   )
 
   if (documents.length === 0) {
-    return (
-      <box flexGrow={1} justifyContent="center" alignItems="center">
-        <text>
-          <span fg={theme.textDim}>No documents found</span>
-        </text>
-      </box>
-    )
+    return loading
+      ? <Loading message="Loading documents..." />
+      : (
+        <box flexGrow={1} justifyContent="center" alignItems="center">
+          <text><span fg={theme.textDim}>No documents found</span></text>
+        </box>
+      )
   }
 
   return (

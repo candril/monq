@@ -276,6 +276,7 @@ export function App({ uri }: AppProps) {
               sortDirection={state.sortDirection}
               selectionMode={state.selectionMode}
               selectedRows={state.selectedRows}
+              loading={state.documentsLoading}
             />
           </box>
         ) : null}
