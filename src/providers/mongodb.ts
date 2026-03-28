@@ -159,7 +159,9 @@ export function detectColumns(documents: Document[]): string[] {
     }
   }
 
-  const threshold = documents.length * 0.3
+  // Threshold scales with result size: always show if present in small sets,
+  // require ~10% presence for medium sets, capped at 5 for large sets (50+ docs).
+  const threshold = Math.max(1, Math.min(documents.length * 0.1, 5))
   return [...fieldCounts.entries()]
     .filter(([, count]) => count >= threshold)
     .sort((a, b) => {
