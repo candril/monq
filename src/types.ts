@@ -6,6 +6,29 @@ import type { Document } from "mongodb"
 import type { SchemaMap } from "./query/schema"
 
 // ============================================================================
+// Selection
+// ============================================================================
+
+/** Row selection mode */
+export type SelectionMode = "none" | "selecting" | "selected"
+
+/** Pending bulk edit confirmation for missing/added docs */
+export interface BulkEditConfirmation {
+  missing: import("mongodb").Document[]
+  added: import("mongodb").Document[]
+  focusedIndex: number
+  resolve: (missingAction: "ignore" | "delete", addedAction: "ignore" | "insert") => void
+  goBack: () => void
+}
+
+/** Pending delete confirmation */
+export interface DeleteConfirmation {
+  docs: import("mongodb").Document[]
+  focusedIndex: number
+  resolve: (confirmed: boolean) => void
+}
+
+// ============================================================================
 // Views
 // ============================================================================
 
@@ -60,6 +83,8 @@ export interface Tab {
   documents: Document[]
   documentCount: number
   totalDocumentCount: number
+  selectionMode: SelectionMode
+  selectedIds: Set<string>
 }
 
 // ============================================================================
@@ -182,4 +207,16 @@ export interface AppState {
 
   // Errors
   error: string | null
+
+  // Selection
+  selectionMode: SelectionMode
+  selectedIds: Set<string>
+  frozenIds: Set<string>
+  selectedRows: Set<number>
+  selectionAnchor: number | null
+
+  // Bulk edit confirmation dialog (null = not showing)
+  bulkEditConfirmation: BulkEditConfirmation | null
+  // Delete confirmation dialog (null = not showing)
+  deleteConfirmation: DeleteConfirmation | null
 }

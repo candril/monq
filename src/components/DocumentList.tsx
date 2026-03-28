@@ -8,7 +8,7 @@ import { useRef, useEffect, useMemo } from "react"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/react"
 import type { Document } from "mongodb"
-import type { DetectedColumn } from "../types"
+import type { DetectedColumn, SelectionMode } from "../types"
 import { theme } from "../theme"
 import { formatValue, valueColor, detectValueType, padRight, truncate } from "../utils/format"
 
@@ -25,6 +25,8 @@ interface DocumentListProps {
   selectedColumnIndex: number
   sortField: string | null
   sortDirection: 1 | -1
+  selectionMode: SelectionMode
+  selectedRows: Set<number>
 }
 
 /** Compute natural column widths (no shrinking to fit terminal) */
@@ -166,7 +168,7 @@ function getNestedValue(doc: Document, field: string): unknown {
   return current
 }
 
-export function DocumentList({ documents, columns, selectedIndex, selectedColumnIndex, sortField, sortDirection }: DocumentListProps) {
+export function DocumentList({ documents, columns, selectedIndex, selectedColumnIndex, sortField, sortDirection, selectionMode, selectedRows }: DocumentListProps) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
   const { width: terminalWidth } = useTerminalDimensions()
 
@@ -233,6 +235,8 @@ export function DocumentList({ documents, columns, selectedIndex, selectedColumn
             selectedColumnIndex={selectedColumnIndex}
             scrollLeft={scrollLeft}
             viewportWidth={viewportWidth}
+            rowSelected={selectedRows.has(i)}
+            selectionMode={selectionMode}
           />
         ))}
       </scrollbox>
@@ -294,6 +298,8 @@ function DocumentRow({
   selectedColumnIndex,
   scrollLeft,
   viewportWidth,
+  rowSelected,
+  selectionMode,
 }: {
   doc: Document
   columns: DetectedColumn[]
@@ -302,6 +308,8 @@ function DocumentRow({
   selectedColumnIndex: number
   scrollLeft: number
   viewportWidth: number
+  rowSelected: boolean
+  selectionMode: SelectionMode
 }) {
   const values = columns.map((col, i) => {
     const w = colWidthArray[i]
@@ -316,11 +324,17 @@ function DocumentRow({
   const segments = buildRowSegments(values, colWidthArray)
   const visible = sliceSegments(segments, scrollLeft, viewportWidth)
 
+  const bg = rowSelected && selectionMode !== "none"
+    ? theme.selection
+    : selected
+      ? theme.headerBg
+      : undefined
+
   return (
     <box
       height={1}
       width="100%"
-      backgroundColor={selected ? theme.headerBg : undefined}
+      backgroundColor={bg}
       paddingLeft={1}
       paddingRight={1}
     >

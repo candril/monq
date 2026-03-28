@@ -1,97 +1,96 @@
 /**
- * Confirmation dialog — modal overlay for destructive/ambiguous actions.
- *
- * Renders centered over the screen with a title, optional message,
- * and a row of labeled key choices. The caller handles the keyboard
- * responses via useKeyboard — this component is purely display.
- *
- * Design matches the jj multiselection pattern: dark modal bg,
- * bordered box, color-coded key badges.
- *
- * Usage:
- *   <ConfirmDialog
- *     visible={state.confirmVisible}
- *     title="Switch to simple filter?"
- *     message="The $regex condition cannot be expressed in simple mode."
- *     choices={[
- *       { key: "s", label: "Switch (drop complex conditions)" },
- *       { key: "n", label: "Open in new tab" },
- *       { key: "Esc", label: "Cancel" },
- *     ]}
- *   />
- *
- * Key handling: wire in useKeyboardNav — when confirmVisible, intercept
- * the choice keys and dispatch the appropriate action.
+ * Confirmation dialogs.
+ * ConfirmDialog — badge-style selectable options with j/k navigation + Enter.
+ * ConfirmChoiceDialog — simple key-choice list without navigation.
  */
 
 import { theme } from "../theme"
 
-export interface ConfirmChoice {
+export interface ConfirmOption {
   key: string
   label: string
-  /** Color for the key badge — defaults to theme.primary */
   color?: string
 }
 
+export interface ConfirmLine {
+  text: string
+  dim?: boolean
+  danger?: boolean
+}
+
 interface ConfirmDialogProps {
+  title: string
+  lines: ConfirmLine[]
+  options: ConfirmOption[]
+  focusedIndex: number
+}
+
+export function ConfirmDialog({ title, lines, options, focusedIndex }: ConfirmDialogProps) {
+  return (
+    <box position="absolute" top={0} left={0} width="100%" height="100%" zIndex={200} justifyContent="center" alignItems="center">
+      <box position="absolute" top={0} left={0} width="100%" height="100%" backgroundColor={theme.overlayBg} />
+      <box width={72} flexDirection="column" backgroundColor={theme.modalBg}>
+        <box paddingX={2} paddingY={1} backgroundColor={theme.headerBg}>
+          <text><span fg={theme.warning}>{title}</span></text>
+        </box>
+        <box flexDirection="column" paddingX={2} paddingY={1}>
+          {lines.map((line, i) => (
+            <text key={i}>
+              <span fg={line.danger ? theme.error : line.dim ? theme.textDim : theme.text}>{line.text || " "}</span>
+            </text>
+          ))}
+        </box>
+        <box paddingX={2} paddingTop={1} paddingBottom={1} backgroundColor={theme.headerBg} flexDirection="column" gap={1}>
+          <box flexDirection="row" gap={2}>
+            {options.map((opt, i) => {
+              const selected = i === focusedIndex
+              const bg = selected ? (opt.color ?? theme.primary) : undefined
+              const fg = selected ? theme.bg : theme.text
+              return (
+                <box key={opt.key} paddingLeft={1} paddingRight={1} backgroundColor={bg} flexShrink={0}>
+                  <text fg={fg}>{opt.key}: {opt.label}</text>
+                </box>
+              )
+            })}
+          </box>
+          <text><span fg={theme.textMuted}>j/k navigate · Enter confirm · Esc cancel</span></text>
+        </box>
+      </box>
+    </box>
+  )
+}
+
+export interface ConfirmChoice {
+  key: string
+  label: string
+  color?: string
+}
+
+interface ConfirmChoiceDialogProps {
   visible: boolean
   title: string
   message?: string
   choices: ConfirmChoice[]
 }
 
-export function ConfirmDialog({ visible, title, message, choices }: ConfirmDialogProps) {
+export function ConfirmChoiceDialog({ visible, title, message, choices }: ConfirmChoiceDialogProps) {
   if (!visible) return null
-
   return (
-    <box
-      position="absolute"
-      top={0}
-      left={0}
-      width="100%"
-      height="100%"
-      justifyContent="center"
-      alignItems="center"
-      backgroundColor={theme.overlayBg}
-    >
-      <box
-        flexDirection="column"
-        backgroundColor={theme.modalBg}
-        border={true}
-        borderStyle="rounded"
-        borderColor={theme.border}
-        paddingX={3}
-        paddingY={1}
-        minWidth={50}
-      >
-        {/* Title */}
+    <box position="absolute" top={0} left={0} width="100%" height="100%" justifyContent="center" alignItems="center" backgroundColor={theme.overlayBg}>
+      <box flexDirection="column" backgroundColor={theme.modalBg} paddingX={3} paddingY={1} minWidth={50}>
         <box height={1} justifyContent="center" marginBottom={1}>
-          <text>
-            <span fg={theme.primary}><strong>{title}</strong></span>
-          </text>
+          <text><span fg={theme.primary}><strong>{title}</strong></span></text>
         </box>
-
-        {/* Optional message */}
         {message && (
           <box marginBottom={1}>
-            <text>
-              <span fg={theme.textDim}>{message}</span>
-            </text>
+            <text><span fg={theme.textDim}>{message}</span></text>
           </box>
         )}
-
-        {/* Choice rows */}
         <box flexDirection="column" gap={0}>
           {choices.map((choice) => (
             <box key={choice.key} height={1} flexDirection="row" gap={1}>
-              <text>
-                <span fg={choice.color ?? theme.warning}>
-                  <strong>[{choice.key}]</strong>
-                </span>
-              </text>
-              <text>
-                <span fg={theme.text}>{choice.label}</span>
-              </text>
+              <text><span fg={choice.color ?? theme.warning}><strong>[{choice.key}]</strong></span></text>
+              <text><span fg={theme.text}>{choice.label}</span></text>
             </box>
           ))}
         </box>

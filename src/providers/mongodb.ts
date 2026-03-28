@@ -103,6 +103,18 @@ export async function fetchAggregate(
   return { documents, count }
 }
 
+/** Insert a new document into a collection */
+export async function insertDocument(collectionName: string, doc: Document): Promise<void> {
+  const collection = getDb().collection(collectionName)
+  await collection.insertOne(doc)
+}
+
+/** Delete a document by its _id */
+export async function deleteDocument(collectionName: string, id: unknown): Promise<void> {
+  const collection = getDb().collection(collectionName)
+  await collection.deleteOne({ _id: id as any })
+}
+
 /** Replace a document by its original _id */
 export async function replaceDocument(
   collectionName: string,

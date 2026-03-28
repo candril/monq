@@ -6,10 +6,13 @@ import type { Document } from "mongodb"
 import type {
   AppState,
   BsonSection,
+  BulkEditConfirmation,
   CollectionInfo,
+  DeleteConfirmation,
   DetectedColumn,
   PreviewPosition,
   QueryMode,
+  SelectionMode,
   Tab,
   View,
 } from "./types"
@@ -86,6 +89,21 @@ export type AppAction =
   // Messages
   | { type: "SHOW_MESSAGE"; message: string }
   | { type: "CLEAR_MESSAGE" }
+  // Selection
+  | { type: "ENTER_SELECTION_MODE" }
+  | { type: "EXIT_SELECTION_MODE" }
+  | { type: "FREEZE_SELECTION" }
+  | { type: "TOGGLE_CURRENT_ROW" }
+  | { type: "MOVE_SELECTION"; delta: number }
+  | { type: "JUMP_SELECTION_END" }
+  | { type: "SELECT_ALL" }
+  | { type: "SHOW_BULK_EDIT_CONFIRM"; confirmation: BulkEditConfirmation }
+  | { type: "CLEAR_BULK_EDIT_CONFIRM" }
+  | { type: "MOVE_BULK_EDIT_FOCUS"; delta: number }
+  | { type: "SET_BULK_EDIT_FOCUS"; index: number }
+  | { type: "SHOW_DELETE_CONFIRM"; confirmation: DeleteConfirmation }
+  | { type: "CLEAR_DELETE_CONFIRM" }
+  | { type: "MOVE_DELETE_FOCUS"; delta: number }
 
 // ============================================================================
 // Helpers
@@ -155,6 +173,13 @@ export function createInitialState(): AppState {
     commandPaletteVisible: false,
     message: null,
     error: null,
+    selectionMode: "none",
+    selectedIds: new Set<string>(),
+    frozenIds: new Set<string>(),
+    selectedRows: new Set<number>(),
+    selectionAnchor: null,
+    bulkEditConfirmation: null,
+    deleteConfirmation: null,
   }
 }
 
@@ -187,6 +212,8 @@ function snapshotTab(state: AppState, tabId: string, collectionName: string): Ta
     documents: state.documents,
     documentCount: state.documentCount,
     totalDocumentCount: state.totalDocumentCount,
+    selectionMode: state.selectionMode === "selecting" ? "selected" : state.selectionMode,
+    selectedIds: new Set(state.selectedIds),
   }
 }
 
@@ -211,7 +238,31 @@ function restoreFromTab(state: AppState, tab: Tab): Partial<AppState> {
     documentCount: tab.documentCount,
     totalDocumentCount: tab.totalDocumentCount,
     documentsLoading: false,
+    selectionMode: tab.selectionMode,
+    selectedIds: new Set(tab.selectedIds),
+    frozenIds: new Set(tab.selectedIds),
+    selectedRows: deriveSelectedRows(tab.documents, tab.selectedIds),
+    selectionAnchor: null,
   }
+}
+
+// ============================================================================
+// Selection Helpers
+// ============================================================================
+
+function idKey(id: unknown): string {
+  return id != null && typeof (id as any).toHexString === "function"
+    ? (id as any).toHexString()
+    : String(id)
+}
+
+function deriveSelectedRows(documents: Document[], selectedIds: Set<string>): Set<number> {
+  if (selectedIds.size === 0) return new Set()
+  const rows = new Set<number>()
+  for (let i = 0; i < documents.length; i++) {
+    if (selectedIds.has(idKey(documents[i]._id))) rows.add(i)
+  }
+  return rows
 }
 
 // ============================================================================
@@ -280,6 +331,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         documents: [],
         documentCount: 0,
         totalDocumentCount: 0,
+        selectionMode: "none",
+        selectedIds: new Set(),
       }
       return {
         ...state,
@@ -298,6 +351,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         queryInput: "",
         previewPosition: null,
         previewScrollOffset: 0,
+        selectionMode: "none",
+        selectedIds: new Set(),
+        frozenIds: new Set(),
+        selectedRows: new Set(),
+        selectionAnchor: null,
       }
     }
 
@@ -426,7 +484,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     // Documents
-    case "SET_DOCUMENTS":
+    case "SET_DOCUMENTS": {
+      const selectedRows = deriveSelectedRows(action.documents, state.selectedIds)
       return {
         ...state,
         documents: action.documents,
@@ -434,7 +493,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         totalDocumentCount: action.totalCount ?? state.totalDocumentCount,
         documentsLoading: false,
         selectedIndex: Math.min(state.selectedIndex, Math.max(0, action.documents.length - 1)),
+        selectedRows,
       }
+    }
 
     case "APPEND_DOCUMENTS":
       return {
@@ -869,6 +930,106 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "CLEAR_MESSAGE":
       return { ...state, message: null }
+
+    // Selection
+    case "ENTER_SELECTION_MODE": {
+      if (state.selectionMode === "selecting") return state
+      const anchor = state.selectedIndex
+      const doc = state.documents[anchor]
+      const frozenIds = new Set(state.selectedIds)
+      const selectedIds = new Set(frozenIds)
+      if (doc?._id !== undefined) selectedIds.add(idKey(doc._id))
+      const selectedRows = deriveSelectedRows(state.documents, selectedIds)
+      return { ...state, selectionMode: "selecting", selectionAnchor: anchor, frozenIds, selectedIds, selectedRows }
+    }
+
+    case "EXIT_SELECTION_MODE":
+      return { ...state, selectionMode: "none", selectedIds: new Set(), frozenIds: new Set(), selectedRows: new Set(), selectionAnchor: null }
+
+    case "FREEZE_SELECTION":
+      if (state.selectionMode !== "selecting") return state
+      return { ...state, selectionMode: "selected", frozenIds: new Set(state.selectedIds), selectionAnchor: null }
+
+    case "TOGGLE_CURRENT_ROW": {
+      const doc = state.documents[state.selectedIndex]
+      if (!doc || doc._id === undefined) return state
+      const key = idKey(doc._id)
+      const selectedIds = new Set(state.selectedIds)
+      const frozenIds = new Set(state.frozenIds)
+      if (selectedIds.has(key)) {
+        selectedIds.delete(key)
+        frozenIds.delete(key)
+      } else {
+        selectedIds.add(key)
+        frozenIds.add(key)
+      }
+      const selectedRows = deriveSelectedRows(state.documents, selectedIds)
+      const selectionMode: SelectionMode = state.selectionMode === "none" ? "selected" : state.selectionMode
+      return { ...state, selectionMode, selectedIds, frozenIds, selectedRows }
+    }
+
+    case "MOVE_SELECTION": {
+      const newIndex = Math.max(0, Math.min(state.documents.length - 1, state.selectedIndex + action.delta))
+      if (state.selectionMode === "selecting") {
+        const anchor = state.selectionAnchor ?? newIndex
+        const selectedIds = new Set(state.frozenIds)
+        const lo = Math.min(anchor, newIndex)
+        const hi = Math.max(anchor, newIndex)
+        for (let i = lo; i <= hi; i++) {
+          const id = state.documents[i]?._id
+          if (id !== undefined) selectedIds.add(idKey(id))
+        }
+        const selectedRows = deriveSelectedRows(state.documents, selectedIds)
+        return { ...state, selectedIndex: newIndex, selectedIds, selectedRows }
+      }
+      return { ...state, selectedIndex: newIndex }
+    }
+
+    case "JUMP_SELECTION_END": {
+      if (state.selectionMode !== "selecting" || state.selectionAnchor === null) return state
+      return { ...state, selectedIndex: state.selectionAnchor, selectionAnchor: state.selectedIndex }
+    }
+
+    case "SELECT_ALL": {
+      const selectedIds = new Set(state.selectedIds)
+      for (const doc of state.documents) {
+        if (doc._id !== undefined) selectedIds.add(idKey(doc._id))
+      }
+      const frozenIds = new Set(selectedIds)
+      const selectedRows = deriveSelectedRows(state.documents, selectedIds)
+      return { ...state, selectionMode: "selecting", frozenIds, selectedIds, selectedRows, selectionAnchor: state.selectedIndex }
+    }
+
+    case "SHOW_BULK_EDIT_CONFIRM":
+      return { ...state, bulkEditConfirmation: action.confirmation }
+
+    case "CLEAR_BULK_EDIT_CONFIRM":
+      return { ...state, bulkEditConfirmation: null }
+
+    case "MOVE_BULK_EDIT_FOCUS": {
+      if (!state.bulkEditConfirmation) return state
+      const { missing, added } = state.bulkEditConfirmation
+      const count = 2 + (missing.length > 0 ? 1 : 0) + (added.length > 0 ? 1 : 0) + (missing.length > 0 && added.length > 0 ? 1 : 0)
+      const next = (state.bulkEditConfirmation.focusedIndex + action.delta + count) % count
+      return { ...state, bulkEditConfirmation: { ...state.bulkEditConfirmation, focusedIndex: next } }
+    }
+
+    case "SET_BULK_EDIT_FOCUS": {
+      if (!state.bulkEditConfirmation) return state
+      return { ...state, bulkEditConfirmation: { ...state.bulkEditConfirmation, focusedIndex: action.index } }
+    }
+
+    case "SHOW_DELETE_CONFIRM":
+      return { ...state, deleteConfirmation: action.confirmation }
+
+    case "CLEAR_DELETE_CONFIRM":
+      return { ...state, deleteConfirmation: null }
+
+    case "MOVE_DELETE_FOCUS": {
+      if (!state.deleteConfirmation) return state
+      const next = (state.deleteConfirmation.focusedIndex + action.delta + 2) % 2
+      return { ...state, deleteConfirmation: { ...state.deleteConfirmation, focusedIndex: next } }
+    }
 
     default:
       return state

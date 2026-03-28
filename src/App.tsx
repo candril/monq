@@ -9,7 +9,8 @@ import { Shell } from "./components/Shell"
 import { Header } from "./components/Header"
 import { FilterBar } from "./components/FilterBar"
 import { PipelineBar } from "./components/PipelineBar"
-import { ConfirmDialog } from "./components/ConfirmDialog"
+import { ConfirmDialog, ConfirmChoiceDialog } from "./components/ConfirmDialog"
+import type { ConfirmLine, ConfirmOption } from "./components/ConfirmDialog"
 import { Toast } from "./components/Toast"
 import { Loading } from "./components/Loading"
 import { ErrorView } from "./components/ErrorView"
@@ -27,7 +28,22 @@ import { buildCollectionCommands } from "./commands/collections"
 import { editDocument } from "./actions/edit"
 import { openPipelineEditor } from "./actions/pipeline"
 import { disconnect, serializeDocument } from "./providers/mongodb"
+import { theme } from "./theme"
 import type { Command } from "./commands/types"
+import type { Document } from "mongodb"
+
+function docSummary(doc: Document): string {
+  const LABEL_FIELDS = ["name", "title", "label", "email", "username", "slug", "key"]
+  for (const field of LABEL_FIELDS) {
+    const val = doc[field]
+    if (val !== undefined && val !== null && typeof val !== "object") return `${field}: ${String(val)}`
+  }
+  for (const [key, val] of Object.entries(doc)) {
+    if (key === "_id") continue
+    if (val !== undefined && val !== null && typeof val !== "object") return `${key}: ${String(val)}`
+  }
+  return `_id: ${String(doc._id)}`
+}
 
 interface AppProps {
   uri: string
@@ -223,6 +239,8 @@ export function App({ uri }: AppProps) {
             : `${state.documentCount.toLocaleString()} docs`
           : ""
         }
+        selectionMode={state.selectionMode}
+        selectionCount={state.selectedIds.size}
       />
 
       <TabBar tabs={state.tabs} activeTabId={state.activeTabId} />
@@ -250,6 +268,8 @@ export function App({ uri }: AppProps) {
               selectedColumnIndex={state.selectedColumnIndex}
               sortField={state.sortField}
               sortDirection={state.sortDirection}
+              selectionMode={state.selectionMode}
+              selectedRows={state.selectedRows}
             />
           </box>
         ) : null}
@@ -310,7 +330,7 @@ export function App({ uri }: AppProps) {
         placeholder={effectivePlaceholder}
       />
 
-      <ConfirmDialog
+      <ConfirmChoiceDialog
         visible={state.confirmPending === "pipeline-to-simple"}
         title="Switch to simple filter?"
         message={
@@ -329,6 +349,44 @@ export function App({ uri }: AppProps) {
         message={state.message}
         onDismiss={() => dispatch({ type: "CLEAR_MESSAGE" })}
       />
+
+      {state.bulkEditConfirmation && (() => {
+        const { missing, added, focusedIndex } = state.bulkEditConfirmation
+        const missingCount = missing.length
+        const addedCount = added.length
+        const lines: ConfirmLine[] = []
+        if (missingCount > 0) {
+          lines.push({ text: `${missingCount} doc${missingCount === 1 ? "" : "s"} removed from array:`, dim: true })
+          for (const doc of missing) lines.push({ text: `  ${docSummary(doc)}`, danger: true })
+        }
+        if (addedCount > 0) {
+          if (missingCount > 0) lines.push({ text: "" })
+          lines.push({ text: `${addedCount} new doc${addedCount === 1 ? "" : "s"} added to array:`, dim: true })
+          for (const doc of added) lines.push({ text: `  ${docSummary(doc)}` })
+        }
+        const options: ConfirmOption[] = [
+          { key: "b", label: "back", color: theme.primary },
+          { key: "i", label: "skip side effects", color: theme.secondary },
+        ]
+        if (missingCount > 0) options.push({ key: "d", label: `delete ${missingCount}`, color: theme.error })
+        if (addedCount > 0) options.push({ key: "a", label: `insert ${addedCount}`, color: theme.success })
+        if (missingCount > 0 && addedCount > 0) options.push({ key: "x", label: "both", color: theme.error })
+        return <ConfirmDialog title="Bulk Edit — Side Effects" lines={lines} options={options} focusedIndex={focusedIndex} />
+      })()}
+
+      {state.deleteConfirmation && (() => {
+        const { docs, focusedIndex } = state.deleteConfirmation
+        const lines: ConfirmLine[] = [
+          { text: `Delete ${docs.length} document${docs.length === 1 ? "" : "s"}?` },
+          { text: "" },
+          ...docs.map((doc) => ({ text: `  ${docSummary(doc)}`, danger: true })),
+        ]
+        const options: ConfirmOption[] = [
+          { key: "n", label: "cancel", color: theme.primary },
+          { key: "d", label: `delete ${docs.length}`, color: theme.error },
+        ]
+        return <ConfirmDialog title="Delete Documents" lines={lines} options={options} focusedIndex={focusedIndex} />
+      })()}
     </Shell>
   )
 }

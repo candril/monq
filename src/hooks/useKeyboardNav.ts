@@ -8,9 +8,9 @@ import type { Dispatch } from "react"
 import { useKeyboard, useRenderer } from "@opentui/react"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
-import { disconnect, serializeDocument } from "../providers/mongodb"
-import { editDocument } from "../actions/edit"
+import { disconnect, serializeDocument, deleteDocument } from "../providers/mongodb"
 import { openPipelineEditor, extractFindParts, classifyPipeline } from "../actions/pipeline"
+import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../actions/editMany"
 import { filterToSimple } from "../query/parser"
 import { formatValue } from "../utils/format"
 
@@ -152,6 +152,64 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       return
     }
 
+    // Bulk edit confirmation dialog
+    if (state.bulkEditConfirmation) {
+      const { resolve, goBack, missing, added, focusedIndex } = state.bulkEditConfirmation
+      const opts: Array<{ key: string; exec: () => void }> = [
+        { key: "b", exec: () => { dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" }); goBack() } },
+        { key: "i", exec: () => { dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" }); resolve("ignore", "ignore") } },
+      ]
+      if (missing.length > 0)
+        opts.push({ key: "d", exec: () => { dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" }); resolve("delete", "ignore") } })
+      if (added.length > 0)
+        opts.push({ key: "a", exec: () => { dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" }); resolve("ignore", "insert") } })
+      if (missing.length > 0 && added.length > 0)
+        opts.push({ key: "x", exec: () => { dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" }); resolve("delete", "insert") } })
+
+      if (key.name === "escape") { dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" }); goBack() }
+      else if (key.name === "return") { opts[focusedIndex]?.exec() }
+      else if (key.name === "j" || key.name === "down") { dispatch({ type: "MOVE_BULK_EDIT_FOCUS", delta: 1 }) }
+      else if (key.name === "k" || key.name === "up") { dispatch({ type: "MOVE_BULK_EDIT_FOCUS", delta: -1 }) }
+      else {
+        const match = opts.findIndex((o) => o.key === key.name)
+        if (match !== -1) {
+          if (focusedIndex === match) { opts[match].exec() }
+          else { dispatch({ type: "SET_BULK_EDIT_FOCUS", index: match }) }
+        }
+      }
+      return
+    }
+
+    // Delete confirmation dialog
+    if (state.deleteConfirmation) {
+      const { resolve, focusedIndex } = state.deleteConfirmation
+      const opts = [
+        { key: "n", exec: () => { dispatch({ type: "CLEAR_DELETE_CONFIRM" }); resolve(false) } },
+        { key: "d", exec: () => { dispatch({ type: "CLEAR_DELETE_CONFIRM" }); resolve(true) } },
+      ]
+      if (key.name === "escape" || key.name === "n") { opts[0].exec() }
+      else if (key.name === "return") { opts[focusedIndex]?.exec() }
+      else if (key.name === "j" || key.name === "down") { dispatch({ type: "MOVE_DELETE_FOCUS", delta: 1 }) }
+      else if (key.name === "k" || key.name === "up") { dispatch({ type: "MOVE_DELETE_FOCUS", delta: -1 }) }
+      else if (key.name === "d") {
+        if (focusedIndex === 1) opts[1].exec()
+        else dispatch({ type: "MOVE_DELETE_FOCUS", delta: 1 })
+      }
+      return
+    }
+
+    // Escape exits selection mode
+    if (key.name === "escape" && state.selectionMode !== "none") {
+      dispatch({ type: "EXIT_SELECTION_MODE" })
+      return
+    }
+
+    // Ctrl+A selects all
+    if (key.ctrl && key.name === "a" && state.view === "documents") {
+      dispatch({ type: "SELECT_ALL" })
+      return
+    }
+
     // Quit
     if (key.name === "q") {
       disconnect().catch(() => {})
@@ -222,7 +280,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         return
       }
       // d: close current tab
-      if (key.name === "d" && !key.ctrl) {
+      if (key.name === "d" && !key.ctrl && !key.shift) {
         if (state.activeTabId) {
           dispatch({ type: "CLOSE_TAB", tabId: state.activeTabId })
         }
@@ -263,11 +321,13 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       switch (key.name) {
         case "j":
         case "down":
-          dispatch({ type: "MOVE_DOCUMENT", delta: 1 })
+          if (state.selectionMode === "selecting") dispatch({ type: "MOVE_SELECTION", delta: 1 })
+          else dispatch({ type: "MOVE_DOCUMENT", delta: 1 })
           break
         case "k":
         case "up":
-          dispatch({ type: "MOVE_DOCUMENT", delta: -1 })
+          if (state.selectionMode === "selecting") dispatch({ type: "MOVE_SELECTION", delta: -1 })
+          else dispatch({ type: "MOVE_DOCUMENT", delta: -1 })
           break
         case "h":
         case "left":
@@ -279,6 +339,19 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           break
         case "w":
           dispatch({ type: "CYCLE_COLUMN_MODE" })
+          break
+        case "v":
+          if (state.selectionMode === "none" || state.selectionMode === "selected") {
+            dispatch({ type: "ENTER_SELECTION_MODE" })
+          } else {
+            dispatch({ type: "FREEZE_SELECTION" })
+          }
+          break
+        case "space":
+          dispatch({ type: "TOGGLE_CURRENT_ROW" })
+          break
+        case "o":
+          dispatch({ type: "JUMP_SELECTION_END" })
           break
         case "s": {
           const visCols = state.columns.filter((c) => c.visible)
@@ -371,30 +444,117 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           break
         }
         case "e": {
-          const doc = state.documents[state.selectedIndex]
           const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-          if (!doc || !activeTab) break
+          if (!activeTab) break
+          const docsToEdit = state.selectedRows.size > 0
+            ? state.documents.filter((_, i) => state.selectedRows.has(i))
+            : [state.documents[state.selectedIndex]].filter(Boolean)
+          if (docsToEdit.length === 0) break
 
           renderer.suspend()
-          editDocument(activeTab.collectionName, doc)
-            .then((result) => {
-              if (result.error) {
-                dispatch({ type: "SHOW_MESSAGE", message: result.error })
-              } else if (result.updated) {
-                dispatch({ type: "SHOW_MESSAGE", message: "Document updated" })
-              }
-            })
-            .catch((err: Error) => {
-              dispatch({ type: "SHOW_MESSAGE", message: `Edit failed: ${err.message}` })
-            })
-            .finally(() => {
+          openEditorForMany(activeTab.collectionName, docsToEdit, undefined, state.schemaMap)
+            .then(async (outcome) => {
               renderer.resume()
-              dispatch({ type: "RELOAD_DOCUMENTS" })
+              if (outcome.cancelled) return
+              const { result, applyEdits, editedDocs } = outcome
+              if (result.errors.length > 0) { dispatch({ type: "SHOW_MESSAGE", message: result.errors[0] }); return }
+              await applyEdits()
+              const hasSideEffects = result.missing.length > 0 || result.added.length > 0
+              if (!hasSideEffects) {
+                const n = result.updated
+                dispatch({ type: "SHOW_MESSAGE", message: n > 0 ? `Updated ${n} document${n === 1 ? "" : "s"}` : "No changes" })
+                dispatch({ type: "FREEZE_SELECTION" })
+                dispatch({ type: "RELOAD_DOCUMENTS" })
+                return
+              }
+              const showConfirm = (cr: typeof result, ce: typeof editedDocs) => dispatch({
+                type: "SHOW_BULK_EDIT_CONFIRM",
+                confirmation: {
+                  missing: cr.missing, added: cr.added, focusedIndex: 0,
+                  goBack: () => {
+                    renderer.suspend()
+                    openEditorForMany(activeTab.collectionName, docsToEdit, ce, state.schemaMap)
+                      .then(async (o2) => {
+                        renderer.resume()
+                        if (o2.cancelled) return
+                        await o2.applyEdits()
+                        if (o2.result.missing.length === 0 && o2.result.added.length === 0) {
+                          const n2 = o2.result.updated
+                          dispatch({ type: "SHOW_MESSAGE", message: n2 > 0 ? `Updated ${n2} document${n2 === 1 ? "" : "s"}` : "No changes" })
+                          dispatch({ type: "FREEZE_SELECTION" })
+                          dispatch({ type: "RELOAD_DOCUMENTS" })
+                        } else { showConfirm(o2.result, o2.editedDocs) }
+                      })
+                      .catch((err: Error) => { renderer.resume(); dispatch({ type: "SHOW_MESSAGE", message: `Edit failed: ${err.message}` }) })
+                  },
+                  resolve: async (missingAction, addedAction) => {
+                    const errors = await applyConfirmActions(activeTab.collectionName, cr, missingAction, addedAction)
+                    if (errors.length > 0) { dispatch({ type: "SHOW_MESSAGE", message: errors[0] }) }
+                    else {
+                      const parts: string[] = []
+                      if (cr.updated > 0) parts.push(`${cr.updated} updated`)
+                      if (missingAction === "delete" && cr.missing.length > 0) parts.push(`${cr.missing.length} deleted`)
+                      if (addedAction === "insert" && cr.added.length > 0) parts.push(`${cr.added.length} inserted`)
+                      dispatch({ type: "SHOW_MESSAGE", message: parts.join(", ") || "Done" })
+                    }
+                    dispatch({ type: "FREEZE_SELECTION" })
+                    dispatch({ type: "RELOAD_DOCUMENTS" })
+                  },
+                },
+              })
+              showConfirm(result, editedDocs)
             })
+            .catch((err: Error) => { renderer.resume(); dispatch({ type: "SHOW_MESSAGE", message: `Edit failed: ${err.message}` }) })
+          break
+        }
+        case "i": {
+          const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+          if (!activeTab) break
+          const templateDoc = state.documents[state.selectedIndex]
+          renderer.suspend()
+          openEditorForInsert(activeTab.collectionName, templateDoc, state.schemaMap)
+            .then((outcome) => {
+              renderer.resume()
+              if (outcome.cancelled) return
+              if (outcome.errors.length > 0) { dispatch({ type: "SHOW_MESSAGE", message: outcome.errors[0] }) }
+              else if (outcome.inserted > 0) {
+                dispatch({ type: "SHOW_MESSAGE", message: `Inserted ${outcome.inserted} document${outcome.inserted === 1 ? "" : "s"}` })
+                dispatch({ type: "RELOAD_DOCUMENTS" })
+              } else { dispatch({ type: "SHOW_MESSAGE", message: "No documents inserted" }) }
+            })
+            .catch((err: Error) => { renderer.resume(); dispatch({ type: "SHOW_MESSAGE", message: `Insert failed: ${err.message}` }) })
           break
         }
         case "d":
-          if (key.ctrl && state.previewPosition) {
+          if (key.shift) {
+            const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+            if (!activeTab) break
+            const docsToDelete = state.selectedRows.size > 0
+              ? state.documents.filter((_, i) => state.selectedRows.has(i))
+              : [state.documents[state.selectedIndex]].filter(Boolean)
+            if (docsToDelete.length === 0) break
+            dispatch({
+              type: "SHOW_DELETE_CONFIRM",
+              confirmation: {
+                docs: docsToDelete, focusedIndex: 0,
+                resolve: async (confirmed) => {
+                  if (!confirmed) return
+                  const errors: string[] = []
+                  for (const doc of docsToDelete) {
+                    try { await deleteDocument(activeTab.collectionName, doc._id) }
+                    catch (err) { errors.push(`Delete failed: ${(err as Error).message}`) }
+                  }
+                  if (errors.length > 0) { dispatch({ type: "SHOW_MESSAGE", message: errors[0] }) }
+                  else {
+                    const n = docsToDelete.length
+                    dispatch({ type: "SHOW_MESSAGE", message: `Deleted ${n} document${n === 1 ? "" : "s"}` })
+                    dispatch({ type: "EXIT_SELECTION_MODE" })
+                  }
+                  dispatch({ type: "RELOAD_DOCUMENTS" })
+                },
+              },
+            })
+          } else if (key.ctrl && state.previewPosition) {
             dispatch({ type: "SCROLL_PREVIEW", delta: 10 })
           }
           break
