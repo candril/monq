@@ -199,6 +199,7 @@ export function App({ uri }: AppProps) {
           dbName: state.dbName,
           tabId: activeTab.id,
           pipelineSource: state.pipelineSource,
+          currentPipeline: state.pipeline,
           simpleQuery: state.queryInput,
           schemaMap: state.schemaMap,
           sortField: state.sortField,

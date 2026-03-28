@@ -51,6 +51,7 @@ function buildTemplate(
   collectionName: string,
   dbName: string,
   currentPipelineSource: string,
+  currentPipeline: Document[],
   simpleQuery: string,
   schemaMap: SchemaMap,
   sortField: string | null,
@@ -59,6 +60,13 @@ function buildTemplate(
   // Re-open existing pipeline as-is
   if (currentPipelineSource.trim()) {
     return currentPipelineSource
+  }
+
+  // Pipeline is active but was entered programmatically (no source string) —
+  // serialize the live pipeline stages so the user can edit what's actually running
+  if (currentPipeline.length > 0) {
+    const doc = { $schema: "./.monq-pipeline-schema.json", pipeline: currentPipeline }
+    return JSON.stringify(doc, null, 2) + "\n"
   }
 
   // Build $match from simple query if present
@@ -345,19 +353,20 @@ export async function writePipelineFile(params: {
   dbName: string
   tabId: string
   pipelineSource: string
+  currentPipeline: Document[]
   simpleQuery: string
   schemaMap: SchemaMap
   sortField: string | null
   sortDirection: 1 | -1
 }): Promise<string> {
   const {
-    collectionName, dbName, tabId, pipelineSource, simpleQuery,
+    collectionName, dbName, tabId, pipelineSource, currentPipeline, simpleQuery,
     schemaMap, sortField, sortDirection,
   } = params
   const { dir, queryFile, schemaFile } = pipelineFilePaths(dbName, collectionName, tabId)
   await mkdir(dir, { recursive: true })
   await Bun.write(schemaFile, buildJsonSchema(collectionName, schemaMap))
-  const content = buildTemplate(collectionName, dbName, pipelineSource, simpleQuery, schemaMap, sortField, sortDirection)
+  const content = buildTemplate(collectionName, dbName, pipelineSource, currentPipeline, simpleQuery, schemaMap, sortField, sortDirection)
   await Bun.write(queryFile, content)
   return queryFile
 }
@@ -367,13 +376,14 @@ export async function openPipelineEditor(params: {
   dbName: string
   tabId: string
   pipelineSource: string
+  currentPipeline: Document[]
   simpleQuery: string
   schemaMap: SchemaMap
   sortField: string | null
   sortDirection: 1 | -1
 }): Promise<PipelineResult | null> {
   const {
-    collectionName, dbName, tabId, pipelineSource, simpleQuery,
+    collectionName, dbName, tabId, pipelineSource, currentPipeline, simpleQuery,
     schemaMap, sortField, sortDirection,
   } = params
 
@@ -386,7 +396,7 @@ export async function openPipelineEditor(params: {
 
   // Write initial content
   const template = buildTemplate(
-    collectionName, dbName, pipelineSource, simpleQuery,
+    collectionName, dbName, pipelineSource, currentPipeline, simpleQuery,
     schemaMap, sortField, sortDirection,
   )
   await Bun.write(queryFile, template)
