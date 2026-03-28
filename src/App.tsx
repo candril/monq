@@ -264,7 +264,7 @@ export function App({ uri }: AppProps) {
 
       {/* Suggestions only in simple mode with no pipeline */}
       <FilterSuggestions
-        visible={state.queryVisible && state.pipeline.length === 0}
+        visible={state.queryVisible && state.pipeline.length === 0 && state.queryMode === "simple"}
         query={state.queryInput}
         queryMode={state.queryMode}
         columns={state.columns}

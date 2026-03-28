@@ -83,15 +83,15 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         dispatch({ type: "CLOSE_QUERY" })
         return
       }
-      // Tab always toggles mode (simple→bson or bson→simple), carrying state across
-      // In BSON mode, also cycles sections on subsequent Tab presses would be confusing,
-      // so Tab always toggles; sections cycle via a separate action if needed.
+      // If pipeline is active, the filter bar isn't shown — close and ignore
+      if (state.pipeline.length > 0) {
+        dispatch({ type: "CLOSE_QUERY" })
+        return
+      }
       if (key.name === "tab") {
         if (state.queryMode === "simple") {
-          // simple → bson (migrate filter + sort)
           dispatch({ type: "TOGGLE_QUERY_MODE" })
         } else {
-          // bson → simple (attempt reverse conversion)
           dispatch({ type: "TOGGLE_QUERY_MODE" })
         }
         return
