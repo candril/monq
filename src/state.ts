@@ -502,7 +502,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           ? JSON.stringify(filter, null, 2)
           : ""
       } catch {
-        bsonFilter = state.queryInput
+        // Unparseable simple query — start with empty BSON filter
+        bsonFilter = ""
       }
       const bsonSort = state.sortField
         ? JSON.stringify({ [state.sortField]: state.sortDirection }, null, 2)
@@ -539,7 +540,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             ? JSON.stringify(filter, null, 2)
             : ""
         } catch {
-          bsonFilter = state.queryInput
+          // Unparseable simple query — start with empty BSON filter
+          bsonFilter = ""
         }
         // Migrate active sort into sort textarea
         const bsonSort = state.sortField

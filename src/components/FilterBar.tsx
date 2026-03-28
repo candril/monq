@@ -14,12 +14,16 @@
  *
  * Textarea is imperative: seeded via initialValue, updated via ref.replaceText(),
  * changes read via ref.onContentChange. Enter submits, Ctrl+J/Shift+Enter = newline.
+ * onSubmit wired via callback ref (not JSX prop — reconciler only handles it for Input).
  */
 
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useCallback } from "react"
 import type { TextareaRenderable, TextareaOptions } from "@opentui/core"
 import { theme } from "../theme"
-import type { BsonSection, QueryMode } from "../types"
+import type { BsonSection, QueryMode, DetectedColumn } from "../types"
+import type { SchemaMap } from "../query/schema"
+import { getSubfieldSuggestions } from "../query/schema"
+import { fuzzyFilter } from "../utils/fuzzy"
 
 type BsonKeyBinding = NonNullable<TextareaOptions["keyBindings"]>[number]
 
@@ -48,6 +52,8 @@ interface FilterBarProps {
   bsonSortVisible: boolean
   bsonProjectionVisible: boolean
   editing?: boolean
+  columns: DetectedColumn[]
+  schemaMap: SchemaMap
 
   onQueryChange?: (value: string) => void
   onBsonSortChange?: (value: string) => void
@@ -55,10 +61,60 @@ interface FilterBarProps {
   onSubmit?: () => void
 }
 
+// ── Field suggestions for BSON mode ────────────────────────────────────────
+
+function buildBsonSuggestions(columns: DetectedColumn[], schemaMap: SchemaMap): string[] {
+  const fields = new Set(columns.map((c) => c.field))
+  // Add schema paths with children for dot-notation
+  for (const [path, info] of schemaMap) {
+    if (!path.includes(".") && info.children.length > 0) fields.add(path)
+  }
+  return [...fields]
+}
+
+function BsonFieldSuggestions({
+  visible,
+  columns,
+  schemaMap,
+  onSelect,
+}: {
+  visible: boolean
+  columns: DetectedColumn[]
+  schemaMap: SchemaMap
+  onSelect: (field: string) => void
+}) {
+  const suggestions = buildBsonSuggestions(columns, schemaMap)
+
+  if (!visible || suggestions.length === 0) return null
+
+  return (
+    <box
+      flexDirection="row"
+      flexWrap="wrap"
+      backgroundColor={theme.headerBg}
+      paddingX={1}
+      paddingY={0}
+      gap={1}
+    >
+      {suggestions.slice(0, 12).map((field) => {
+        const info = schemaMap.get(field)
+        return (
+          <text key={field}>
+            <span fg={theme.textMuted}>{field}</span>
+            {info?.type ? <span fg={theme.textMuted}>:{info.type} </span> : <span fg={theme.textMuted}> </span>}
+          </text>
+        )
+      })}
+    </box>
+  )
+}
+
+// ── BsonTextarea ────────────────────────────────────────────────────────────
+
 /**
  * A single labelled BSON textarea section.
- * Uses initialValue to seed; externalValue synced via ref.setText() when it
- * changes externally (e.g. Ctrl+F format, mode migration).
+ * Uses a callback ref so onContentChange + onSubmit are wired immediately
+ * when the renderable is created (avoids the timing issue with useRef + useEffect).
  */
 function BsonTextarea({
   label,
@@ -75,34 +131,32 @@ function BsonTextarea({
   onChange: (v: string) => void
   onSubmit?: () => void
 }) {
-  const ref = useRef<TextareaRenderable>(null)
+  // Keep latest callbacks in a ref so the callback-ref closure stays fresh
+  const callbacksRef = useRef({ onChange, onSubmit })
+  callbacksRef.current = { onChange, onSubmit }
 
-  // Wire onContentChange + onSubmit once ref is available
-  useEffect(() => {
-    const ta = ref.current
+  const taRef = useRef<TextareaRenderable | null>(null)
+
+  // Callback ref: called with the instance when mounted, null when unmounted
+  const setRef = useCallback((ta: TextareaRenderable | null) => {
+    if (taRef.current) {
+      taRef.current.onContentChange = undefined
+      taRef.current.onSubmit = undefined
+    }
+    taRef.current = ta
     if (!ta) return
+
     ta.onContentChange = () => {
-      onChange(ta.getTextRange(0, 1_000_000))
+      callbacksRef.current.onChange(ta.getTextRange(0, 1_000_000))
     }
-    ta.onSubmit = onSubmit ? () => onSubmit() : undefined
-    return () => {
-      if (ref.current) {
-        ref.current.onContentChange = undefined
-        ref.current.onSubmit = undefined
-      }
+    ta.onSubmit = () => {
+      callbacksRef.current.onSubmit?.()
     }
-  }, [ref.current]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
-  // Keep onSubmit callback fresh without re-running the effect
+  // Push external changes (format, migration) into the textarea
   useEffect(() => {
-    if (ref.current) {
-      ref.current.onSubmit = onSubmit ? () => onSubmit() : undefined
-    }
-  }, [onSubmit])
-
-  // Push external changes (format, migration) back into the textarea
-  useEffect(() => {
-    const ta = ref.current
+    const ta = taRef.current
     if (!ta) return
     const current = ta.getTextRange(0, 1_000_000)
     if (current !== externalValue) {
@@ -120,9 +174,8 @@ function BsonTextarea({
         </text>
       </box>
       <textarea
-        ref={ref}
+        ref={setRef}
         initialValue={initialValue}
-        placeholder="{ }"
         focused={focused}
         height={TEXTAREA_HEIGHT}
         flexGrow={1}
@@ -137,6 +190,8 @@ function BsonTextarea({
   )
 }
 
+// ── FilterBar ───────────────────────────────────────────────────────────────
+
 export function FilterBar({
   query,
   queryMode,
@@ -146,6 +201,8 @@ export function FilterBar({
   bsonSortVisible,
   bsonProjectionVisible,
   editing,
+  columns,
+  schemaMap,
   onQueryChange,
   onBsonSortChange,
   onBsonProjectionChange,
@@ -160,6 +217,8 @@ export function FilterBar({
     1 + (bsonSortVisible ? 1 : 0) + (bsonProjectionVisible ? 1 : 0)
   const bsonHeight = sectionCount * (TEXTAREA_HEIGHT + 1) // textarea + label row
 
+  const showBsonSuggestions = editing && queryMode === "bson"
+
   return (
     <box
       height={editing && queryMode === "bson" ? bsonHeight + 1 : 1}
@@ -167,7 +226,7 @@ export function FilterBar({
       paddingX={1}
       flexDirection="column"
     >
-      {/* Header row: badge + input or hint */}
+      {/* Header row: badge + input or BSON pills */}
       <box height={1} flexDirection="row" gap={1}>
         <text>
           <span fg={badgeFg}>{badgeLabel}</span>
@@ -176,20 +235,17 @@ export function FilterBar({
         {editing ? (
           queryMode === "bson" ? (
             <>
-              {/* "filter" active indicator */}
               <text>
                 <span fg={bsonFocusedSection === "filter" ? theme.primary : theme.textMuted}>
                   filter{bsonFocusedSection === "filter" ? " ▸" : ""}
                 </span>
               </text>
-              {/* Sort pill */}
               <text>
                 {bsonSortVisible
                   ? <span fg={bsonFocusedSection === "sort" ? theme.primary : theme.warning}>[sort Ctrl+O]</span>
                   : <span fg={theme.textMuted}>[+sort Ctrl+O]</span>
                 }
               </text>
-              {/* Projection pill */}
               <text>
                 {bsonProjectionVisible
                   ? <span fg={bsonFocusedSection === "projection" ? theme.primary : theme.warning}>[projection Ctrl+K]</span>
@@ -250,6 +306,46 @@ export function FilterBar({
           )}
         </>
       )}
+    </box>
+  )
+}
+
+// ── BsonSuggestions (rendered above the panel in Shell/App) ─────────────────
+
+export function BsonSuggestions({
+  visible,
+  columns,
+  schemaMap,
+}: {
+  visible: boolean
+  columns: DetectedColumn[]
+  schemaMap: SchemaMap
+}) {
+  const suggestions = buildBsonSuggestions(columns, schemaMap)
+  if (!visible || suggestions.length === 0) return null
+
+  return (
+    <box
+      position="absolute"
+      bottom={1}
+      left={0}
+      width="100%"
+      backgroundColor={theme.headerBg}
+      flexDirection="row"
+      flexWrap="wrap"
+      paddingX={2}
+      paddingY={0}
+    >
+      {suggestions.slice(0, 20).map((field) => {
+        const info = schemaMap.get(field)
+        const typeHint = info?.type ? `:${info.type}` : ""
+        return (
+          <text key={field}>
+            <span fg={theme.textDim}>{field}</span>
+            <span fg={theme.textMuted}>{typeHint}  </span>
+          </text>
+        )
+      })}
     </box>
   )
 }
