@@ -68,7 +68,7 @@ export function App({ uri }: AppProps) {
   )
 
   const paletteCommands = paletteMode === "collections" ? collectionCommands : mainCommands
-  const palettePlaceholder = paletteMode === "collections" ? "Switch collection..." : "Search commands..."
+  const palettePlaceholder = paletteMode === "collections" ? "Open collection..." : "Search commands..."
 
   const handlePaletteSelect = useCallback((cmd: Command) => {
     // Collection selection
@@ -218,7 +218,7 @@ export function App({ uri }: AppProps) {
   // Auto-show collection picker when no tab is open
   const effectivePaletteMode = !state.activeTabId && paletteVisible ? "collections" : paletteMode
   const effectiveCommands = effectivePaletteMode === "collections" ? collectionCommands : mainCommands
-  const effectivePlaceholder = effectivePaletteMode === "collections" ? "Switch collection..." : "Search commands..."
+  const effectivePlaceholder = effectivePaletteMode === "collections" ? "Open collection..." : "Search commands..."
 
   const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
   const selectedDoc = state.documents[state.selectedIndex] ?? null

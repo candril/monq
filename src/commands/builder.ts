@@ -13,7 +13,7 @@ export function buildCommands(state: AppState): Command[] {
   // Navigation
   commands.push({
     id: "nav:switch-collection",
-    label: "Switch Collection",
+    label: "Open Collection",
     category: "navigation",
     shortcut: "",
   })
