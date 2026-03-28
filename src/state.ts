@@ -104,6 +104,7 @@ export type AppAction =
   | { type: "SHOW_DELETE_CONFIRM"; confirmation: DeleteConfirmation }
   | { type: "CLEAR_DELETE_CONFIRM" }
   | { type: "MOVE_DELETE_FOCUS"; delta: number }
+  | { type: "SET_DELETE_FOCUS"; index: number }
 
 // ============================================================================
 // Helpers
@@ -1010,7 +1011,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       if (!state.bulkEditConfirmation) return state
       const { missing, added } = state.bulkEditConfirmation
       const count = 2 + (missing.length > 0 ? 1 : 0) + (added.length > 0 ? 1 : 0) + (missing.length > 0 && added.length > 0 ? 1 : 0)
-      const next = (state.bulkEditConfirmation.focusedIndex + action.delta + count) % count
+      const current = state.bulkEditConfirmation.focusedIndex
+      // From -1 (unselected): j goes to 0, k goes to last
+      const next = current === -1
+        ? (action.delta > 0 ? 0 : count - 1)
+        : (current + action.delta + count) % count
       return { ...state, bulkEditConfirmation: { ...state.bulkEditConfirmation, focusedIndex: next } }
     }
 
@@ -1027,8 +1032,16 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "MOVE_DELETE_FOCUS": {
       if (!state.deleteConfirmation) return state
-      const next = (state.deleteConfirmation.focusedIndex + action.delta + 2) % 2
+      const current = state.deleteConfirmation.focusedIndex
+      const next = current === -1
+        ? (action.delta > 0 ? 0 : 1)
+        : (current + action.delta + 2) % 2
       return { ...state, deleteConfirmation: { ...state.deleteConfirmation, focusedIndex: next } }
+    }
+
+    case "SET_DELETE_FOCUS": {
+      if (!state.deleteConfirmation) return state
+      return { ...state, deleteConfirmation: { ...state.deleteConfirmation, focusedIndex: action.index } }
     }
 
     default:

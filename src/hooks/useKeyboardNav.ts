@@ -165,9 +165,11 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         opts.push({ key: "a", exec: () => { dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" }); resolve("ignore", "insert") } })
       if (missing.length > 0 && added.length > 0)
         opts.push({ key: "x", exec: () => { dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" }); resolve("delete", "insert") } })
+      opts.push({ key: "c", exec: () => { dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" }) } })
 
-      if (key.name === "escape") { dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" }); goBack() }
-      else if (key.name === "return") { opts[focusedIndex]?.exec() }
+      if (key.name === "return") {
+        if (focusedIndex >= 0) opts[focusedIndex]?.exec()
+      }
       else if (key.name === "j" || key.name === "down") { dispatch({ type: "MOVE_BULK_EDIT_FOCUS", delta: 1 }) }
       else if (key.name === "k" || key.name === "up") { dispatch({ type: "MOVE_BULK_EDIT_FOCUS", delta: -1 }) }
       else {
@@ -184,16 +186,20 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
     if (state.deleteConfirmation) {
       const { resolve, focusedIndex } = state.deleteConfirmation
       const opts = [
-        { key: "n", exec: () => { dispatch({ type: "CLEAR_DELETE_CONFIRM" }); resolve(false) } },
+        { key: "c", exec: () => { dispatch({ type: "CLEAR_DELETE_CONFIRM" }); resolve(false) } },
         { key: "d", exec: () => { dispatch({ type: "CLEAR_DELETE_CONFIRM" }); resolve(true) } },
       ]
-      if (key.name === "escape" || key.name === "n") { opts[0].exec() }
-      else if (key.name === "return") { opts[focusedIndex]?.exec() }
+      if (key.name === "return") {
+        if (focusedIndex >= 0) opts[focusedIndex]?.exec()
+      }
       else if (key.name === "j" || key.name === "down") { dispatch({ type: "MOVE_DELETE_FOCUS", delta: 1 }) }
       else if (key.name === "k" || key.name === "up") { dispatch({ type: "MOVE_DELETE_FOCUS", delta: -1 }) }
-      else if (key.name === "d") {
-        if (focusedIndex === 1) opts[1].exec()
-        else dispatch({ type: "MOVE_DELETE_FOCUS", delta: 1 })
+      else {
+        const match = opts.findIndex((o) => o.key === key.name)
+        if (match !== -1) {
+          if (focusedIndex === match) { opts[match].exec() }
+          else { dispatch({ type: "SET_DELETE_FOCUS", index: match }) }
+        }
       }
       return
     }
@@ -446,7 +452,9 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         case "e": {
           const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
           if (!activeTab) break
-          const docsToEdit = state.selectedRows.size > 0
+          // Edit selected rows if cursor is on a selected row, otherwise edit current doc only
+          const cursorOnSelection = state.selectedRows.has(state.selectedIndex)
+          const docsToEdit = cursorOnSelection
             ? state.documents.filter((_, i) => state.selectedRows.has(i))
             : [state.documents[state.selectedIndex]].filter(Boolean)
           if (docsToEdit.length === 0) break
@@ -470,7 +478,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
               const showConfirm = (cr: typeof result, ce: typeof editedDocs) => dispatch({
                 type: "SHOW_BULK_EDIT_CONFIRM",
                 confirmation: {
-                  missing: cr.missing, added: cr.added, focusedIndex: 0,
+                  missing: cr.missing, added: cr.added, focusedIndex: -1,
                   goBack: () => {
                     renderer.suspend()
                     openEditorForMany(activeTab.collectionName, docsToEdit, ce, state.schemaMap)
@@ -536,7 +544,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
             dispatch({
               type: "SHOW_DELETE_CONFIRM",
               confirmation: {
-                docs: docsToDelete, focusedIndex: 0,
+                docs: docsToDelete, focusedIndex: -1,
                 resolve: async (confirmed) => {
                   if (!confirmed) return
                   const errors: string[] = []

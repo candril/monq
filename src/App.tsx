@@ -365,12 +365,13 @@ export function App({ uri }: AppProps) {
           for (const doc of added) lines.push({ text: `  ${docSummary(doc)}` })
         }
         const options: ConfirmOption[] = [
-          { key: "b", label: "back", color: theme.primary },
+          { key: "b", label: "back to editor", color: theme.primary },
           { key: "i", label: "skip side effects", color: theme.secondary },
         ]
         if (missingCount > 0) options.push({ key: "d", label: `delete ${missingCount}`, color: theme.error })
         if (addedCount > 0) options.push({ key: "a", label: `insert ${addedCount}`, color: theme.success })
         if (missingCount > 0 && addedCount > 0) options.push({ key: "x", label: "both", color: theme.error })
+        options.push({ key: "c", label: "cancel", color: theme.textMuted })
         return <ConfirmDialog title="Bulk Edit — Side Effects" lines={lines} options={options} focusedIndex={focusedIndex} />
       })()}
 
@@ -382,8 +383,8 @@ export function App({ uri }: AppProps) {
           ...docs.map((doc) => ({ text: `  ${docSummary(doc)}`, danger: true })),
         ]
         const options: ConfirmOption[] = [
-          { key: "n", label: "cancel", color: theme.primary },
           { key: "d", label: `delete ${docs.length}`, color: theme.error },
+          { key: "c", label: "cancel", color: theme.textMuted },
         ]
         return <ConfirmDialog title="Delete Documents" lines={lines} options={options} focusedIndex={focusedIndex} />
       })()}

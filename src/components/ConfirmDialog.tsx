@@ -45,7 +45,7 @@ export function ConfirmDialog({ title, lines, options, focusedIndex }: ConfirmDi
             {options.map((opt, i) => {
               const selected = i === focusedIndex
               const bg = selected ? (opt.color ?? theme.primary) : undefined
-              const fg = selected ? theme.bg : theme.text
+              const fg = selected ? theme.bg : theme.textDim
               return (
                 <box key={opt.key} paddingLeft={1} paddingRight={1} backgroundColor={bg} flexShrink={0}>
                   <text fg={fg}>{opt.key}: {opt.label}</text>
@@ -53,7 +53,13 @@ export function ConfirmDialog({ title, lines, options, focusedIndex }: ConfirmDi
               )
             })}
           </box>
-          <text><span fg={theme.textMuted}>j/k navigate · Enter confirm · Esc cancel</span></text>
+          <text>
+            <span fg={theme.textMuted}>j/k navigate · </span>
+            {focusedIndex >= 0
+              ? <span fg={theme.text}>Enter confirm</span>
+              : <span fg={theme.textMuted}>choose an option first</span>
+            }
+          </text>
         </box>
       </box>
     </box>
