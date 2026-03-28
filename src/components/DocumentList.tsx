@@ -33,36 +33,75 @@ interface DocumentListProps {
   scrollRef?: React.RefObject<ScrollBoxRenderable>
 }
 
-/** Compute natural column widths (no shrinking to fit terminal) */
+/** Compute natural column widths, then expand capped columns to fill available screen width */
 function computeColumnWidths(
   documents: Document[],
   columns: DetectedColumn[],
+  availableWidth: number,
 ): Map<string, number> {
   const visible = columns.filter((c) => c.visible)
   if (visible.length === 0) return new Map()
 
   const widths = new Map<string, number>()
+  const naturalWidths = new Map<string, number>() // uncapped natural width
   const sample = documents.slice(0, 50)
 
   for (const col of visible) {
     if (col.displayMode === "minimized") {
       widths.set(col.field, MINIMIZED_COL_WIDTH)
+      naturalWidths.set(col.field, MINIMIZED_COL_WIDTH)
       continue
     }
 
     let maxW = col.field.length
+    let naturalW = col.field.length
     for (const doc of sample) {
       const val = getNestedValue(doc, col.field)
-      const cap = col.displayMode === "full" ? 200 : MAX_COL_WIDTH
-      const formatted = formatValue(val, cap)
-      maxW = Math.max(maxW, formatted.length)
+      const formatted = formatValue(val, 200)
+      naturalW = Math.max(naturalW, formatted.length)
+      maxW = Math.max(maxW, Math.min(MAX_COL_WIDTH, formatted.length))
     }
 
+    naturalWidths.set(col.field, Math.max(MIN_COL_WIDTH, naturalW))
+
     if (col.displayMode === "full") {
-      widths.set(col.field, Math.max(MIN_COL_WIDTH, maxW))
+      widths.set(col.field, Math.max(MIN_COL_WIDTH, naturalW))
     } else {
       widths.set(col.field, Math.min(MAX_COL_WIDTH, Math.max(MIN_COL_WIDTH, maxW)))
     }
+  }
+
+  // Second pass: if total width is less than available, expand capped columns up to their
+  // natural content width. Distribute surplus evenly among columns that still have room to grow,
+  // iterating until surplus is exhausted or no column can grow further.
+  const totalGaps = Math.max(0, visible.length - 1) * COL_GAP
+  let totalUsed = totalGaps
+  for (const col of visible) totalUsed += widths.get(col.field) ?? 0
+
+  let surplus = availableWidth - totalUsed
+  while (surplus > 0) {
+    const growable = visible.filter((col) => {
+      if (col.displayMode === "minimized" || col.displayMode === "full") return false
+      return (naturalWidths.get(col.field) ?? 0) > (widths.get(col.field) ?? 0)
+    })
+    if (growable.length === 0) break
+
+    const perCol = Math.floor(surplus / growable.length)
+    const remainder = surplus % growable.length
+    let allocated = 0
+
+    for (let i = 0; i < growable.length; i++) {
+      const col = growable[i]
+      const current = widths.get(col.field) ?? 0
+      const natural = naturalWidths.get(col.field) ?? current
+      const share = perCol + (i < remainder ? 1 : 0)
+      const grant = Math.min(natural - current, share)
+      widths.set(col.field, current + grant)
+      allocated += grant
+    }
+
+    if (allocated === 0) break
+    surplus -= allocated
   }
 
   return widths
@@ -192,12 +231,11 @@ export function DocumentList({ documents, columns, selectedIndex, selectedColumn
   }, [selectedIndex])
 
   const visibleColumns = columns.filter((c) => c.visible)
-  const colWidths = useMemo(
-    () => computeColumnWidths(documents, columns),
-    [documents, columns],
-  )
-
   const viewportWidth = terminalWidth - 2 // padding
+  const colWidths = useMemo(
+    () => computeColumnWidths(documents, columns, viewportWidth),
+    [documents, columns, viewportWidth],
+  )
   const scrollLeft = useMemo(
     () => computeScrollLeft(visibleColumns, colWidths, selectedColumnIndex, terminalWidth),
     [visibleColumns, colWidths, selectedColumnIndex, terminalWidth],
