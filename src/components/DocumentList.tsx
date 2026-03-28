@@ -5,6 +5,7 @@
  */
 
 import { useRef, useEffect, useMemo } from "react"
+import type React from "react"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/react"
 import type { Document } from "mongodb"
@@ -29,6 +30,7 @@ interface DocumentListProps {
   selectionMode: SelectionMode
   selectedRows: Set<number>
   loading?: boolean
+  scrollRef?: React.RefObject<ScrollBoxRenderable>
 }
 
 /** Compute natural column widths (no shrinking to fit terminal) */
@@ -170,8 +172,9 @@ function getNestedValue(doc: Document, field: string): unknown {
   return current
 }
 
-export function DocumentList({ documents, columns, selectedIndex, selectedColumnIndex, sortField, sortDirection, selectionMode, selectedRows, loading }: DocumentListProps) {
-  const scrollRef = useRef<ScrollBoxRenderable>(null)
+export function DocumentList({ documents, columns, selectedIndex, selectedColumnIndex, sortField, sortDirection, selectionMode, selectedRows, loading, scrollRef: externalScrollRef }: DocumentListProps) {
+  const internalScrollRef = useRef<ScrollBoxRenderable>(null)
+  const scrollRef = externalScrollRef ?? internalScrollRef
   const { width: terminalWidth } = useTerminalDimensions()
 
   useEffect(() => {

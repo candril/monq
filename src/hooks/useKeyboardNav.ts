@@ -4,8 +4,9 @@
  * Does NOT handle input when command palette or query bar is open.
  */
 
-import type { Dispatch } from "react"
+import type { Dispatch, RefObject } from "react"
 import { useKeyboard, useRenderer } from "@opentui/react"
+import type { ScrollBoxRenderable } from "@opentui/core"
 
 import { ObjectId } from "mongodb"
 import type { AppState } from "../types"
@@ -20,6 +21,7 @@ import { formatValue } from "../utils/format"
 interface UseKeyboardNavOptions {
   state: AppState
   dispatch: Dispatch<AppAction>
+  docListScrollRef: RefObject<ScrollBoxRenderable>
 }
 
 /** Get a nested value from a document */
@@ -33,13 +35,34 @@ function getNestedValue(doc: Record<string, unknown>, field: string): unknown {
   return current
 }
 
-export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
+export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboardNavOptions) {
   const renderer = useRenderer()
 
   useKeyboard((key) => {
     // Open command palette (always available)
     if (key.ctrl && key.name === "p") {
       dispatch({ type: "OPEN_COMMAND_PALETTE" })
+      return
+    }
+
+    // Ctrl+D / Ctrl+U: half-page scroll (nvim behaviour)
+    // Cursor moves by half the viewport, scroll moves by the same amount.
+    if ((key.ctrl && key.name === "d") || (key.ctrl && key.name === "u")) {
+      if (state.view !== "documents") return
+      const scrollbox = docListScrollRef.current
+      if (!scrollbox) return
+      const viewportHeight = scrollbox.viewport?.height ?? 20
+      const half = Math.floor(viewportHeight / 2)
+      const dir = key.name === "d" ? 1 : -1
+      const newIndex = Math.max(0, Math.min(state.documents.length - 1, state.selectedIndex + dir * half))
+      const newScrollTop = Math.max(0, scrollbox.scrollTop + dir * half)
+      dispatch({ type: "SELECT_DOCUMENT", index: newIndex })
+      scrollbox.scrollTo(newScrollTop)
+      // Trigger load-more if scrolling down near the end
+      if (dir === 1 && !state.loadingMore && state.loadedCount < state.documentCount &&
+          newIndex >= state.documents.length - 10) {
+        dispatch({ type: "LOAD_MORE" })
+      }
       return
     }
 

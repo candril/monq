@@ -3,8 +3,9 @@
  * Thin composition — logic in hooks, display in components.
  */
 
-import { useReducer, useMemo, useCallback, useState } from "react"
+import { useReducer, useMemo, useCallback, useState, useRef } from "react"
 import { useRenderer, useTerminalDimensions } from "@opentui/react"
+import type { ScrollBoxRenderable } from "@opentui/core"
 import { Shell } from "./components/Shell"
 import { Header } from "./components/Header"
 import { FilterBar } from "./components/FilterBar"
@@ -57,11 +58,12 @@ export function App({ uri }: AppProps) {
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("commands")
   const renderer = useRenderer()
   const { height: terminalHeight } = useTerminalDimensions()
+  const docListScrollRef = useRef<ScrollBoxRenderable>(null)
 
   const pageSize = terminalHeight + 10
 
   useMongoConnection({ uri, dispatch })
-  useKeyboardNav({ state, dispatch })
+  useKeyboardNav({ state, dispatch, docListScrollRef })
   useDocumentLoader({ state, dispatch, pageSize })
 
   // Build palette commands based on mode
@@ -289,6 +291,7 @@ export function App({ uri }: AppProps) {
               selectionMode={state.selectionMode}
               selectedRows={state.selectedRows}
               loading={state.documentsLoading}
+              scrollRef={docListScrollRef}
             />
           </box>
         ) : null}
