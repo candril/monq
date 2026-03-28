@@ -24,6 +24,7 @@ interface Suggestion {
 interface FilterSuggestionsProps {
   visible: boolean
   query: string
+  queryMode: import("../types").QueryMode
   columns: DetectedColumn[]
   schemaMap: SchemaMap
   onChange: (query: string) => void
@@ -107,10 +108,13 @@ const MAX_VISIBLE = 15
 export function FilterSuggestions({
   visible,
   query,
+  queryMode,
   columns,
   schemaMap,
   onChange,
 }: FilterSuggestionsProps) {
+  // No suggestions in BSON mode — user is writing raw JSON
+  if (queryMode === "bson") return null
   const [selectedIndex, setSelectedIndex] = useState(0)
 
   const suggestions = useMemo(
@@ -129,7 +133,7 @@ export function FilterSuggestions({
       setSelectedIndex((i) => Math.max(0, i - 1))
     } else if (key.name === "down" || (key.ctrl && key.name === "n")) {
       setSelectedIndex((i) => Math.min(suggestions.length - 1, i + 1))
-    } else if (key.name === "tab" || (key.ctrl && key.name === "y")) {
+    } else if (key.ctrl && key.name === "y") {
       if (suggestions[selectedIndex]) {
         onChange(suggestions[selectedIndex].value)
       }

@@ -60,15 +60,21 @@ export async function listCollections(): Promise<CollectionInfo[]> {
 export async function fetchDocuments(
   collectionName: string,
   filter: Filter<Document> = {},
-  options: { skip?: number; limit?: number; sort?: Record<string, 1 | -1> } = {}
+  options: {
+    skip?: number
+    limit?: number
+    sort?: Record<string, 1 | -1>
+    projection?: Record<string, 0 | 1>
+  } = {}
 ): Promise<{ documents: Document[]; count: number; totalCount: number }> {
   const collection = getDb().collection(collectionName)
-  const { skip = 0, limit = 50, sort } = options
+  const { skip = 0, limit = 50, sort, projection } = options
 
   const hasFilter = Object.keys(filter).length > 0
 
+  const cursor = collection.find(filter, projection ? { projection } : undefined)
   const [documents, count, totalCount] = await Promise.all([
-    collection.find(filter).sort(sort ?? { _id: -1 }).skip(skip).limit(limit).toArray(),
+    cursor.sort(sort ?? { _id: -1 }).skip(skip).limit(limit).toArray(),
     collection.countDocuments(filter),
     hasFilter ? collection.estimatedDocumentCount() : Promise.resolve(0),
   ])

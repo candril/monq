@@ -1,44 +1,208 @@
 /**
- * Filter bar — shows at the bottom.
- * When editing: focused <input> handles all text input natively (Ctrl+W, cursor, etc.)
- * When not editing: shows the active query as static text.
+ * Filter bar — bottom panel, two modes:
+ *
+ * Simple mode (1 row):
+ *   [Simple] <input placeholder="field:value ...">
+ *
+ * BSON mode (expanding panel):
+ *   [BSON]  Tab cycle · Ctrl+F format · Ctrl+O sort · Ctrl+J project · ↵ submit
+ *   filter ▸
+ *   <textarea 4 rows>
+ *   sort              (if bsonSortVisible)
+ *   <textarea 4 rows>
+ *   projection        (if bsonProjectionVisible)
+ *   <textarea 4 rows>
+ *
+ * Textarea is imperative: seeded via initialValue, updated via ref.setText(),
+ * changes read via ref.onContentChange.
  */
 
+import { useRef, useEffect } from "react"
+import type { TextareaRenderable } from "@opentui/core"
 import { theme } from "../theme"
+import type { BsonSection, QueryMode } from "../types"
+
+const BADGE_SIMPLE_FG = theme.querySimple
+const BADGE_BSON_FG = theme.queryBson
+const TEXTAREA_HEIGHT = 4
 
 interface FilterBarProps {
-  /** Current query string */
   query: string
-  /** Whether the query input is currently active/focused */
+  queryMode: QueryMode
+  bsonSort: string
+  bsonProjection: string
+  bsonFocusedSection: BsonSection
+  bsonSortVisible: boolean
+  bsonProjectionVisible: boolean
   editing?: boolean
-  /** Called when input changes (only when editing) */
-  onChange?: (value: string) => void
-  /** Called when Enter is pressed */
+
+  onQueryChange?: (value: string) => void
+  onBsonSortChange?: (value: string) => void
+  onBsonProjectionChange?: (value: string) => void
   onSubmit?: () => void
 }
 
-export function FilterBar({ query, editing, onChange, onSubmit }: FilterBarProps) {
-  if (!query && !editing) return null
+/**
+ * A single labelled BSON textarea section.
+ * Uses initialValue to seed; externalValue synced via ref.setText() when it
+ * changes externally (e.g. Ctrl+F format, mode migration).
+ */
+function BsonTextarea({
+  label,
+  initialValue,
+  externalValue,
+  focused,
+  onChange,
+}: {
+  label: string
+  initialValue: string
+  externalValue: string
+  focused: boolean
+  onChange: (v: string) => void
+}) {
+  const ref = useRef<TextareaRenderable>(null)
+
+  // Wire onContentChange once ref is available
+  useEffect(() => {
+    const ta = ref.current
+    if (!ta) return
+    ta.onContentChange = () => {
+      // getTextRange(0, large number) reads the full buffer
+      onChange(ta.getTextRange(0, 1_000_000))
+    }
+    return () => {
+      if (ref.current) ref.current.onContentChange = undefined
+    }
+  }, [ref.current]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Push external changes (format, migration) back into the textarea
+  useEffect(() => {
+    const ta = ref.current
+    if (!ta) return
+    const current = ta.getTextRange(0, 1_000_000)
+    if (current !== externalValue) {
+      ta.replaceText(externalValue)
+    }
+  }, [externalValue])
 
   return (
-    <box height={1} backgroundColor={theme.headerBg} paddingX={1} flexDirection="row">
-      <text fg={theme.textMuted}>/</text>
-      {editing ? (
-        <input
-          value={query}
-          onInput={onChange}
-          onChange={onSubmit}
-          placeholder="filter..."
-          focused={true}
-          flexGrow={1}
-          backgroundColor={theme.headerBg}
-          textColor={theme.text}
-          placeholderColor={theme.textDim}
-        />
-      ) : (
+    <box flexDirection="column">
+      <box height={1} paddingLeft={1}>
         <text>
-          <span fg={theme.text}>{query}</span>
+          <span fg={focused ? theme.primary : theme.textMuted}>
+            {focused ? `${label} ▸` : label}
+          </span>
         </text>
+      </box>
+      <textarea
+        ref={ref}
+        initialValue={initialValue}
+        placeholder="{ }"
+        focused={focused}
+        height={TEXTAREA_HEIGHT}
+        flexGrow={1}
+        backgroundColor={theme.bg}
+        focusedBackgroundColor={theme.bg}
+        textColor={theme.text}
+        placeholderColor={theme.textDim}
+        wrapMode="word"
+      />
+    </box>
+  )
+}
+
+export function FilterBar({
+  query,
+  queryMode,
+  bsonSort,
+  bsonProjection,
+  bsonFocusedSection,
+  bsonSortVisible,
+  bsonProjectionVisible,
+  editing,
+  onQueryChange,
+  onBsonSortChange,
+  onBsonProjectionChange,
+  onSubmit,
+}: FilterBarProps) {
+  if (!query && !editing) return null
+
+  const badgeLabel = queryMode === "simple" ? "[Simple]" : "[BSON]"
+  const badgeFg = queryMode === "simple" ? BADGE_SIMPLE_FG : BADGE_BSON_FG
+
+  const sectionCount =
+    1 + (bsonSortVisible ? 1 : 0) + (bsonProjectionVisible ? 1 : 0)
+  const bsonHeight = sectionCount * (TEXTAREA_HEIGHT + 1) // textarea + label row
+
+  return (
+    <box
+      height={editing && queryMode === "bson" ? bsonHeight + 1 : 1}
+      backgroundColor={theme.headerBg}
+      paddingX={1}
+      flexDirection="column"
+    >
+      {/* Header row: badge + input or hint */}
+      <box height={1} flexDirection="row" gap={1}>
+        <text>
+          <span fg={badgeFg}>{badgeLabel}</span>
+        </text>
+
+        {editing ? (
+          queryMode === "bson" ? (
+            <text>
+              <span fg={theme.textMuted}>
+                Tab cycle · Shift+Tab→simple · Ctrl+F format · Ctrl+O sort · Ctrl+J project · Ctrl+↵ submit
+              </span>
+            </text>
+          ) : (
+            <input
+              value={query}
+              onInput={onQueryChange}
+              onChange={onSubmit}
+              placeholder="field:value ..."
+              focused={true}
+              flexGrow={1}
+              backgroundColor={theme.headerBg}
+              textColor={theme.text}
+              placeholderColor={theme.textDim}
+            />
+          )
+        ) : (
+          <text>
+            <span fg={theme.text}>{query}</span>
+          </text>
+        )}
+      </box>
+
+      {/* BSON sections — only when editing in bson mode */}
+      {editing && queryMode === "bson" && (
+        <>
+          <BsonTextarea
+            label="filter"
+            initialValue={query}
+            externalValue={query}
+            focused={bsonFocusedSection === "filter"}
+            onChange={onQueryChange ?? (() => {})}
+          />
+          {bsonSortVisible && (
+            <BsonTextarea
+              label="sort"
+              initialValue={bsonSort}
+              externalValue={bsonSort}
+              focused={bsonFocusedSection === "sort"}
+              onChange={onBsonSortChange ?? (() => {})}
+            />
+          )}
+          {bsonProjectionVisible && (
+            <BsonTextarea
+              label="projection"
+              initialValue={bsonProjection}
+              externalValue={bsonProjection}
+              focused={bsonFocusedSection === "projection"}
+              onChange={onBsonProjectionChange ?? (() => {})}
+            />
+          )}
+        </>
       )}
     </box>
   )

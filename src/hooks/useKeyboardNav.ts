@@ -38,10 +38,46 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       return
     }
 
-    // Filter bar: only handle Escape to close
+    // Filter bar key handling
     if (state.queryVisible) {
       if (key.name === "escape") {
         dispatch({ type: "CLOSE_QUERY" })
+        return
+      }
+      if (key.name === "tab" && !key.shift) {
+        if (state.queryMode === "simple") {
+          // Simple mode: Tab → switch to BSON (migrates current filter + sort)
+          dispatch({ type: "TOGGLE_QUERY_MODE" })
+        } else {
+          // BSON mode: Tab → cycle focus between visible sections
+          dispatch({ type: "CYCLE_BSON_SECTION" })
+        }
+        return
+      }
+      // Shift+Tab: BSON → back to simple mode
+      if (key.name === "tab" && key.shift && state.queryMode === "bson") {
+        dispatch({ type: "TOGGLE_QUERY_MODE" })
+        return
+      }
+      // BSON-mode only controls
+      if (state.queryMode === "bson") {
+        if (key.ctrl && key.name === "o") {
+          dispatch({ type: "TOGGLE_BSON_SORT" })
+          return
+        }
+        if (key.ctrl && key.name === "j") {
+          dispatch({ type: "TOGGLE_BSON_PROJECTION" })
+          return
+        }
+        if (key.ctrl && key.name === "f") {
+          dispatch({ type: "FORMAT_BSON_SECTION" })
+          return
+        }
+        // Ctrl+Enter submits in BSON mode (regular Enter inserts newlines in textarea)
+        if (key.ctrl && key.name === "return") {
+          dispatch({ type: "SUBMIT_QUERY" })
+          return
+        }
       }
       return
     }

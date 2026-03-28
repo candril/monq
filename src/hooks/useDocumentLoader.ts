@@ -39,11 +39,29 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
 
     const existingColumns = state.columns
 
-    const sort = state.sortField
-      ? { [state.sortField]: state.sortDirection as 1 | -1 }
-      : undefined
+    // Sort: in bson mode use bsonSort textarea, otherwise use simple sort state
+    let sort: Record<string, 1 | -1> | undefined
+    if (queryMode === "bson" && state.bsonSort.trim()) {
+      try {
+        sort = JSON.parse(state.bsonSort) as Record<string, 1 | -1>
+      } catch {
+        // Invalid sort JSON — skip
+      }
+    } else if (state.sortField) {
+      sort = { [state.sortField]: state.sortDirection as 1 | -1 }
+    }
 
-    fetchDocuments(activeTab.collectionName, filter, { sort })
+    // Projection: only in bson mode
+    let projection: Record<string, 0 | 1> | undefined
+    if (queryMode === "bson" && state.bsonProjection.trim()) {
+      try {
+        projection = JSON.parse(state.bsonProjection) as Record<string, 0 | 1>
+      } catch {
+        // Invalid projection JSON — skip
+      }
+    }
+
+    fetchDocuments(activeTab.collectionName, filter, { sort, projection })
       .then(({ documents, count, totalCount }) => {
         if (cancelled) return
         const detectedFields = detectColumns(documents)

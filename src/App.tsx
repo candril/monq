@@ -219,6 +219,7 @@ export function App({ uri }: AppProps) {
       <FilterSuggestions
         visible={state.queryVisible}
         query={state.queryInput}
+        queryMode={state.queryMode}
         columns={state.columns}
         schemaMap={state.schemaMap}
         onChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
@@ -226,8 +227,16 @@ export function App({ uri }: AppProps) {
 
       <FilterBar
         query={state.queryInput}
+        queryMode={state.queryMode}
+        bsonSort={state.bsonSort}
+        bsonProjection={state.bsonProjection}
+        bsonFocusedSection={state.bsonFocusedSection}
+        bsonSortVisible={state.bsonSortVisible}
+        bsonProjectionVisible={state.bsonProjectionVisible}
         editing={state.queryVisible}
-        onChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
+        onQueryChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
+        onBsonSortChange={(v) => dispatch({ type: "SET_BSON_SORT", input: v })}
+        onBsonProjectionChange={(v) => dispatch({ type: "SET_BSON_PROJECTION", input: v })}
         onSubmit={() => dispatch({ type: "SUBMIT_QUERY" })}
       />
 

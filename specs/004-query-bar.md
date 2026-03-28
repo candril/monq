@@ -1,127 +1,176 @@
 # Query Bar
 
-**Status**: Ready
+**Status**: In Progress
 
 ## Description
 
-A dual-mode query bar for filtering documents. Simple mode uses human-readable `Key:Value` syntax that auto-converts to MongoDB queries. BSON mode allows raw MongoDB filter JSON. The query bar also supports filtering on current values from selected documents.
+A dual-mode query bar for filtering documents. Simple mode uses human-readable `Key:Value`
+syntax that auto-converts to MongoDB queries. BSON mode is an expanding multi-section panel
+that exposes filter, sort, and projection as raw MongoDB JSON — and is designed to grow into
+full aggregation pipeline support in the future.
 
 ## Out of Scope
 
-- Aggregation pipelines
+- Aggregation pipelines (planned, see Future section below)
 - Query history / saved queries (future spec)
 - Index-aware query suggestions
+- Live / debounced results (submit on Enter only)
 
 ## Capabilities
 
 ### P1 - Must Have
 
-- **Simple mode** (default): Parse `Key:Value` pairs into MongoDB filters
-  - `Author:Peter` -> `{ "Author": "Peter" }`
-  - `Author:Peter State:Closed` -> `{ "Author": "Peter", "State": "Closed" }`
-  - Multiple pairs combined with `$and`
-- **BSON mode**: Raw MongoDB filter JSON input
-  - `{ "age": { "$gt": 25 } }`
-  - Syntax validation before executing
-- Toggle between modes with `Tab` key
-- Show current mode indicator (Simple / BSON)
-- Execute query on Enter
-- Clear query with Escape
-- Open query bar with `/`
+- **Simple mode** (default): single-line `<input>` at the bottom of the screen
+  - Parse `Key:Value` pairs into MongoDB filters
+  - `Author:Peter` → `{ "Author": "Peter" }`
+  - `Author:Peter State:Closed` → `{ "Author": "Peter", "State": "Closed" }`
+  - Comparison operators: `age>25`, `age>=25`, `age<25`, `count!=0`
+  - Regex: `name:/^john/i` → `{ "name": { "$regex": "^john", "$options": "i" } }`
+  - Negation: `-Field:Value` → `{ "Field": { "$ne": "Value" } }`
+  - Dot-notation: `address.city:London` → `{ "address.city": "London" }`
+  - Null / exists checks: `email:null`, `email:exists`, `email:!exists`
+  - `$elemMatch` auto-generated for array ancestors
+  - Field name suggestions with dot-notation drill-down (schema-aware)
+  - Execute on Enter, clear with Backspace (outside bar), open with `/`
+
+- **BSON mode**: expanding multi-section panel, toggled with `Tab` from the filter bar
+  - **Filter section** (always visible): raw MongoDB filter JSON textarea
+  - **Sort section** (toggle with `Ctrl+O`): raw MongoDB sort JSON textarea
+  - **Projection section** (toggle with `Ctrl+J`): raw MongoDB projection JSON textarea
+  - `Tab` cycles focus between visible sections
+  - `Ctrl+F` pretty-prints (formats) the currently focused section
+  - `Enter` submits all sections
+  - `Escape` closes the BSON panel (returns to simple mode display)
+  - Mode badge: `[Simple]` in green / `[BSON]` in orange — always visible when bar is open
+
+- **Mode migration on Tab switch**:
+  - Simple → BSON: current simple query is parsed and pre-populated as pretty-printed JSON
+    in the filter textarea; active sort state is pre-populated in the sort textarea
+  - BSON → Simple: filter textarea content is carried back into the simple input as-is
+    (user's raw JSON is preserved as the query string)
 
 ### P2 - Should Have
 
-- **Comparison operators** in simple mode:
-  - `age>25` -> `{ "age": { "$gt": 25 } }`
-  - `age>=25` -> `{ "age": { "$gte": 25 } }`
-  - `age<25` -> `{ "age": { "$lt": 25 } }`
-  - `count!=0` -> `{ "count": { "$ne": 0 } }`
-- **Regex** in simple mode:
-  - `name:/^john/i` -> `{ "name": { "$regex": "^john", "$options": "i" } }`
-- **Filter from value**: Select a value in document preview and press `f` to create a filter for that field=value
-- **Auto-detect value types**: Numbers parsed as numbers, not strings
-- Live results (debounced, update as you type)
+- Filter-from-value: press `f` on a cell to append `field:value` to the simple query
+- Show current mode indicator in the filter bar at all times (even when closed, if a
+  query is active)
+- Syntax highlighting in BSON textareas (JSON language)
+- BSON parse error shown inline (red message below the offending textarea) rather than
+  silently falling back to unfiltered
 
 ### P3 - Nice to Have
 
-- **Nested field** queries: `address.city:London` -> `{ "address.city": "London" }`
-- **Null checks**: `email:null` -> `{ "email": null }`
-- **Exists checks**: `email:exists` -> `{ "email": { "$exists": true } }`
-- Query suggestions based on known field names
-- Query history with up/down arrows
+- Query history with up/down arrows (simple mode)
+- Validate projection fields against known schema
+- Visual diff of active filter vs. previous filter
 
 ## Technical Notes
 
 ### Simple Query Parser
 
+Located at `src/query/parser.ts`. Key exports:
+
 ```typescript
-interface SimpleQuery {
-  field: string
-  operator: "eq" | "gt" | "gte" | "lt" | "lte" | "ne" | "regex"
-  value: string | number | boolean | null | RegExp
-}
+parseSimpleQuery(input: string, schemaMap?: SchemaMap): Filter<Document>
+parseBsonQuery(input: string): Filter<Document>
+getLastToken(input: string): { prefix: string; lastToken: string }
+```
 
-function parseSimpleQuery(input: string): Record<string, unknown> {
-  const tokens = tokenize(input) // Split by spaces, respecting quotes
-  const filter: Record<string, unknown> = {}
-  
-  for (const token of tokens) {
-    // Key:Value pattern
-    const colonMatch = token.match(/^(\w[\w.]*):(.+)$/)
-    if (colonMatch) {
-      const [, field, value] = colonMatch
-      filter[field] = coerceValue(value)
-      continue
-    }
-    
-    // Key>Value, Key>=Value, Key<Value, Key<=Value, Key!=Value
-    const opMatch = token.match(/^(\w[\w.]*)(>=|<=|!=|>|<)(.+)$/)
-    if (opMatch) {
-      const [, field, op, value] = opMatch
-      const mongoOp = { ">": "$gt", ">=": "$gte", "<": "$lt", "<=": "$lte", "!=": "$ne" }[op]
-      filter[field] = { [mongoOp!]: coerceValue(value) }
-      continue
-    }
-  }
-  
-  return filter
-}
+### Mode Toggle State Migration
 
-function coerceValue(value: string): string | number | boolean | null {
-  if (value === "null") return null
-  if (value === "true") return true
-  if (value === "false") return false
-  const num = Number(value)
-  if (!isNaN(num) && value.trim() !== "") return num
-  // Strip quotes if present
-  if ((value.startsWith('"') && value.endsWith('"')) || 
-      (value.startsWith("'") && value.endsWith("'"))) {
-    return value.slice(1, -1)
-  }
-  return value
+When switching **simple → BSON**, the reducer:
+1. Calls `parseSimpleQuery(queryInput)` to get the current filter object
+2. Pretty-prints it as `JSON.stringify(filter, null, 2)` → `bsonFilter` textarea
+3. If `sortField` is set, converts `{ [sortField]: sortDirection }` → `bsonSort` textarea
+4. Clears `sortField` / `sortDirection` (BSON mode owns sort now)
+
+When switching **BSON → simple**:
+1. Carries the raw `bsonFilter` string back into `queryInput`
+2. Clears `bsonSort` / `bsonProjection`
+
+### BSON Editor Layout
+
+Expands in-place at the bottom of the screen. Height grows as sections are added:
+
+```
+─────────────────────────────────────────────────────────────────────
+[BSON]  Tab cycle · Ctrl+F format · Ctrl+O sort · Ctrl+J project · ↵ submit
+filter ▸
+┌──────────────────────────────────────────────────────────────────┐
+│ {                                                                │
+│   "age": { "$gt": 25 }                                          │
+│ }                                                                │
+└──────────────────────────────────────────────────────────────────┘
+sort  (after Ctrl+O)
+┌──────────────────────────────────────────────────────────────────┐
+│ { "age": -1 }                                                    │
+└──────────────────────────────────────────────────────────────────┘
+─────────────────────────────────────────────────────────────────────
+```
+
+Section labels dim when unfocused; active section label shows `▸` indicator.
+
+### fetchDocuments Options
+
+`src/providers/mongodb.ts` `fetchDocuments()` accepts:
+
+```typescript
+options: {
+  skip?: number
+  limit?: number
+  sort?: Record<string, 1 | -1>     // used by both simple sort and bsonSort
+  projection?: Record<string, 0 | 1> // new — passed from bsonProjection
 }
 ```
 
-### Layout
+### AppState BSON Fields
 
+```typescript
+bsonFilter: string          // filter textarea content (mirrors queryInput in bson mode)
+bsonSort: string            // sort textarea content
+bsonProjection: string      // projection textarea content
+bsonFocusedSection: "filter" | "sort" | "projection"
+bsonSortVisible: boolean
+bsonProjectionVisible: boolean
 ```
-┌─────────────────────────────────────────────────────────────┐
-│   _id          name          email              age  active │
-│ > 507f1f77...  John Doe      john@example.com   32   true   │
-│   507f1f79...  Bob Wilson    bob@example.com    45   false  │
-├─────────────────────────────────────────────────────────────┤
-│ [Simple] / Author:Peter age>25                              │  <- Query bar
-└─────────────────────────────────────────────────────────────┘
+
+Note: in BSON mode `queryInput` is kept in sync with `bsonFilter` so that the rest of
+the app (document loader, tab persistence, filter bar display) can remain agnostic of mode.
+
+## Future: Aggregation Pipeline
+
+The BSON editor is intentionally designed to extend into aggregation pipeline support.
+The planned addition is a **Pipeline section** (`Ctrl+A` to toggle), where the user enters
+a JSON array of pipeline stages:
+
+```json
+[
+  { "$match": { "status": "active" } },
+  { "$group": { "_id": "$category", "count": { "$sum": 1 } } },
+  { "$sort": { "count": -1 } }
+]
 ```
+
+When a pipeline is present it takes precedence over filter/sort/projection (which become
+disabled). The document loader would call `collection.aggregate(pipeline)` instead of
+`collection.find(filter)`.
+
+This is **out of scope for the current implementation** and will be tracked in a dedicated
+spec (e.g. `012-aggregation-pipeline.md`).
 
 ## File Structure
 
-### Create
-- `src/query/parser.ts` - Simple query parser
-- `src/query/types.ts` - Query type definitions
-- `src/components/QueryBar.tsx` - Query bar component
+### Modified
+- `src/specs/004-query-bar.md` — this file
+- `src/types.ts` — add `BsonSection`, BSON fields to `AppState` and `Tab`
+- `src/state.ts` — add BSON actions + reducer cases, state migration on mode toggle
+- `src/components/FilterBar.tsx` — rewrite: expanding panel, mode badge, textareas
+- `src/components/FilterSuggestions.tsx` — hide when in BSON mode
+- `src/hooks/useKeyboardNav.ts` — Tab toggle, Ctrl+O/J/F, section cycling
+- `src/hooks/useDocumentLoader.ts` — pass sort + projection from BSON fields
+- `src/providers/mongodb.ts` — add `projection` option to `fetchDocuments`
+- `src/App.tsx` — pass BSON fields to FilterBar
 
-### Modify
-- `src/App.tsx` - Integrate query bar
-- `src/state.ts` - Add query state
-- `src/providers/mongodb.ts` - Add filtered queries
+### Already Exists
+- `src/query/parser.ts` — simple + BSON query parsers
+- `src/query/schema.ts` — schema map for suggestions

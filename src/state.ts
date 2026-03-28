@@ -5,6 +5,7 @@
 import type { Document } from "mongodb"
 import type {
   AppState,
+  BsonSection,
   CollectionInfo,
   DetectedColumn,
   PreviewPosition,
@@ -12,6 +13,7 @@ import type {
   Tab,
   View,
 } from "./types"
+import { parseSimpleQuery } from "./query/parser"
 
 // ============================================================================
 // Actions
@@ -52,6 +54,13 @@ export type AppAction =
   | { type: "SET_QUERY_INPUT"; input: string }
   | { type: "SET_QUERY_MODE"; mode: QueryMode }
   | { type: "TOGGLE_QUERY_MODE" }
+  | { type: "SET_BSON_SORT"; input: string }
+  | { type: "SET_BSON_PROJECTION"; input: string }
+  | { type: "SET_BSON_SECTION"; section: BsonSection }
+  | { type: "CYCLE_BSON_SECTION" }
+  | { type: "TOGGLE_BSON_SORT" }
+  | { type: "TOGGLE_BSON_PROJECTION" }
+  | { type: "FORMAT_BSON_SECTION" }
   | { type: "SUBMIT_QUERY" }
   | { type: "CLEAR_QUERY" }
   // Preview
@@ -94,6 +103,11 @@ export function createInitialState(): AppState {
     queryVisible: false,
     queryMode: "simple",
     queryInput: "",
+    bsonSort: "",
+    bsonProjection: "",
+    bsonFocusedSection: "filter",
+    bsonSortVisible: false,
+    bsonProjectionVisible: false,
     previewPosition: null,
     previewScrollOffset: 0,
     commandPaletteVisible: false,
@@ -118,6 +132,8 @@ function snapshotTab(state: AppState, tabId: string, collectionName: string): Ta
     collectionName,
     query: state.queryInput,
     queryMode: state.queryMode,
+    bsonSort: state.bsonSort,
+    bsonProjection: state.bsonProjection,
     selectedIndex: state.selectedIndex,
     selectedColumnIndex: state.selectedColumnIndex,
     scrollOffset: 0,
@@ -137,6 +153,11 @@ function restoreFromTab(state: AppState, tab: Tab): Partial<AppState> {
   return {
     queryInput: tab.query,
     queryMode: tab.queryMode,
+    bsonSort: tab.bsonSort,
+    bsonProjection: tab.bsonProjection,
+    bsonFocusedSection: "filter",
+    bsonSortVisible: tab.bsonSort !== "",
+    bsonProjectionVisible: tab.bsonProjection !== "",
     selectedIndex: tab.selectedIndex,
     selectedColumnIndex: tab.selectedColumnIndex,
     sortField: tab.sortField,
@@ -204,6 +225,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         collectionName: action.collectionName,
         query: "",
         queryMode: "simple",
+        bsonSort: "",
+        bsonProjection: "",
         selectedIndex: 0,
         selectedColumnIndex: 0,
         scrollOffset: 0,
@@ -472,11 +495,97 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "SET_QUERY_MODE":
       return { ...state, queryMode: action.mode }
 
-    case "TOGGLE_QUERY_MODE":
+    case "TOGGLE_QUERY_MODE": {
+      if (state.queryMode === "simple") {
+        // simple → bson: migrate current filter + sort into BSON textareas
+        let bsonFilter = ""
+        try {
+          const filter = parseSimpleQuery(state.queryInput, state.schemaMap)
+          bsonFilter = Object.keys(filter).length > 0
+            ? JSON.stringify(filter, null, 2)
+            : ""
+        } catch {
+          bsonFilter = state.queryInput
+        }
+        // Migrate active sort into sort textarea
+        const bsonSort = state.sortField
+          ? JSON.stringify({ [state.sortField]: state.sortDirection }, null, 2)
+          : state.bsonSort
+        return {
+          ...state,
+          queryMode: "bson",
+          queryInput: bsonFilter,
+          bsonSort,
+          bsonSortVisible: bsonSort !== "",
+          bsonFocusedSection: "filter",
+          // Clear simple-mode sort — BSON mode owns it now
+          sortField: null,
+          sortDirection: -1,
+        }
+      } else {
+        // bson → simple: carry raw filter string back as query input
+        return {
+          ...state,
+          queryMode: "simple",
+          queryInput: state.queryInput,
+          bsonFocusedSection: "filter",
+        }
+      }
+    }
+
+    case "SET_BSON_SORT":
+      return { ...state, bsonSort: action.input }
+
+    case "SET_BSON_PROJECTION":
+      return { ...state, bsonProjection: action.input }
+
+    case "SET_BSON_SECTION":
+      return { ...state, bsonFocusedSection: action.section }
+
+    case "CYCLE_BSON_SECTION": {
+      const sections: BsonSection[] = ["filter"]
+      if (state.bsonSortVisible) sections.push("sort")
+      if (state.bsonProjectionVisible) sections.push("projection")
+      const currentIdx = sections.indexOf(state.bsonFocusedSection)
+      const nextIdx = (currentIdx + 1) % sections.length
+      return { ...state, bsonFocusedSection: sections[nextIdx] }
+    }
+
+    case "TOGGLE_BSON_SORT": {
+      const nowVisible = !state.bsonSortVisible
       return {
         ...state,
-        queryMode: state.queryMode === "simple" ? "bson" : "simple",
+        bsonSortVisible: nowVisible,
+        bsonFocusedSection: nowVisible ? "sort" : "filter",
+        bsonSort: nowVisible ? state.bsonSort : "",
       }
+    }
+
+    case "TOGGLE_BSON_PROJECTION": {
+      const nowVisible = !state.bsonProjectionVisible
+      return {
+        ...state,
+        bsonProjectionVisible: nowVisible,
+        bsonFocusedSection: nowVisible ? "projection" : "filter",
+        bsonProjection: nowVisible ? state.bsonProjection : "",
+      }
+    }
+
+    case "FORMAT_BSON_SECTION": {
+      const section = state.bsonFocusedSection
+      const raw = section === "filter" ? state.queryInput
+        : section === "sort" ? state.bsonSort
+        : state.bsonProjection
+      let formatted = raw
+      try {
+        formatted = JSON.stringify(JSON.parse(raw.trim()), null, 2)
+      } catch {
+        // Not valid JSON yet — leave as-is
+      }
+      if (section === "filter") return { ...state, queryInput: formatted }
+      if (section === "sort") return { ...state, bsonSort: formatted }
+      return { ...state, bsonProjection: formatted }
+    }
 
     case "SUBMIT_QUERY":
       return {

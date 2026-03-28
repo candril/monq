@@ -2,7 +2,7 @@
  * Type definitions for Mon-Q
  */
 
-import type { Document, ObjectId } from "mongodb"
+import type { Document } from "mongodb"
 import type { SchemaMap } from "./query/schema"
 
 // ============================================================================
@@ -17,6 +17,9 @@ export type PreviewPosition = "right" | "bottom" | null
 
 /** Query mode */
 export type QueryMode = "simple" | "bson"
+
+/** Which section is focused in the BSON editor */
+export type BsonSection = "filter" | "sort" | "projection"
 
 // ============================================================================
 // Collection Types
@@ -38,6 +41,10 @@ export interface Tab {
   /** Current query string */
   query: string
   queryMode: QueryMode
+  /** BSON sort expression (only used in bson mode) */
+  bsonSort: string
+  /** BSON projection expression (only used in bson mode) */
+  bsonProjection: string
   selectedIndex: number
   selectedColumnIndex: number
   scrollOffset: number
@@ -128,6 +135,16 @@ export interface AppState {
   queryVisible: boolean
   queryMode: QueryMode
   queryInput: string
+  /** BSON sort input (only used in bson mode) */
+  bsonSort: string
+  /** BSON projection input (only used in bson mode) */
+  bsonProjection: string
+  /** Which section is focused in BSON editor */
+  bsonFocusedSection: BsonSection
+  /** Whether sort section is visible in BSON editor */
+  bsonSortVisible: boolean
+  /** Whether projection section is visible in BSON editor */
+  bsonProjectionVisible: boolean
 
   // Preview
   previewPosition: PreviewPosition
