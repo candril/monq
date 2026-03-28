@@ -287,49 +287,25 @@ function buildJsonSchema(collectionName: string, schemaMap: SchemaMap): string {
 // ── Editor argument builder ─────────────────────────────────────────────────
 
 /**
- * Build editor command args, positioning cursor inside the $match braces.
- *
- * For vim/nvim: use `+call cursor(line, col)` to place the cursor.
- * The target is the opening `{` of the $match value, one character in.
- *
- * For other editors: just open the file with no position args.
+ * Build editor command args, positioning cursor inside the first pipeline stage.
+ * For vim/nvim: lands on the line after the opening `{` of the first stage value.
+ * For other editors: just open the file.
  */
 function buildEditorArgs(editorBase: string, queryFile: string, content: string): string[] {
   const isVimLike = /^(nvim|vim|vi|gvim|view|rvim)$/.test(editorBase)
+  if (!isVimLike) return [editorBase, queryFile]
 
-  if (!isVimLike) {
-    return [editorBase, queryFile]
-  }
-
-  // Find the line containing "$match": { — we want the cursor on the
-  // line after that (the first key inside $match), column 1.
   const lines = content.split("\n")
-  let targetLine = 0
-  let targetCol = 1
-
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    // Match the "$match" key line e.g.: `    { "$match": {`
-    if (/"?\$match"?\s*:\s*\{/.test(line)) {
-      // The opening brace is on this line — place cursor on next line, col 1
-      // so user is ready to type the first field
-      targetLine = i + 2  // 1-indexed, +1 for next line
-      targetCol = 1
-      // Try to find indentation of that next line for better positioning
+    // Match any pipeline stage: `"$anything": {`
+    if (/"\$\w+":\s*\{/.test(lines[i])) {
       const nextLine = lines[i + 1] ?? ""
-      const indent = nextLine.match(/^(\s*)/)?.[1].length ?? 0
-      targetCol = indent + 1
-      break
+      const col = (nextLine.match(/^(\s*)/)?.[1].length ?? 0) + 1
+      return [editorBase, `+call cursor(${i + 2}, ${col})`, queryFile]
     }
   }
 
-  if (targetLine === 0) {
-    // Fallback: just open the file
-    return [editorBase, queryFile]
-  }
-
-  // nvim/vim: `+call cursor(line, col)` positions cursor before loading
-  return [editorBase, `+call cursor(${targetLine}, ${targetCol})`, queryFile]
+  return [editorBase, queryFile]
 }
 
 // ── Main entry point ────────────────────────────────────────────────────────
