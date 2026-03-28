@@ -8,7 +8,7 @@ import type { Dispatch } from "react"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import { fetchDocuments, fetchAggregate, detectColumns } from "../providers/mongodb"
-import { parseSimpleQuery, parseBsonQuery } from "../query/parser"
+import { parseSimpleQuery, parseBsonQuery, splitProjection, parseProjection } from "../query/parser"
 import { buildSchemaMap } from "../query/schema"
 import { classifyPipeline, extractFindParts } from "../actions/pipeline"
 
@@ -111,10 +111,13 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
       sort = { [state.sortField]: state.sortDirection as 1 | -1 }
     }
 
-    // Projection: bson mode only
+    // Projection: bson mode uses bsonProjection textarea; simple mode uses pipe syntax
     let projection: Record<string, 0 | 1> | undefined
     if (queryMode === "bson" && state.bsonProjection.trim()) {
       try { projection = JSON.parse(state.bsonProjection) } catch { /* skip */ }
+    } else if (queryMode === "simple") {
+      const { projection: projStr } = splitProjection(queryInput)
+      projection = parseProjection(projStr)
     }
 
     fetchDocuments(activeTab.collectionName, filter, { sort, projection, limit: pageSize })
@@ -170,6 +173,9 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
     let projection: Record<string, 0 | 1> | undefined
     if (queryMode === "bson" && state.bsonProjection.trim()) {
       try { projection = JSON.parse(state.bsonProjection) } catch { /* skip */ }
+    } else if (queryMode === "simple") {
+      const { projection: projStr } = splitProjection(queryInput)
+      projection = parseProjection(projStr)
     }
 
     fetchDocuments(activeTab.collectionName, filter, {

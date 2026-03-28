@@ -10,7 +10,7 @@ import type { DetectedColumn } from "../types"
 import type { SchemaMap } from "../query/schema"
 import { getSubfieldSuggestions } from "../query/schema"
 import { theme } from "../theme"
-import { getLastToken } from "../query/parser"
+import { getLastToken, isInProjection, getLastProjectionToken, splitProjection } from "../query/parser"
 import { fuzzyFilter } from "../utils/fuzzy"
 
 interface Suggestion {
@@ -48,11 +48,80 @@ function buildBsonSuggestions(
   })
 }
 
+function buildProjectionSuggestions(
+  query: string,
+  columns: DetectedColumn[],
+  schemaMap: SchemaMap,
+): Suggestion[] {
+  const tok = getLastProjectionToken(query)
+  if (!tok) return []
+  const { projPrefix, lastToken } = tok
+
+  // Strip negation for search, preserve for output
+  const negated = lastToken.startsWith("-")
+  const search = negated ? lastToken.slice(1) : lastToken
+  const negPrefix = negated ? "-" : ""
+
+  // Dot-notation drill-down on projection side
+  const dotIndex = search.lastIndexOf(".")
+  if (dotIndex >= 0) {
+    const parentPath = search.slice(0, dotIndex)
+    const subSearch = search.slice(dotIndex + 1)
+    const subfields = getSubfieldSuggestions(schemaMap, parentPath)
+    if (subfields.length === 0) return []
+    const filtered = subSearch
+      ? fuzzyFilter(subSearch, subfields, (f) => [f])
+      : subfields
+    return filtered.map((sub) => {
+      const fullPath = `${parentPath}.${sub}`
+      const info = schemaMap.get(fullPath)
+      const hasChildren = info && info.children.length > 0
+      return {
+        label: negPrefix + fullPath,
+        value: projPrefix + negPrefix + fullPath + (hasChildren ? "." : " "),
+        hint: info?.type,
+      }
+    })
+  }
+
+  // Top-level field suggestions (include schema paths with children for drill-down)
+  const allFields = new Set(columns.map((c) => c.field))
+  for (const [path, info] of schemaMap) {
+    if (!path.includes(".") && info.children.length > 0) allFields.add(path)
+  }
+
+  // Skip fields already present in the projection clause
+  const { projection: projStr } = splitProjection(query)
+  const alreadyUsed = new Set(
+    projStr.trim().split(/\s+/).map((t) => t.replace(/^-/, "")).filter(Boolean)
+  )
+
+  const candidates = [...allFields].filter((f) => !alreadyUsed.has(f))
+  const filtered = search
+    ? fuzzyFilter(search, candidates, (f) => [f])
+    : candidates
+
+  return filtered.map((field) => {
+    const info = schemaMap.get(field)
+    const hasChildren = info && info.children.length > 0
+    return {
+      label: negPrefix + field,
+      value: projPrefix + negPrefix + field + (hasChildren ? "." : " "),
+      hint: info?.type,
+    }
+  })
+}
+
 function buildSuggestions(
   query: string,
   columns: DetectedColumn[],
   schemaMap: SchemaMap,
 ): Suggestion[] {
+  // If cursor is in projection part, delegate
+  if (isInProjection(query)) {
+    return buildProjectionSuggestions(query, columns, schemaMap)
+  }
+
   const { prefix, lastToken } = getLastToken(query)
 
   // If last token contains ":" we're typing a value — no field suggestions

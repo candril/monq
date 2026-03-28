@@ -94,12 +94,15 @@ function tokenize(input: string): string[] {
 }
 
 /** Parse a simple query string into a MongoDB filter.
- *  If schemaMap is provided, uses $elemMatch for fields under array ancestors. */
+ *  If schemaMap is provided, uses $elemMatch for fields under array ancestors.
+ *  The projection part (after `|`) is ignored — use splitProjection + parseProjection for that. */
 export function parseSimpleQuery(
   input: string,
   schemaMap?: import("./schema").SchemaMap,
 ): Filter<Document> {
-  const trimmed = input.trim()
+  // Strip projection clause before parsing
+  const { filter: filterPart } = splitProjection(input)
+  const trimmed = filterPart.trim()
   if (!trimmed) return {}
 
   const tokens = tokenize(trimmed)
@@ -235,4 +238,72 @@ export function getLastToken(input: string): { prefix: string; lastToken: string
     prefix: trimmed.slice(0, lastSpace + 1),
     lastToken: trimmed.slice(lastSpace + 1),
   }
+}
+
+/**
+ * Split a simple query string into filter and projection parts at the first `|`.
+ *
+ * Examples:
+ *   "Author:Peter | name email"  -> { filter: "Author:Peter", projection: "name email" }
+ *   "Author:Peter"               -> { filter: "Author:Peter", projection: "" }
+ *   "| name email"               -> { filter: "", projection: "name email" }
+ */
+export function splitProjection(input: string): { filter: string; projection: string } {
+  const idx = input.indexOf("|")
+  if (idx === -1) return { filter: input.trim(), projection: "" }
+  return {
+    filter: input.slice(0, idx).trim(),
+    projection: input.slice(idx + 1).trim(),
+  }
+}
+
+/**
+ * Parse a projection string into a MongoDB projection object.
+ *
+ * Token rules:
+ *   field       -> { field: 1 }  (include)
+ *   dot.path    -> { "dot.path": 1 }
+ *   -field      -> { field: 0 }  (exclude)
+ *
+ * Returns undefined when projection string is empty.
+ */
+export function parseProjection(projection: string): Record<string, 0 | 1> | undefined {
+  const trimmed = projection.trim()
+  if (!trimmed) return undefined
+  const result: Record<string, 0 | 1> = {}
+  for (const token of trimmed.split(/\s+/)) {
+    if (!token) continue
+    if (token.startsWith("-")) {
+      const field = token.slice(1)
+      if (field) result[field] = 0
+    } else {
+      result[token] = 1
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined
+}
+
+/**
+ * Return whether the cursor is in the projection part (after `|`).
+ * Used by FilterSuggestions to decide which suggestions to show.
+ */
+export function isInProjection(input: string): boolean {
+  return input.includes("|")
+}
+
+/**
+ * Get the last projection token being typed (for field suggestions after `|`).
+ * Returns null if the cursor is not in the projection part.
+ */
+export function getLastProjectionToken(input: string): { projPrefix: string; lastToken: string } | null {
+  const pipeIdx = input.indexOf("|")
+  if (pipeIdx === -1) return null
+  const projPart = input.slice(pipeIdx + 1)
+  const trimmed = projPart.trimEnd()
+  const lastSpace = trimmed.lastIndexOf(" ")
+  const lastToken = lastSpace === -1 ? trimmed.trim() : trimmed.slice(lastSpace + 1)
+  // projPrefix is everything up to and including the pipe + space + tokens before the last one
+  const projPrefix = input.slice(0, pipeIdx + 1) + (lastSpace === -1 ? " " : projPart.slice(0, lastSpace + 1))
+  // Strip leading negation for search, preserve it for output
+  return { projPrefix, lastToken }
 }

@@ -9,6 +9,23 @@ process.on("exit", () => stopWatching())
 process.on("SIGINT", () => { stopWatching(); process.exit(0) })
 process.on("SIGTERM", () => { stopWatching(); process.exit(0) })
 
+// Parse --uri from argv (before starting the renderer)
+const args = process.argv.slice(2)
+const uriIndex = args.indexOf("--uri")
+const uri = uriIndex !== -1 ? args[uriIndex + 1] : null
+
+if (!uri) {
+  console.error("error: --uri is required\n")
+  console.error("Usage:")
+  console.error("  monq --uri <mongodb-uri>\n")
+  console.error("Options:")
+  console.error("  --uri <uri>   MongoDB connection URI (required)\n")
+  console.error("Examples:")
+  console.error("  monq --uri mongodb://localhost:27017")
+  console.error("  monq --uri mongodb+srv://user:pass@cluster.mongodb.net/mydb")
+  process.exit(1)
+}
+
 // Register tree-sitter parsers (JSON for document preview)
 registerSyntaxParsers()
 const tsClient = getTreeSitterClient()
@@ -23,16 +40,5 @@ const renderer = await createCliRenderer({
     title: "monq console",
   },
 })
-
-// Parse --uri from argv
-const args = process.argv.slice(2)
-const uriIndex = args.indexOf("--uri")
-const uri = uriIndex !== -1 ? args[uriIndex + 1] : null
-
-if (!uri) {
-  await renderer.destroy()
-  console.error("Usage: monq --uri <mongodb-uri>")
-  process.exit(1)
-}
 
 createRoot(renderer).render(<App uri={uri} />)

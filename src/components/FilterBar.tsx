@@ -24,6 +24,7 @@ import type { BsonSection, QueryMode, DetectedColumn } from "../types"
 import type { SchemaMap } from "../query/schema"
 import { getSubfieldSuggestions } from "../query/schema"
 import { fuzzyFilter } from "../utils/fuzzy"
+import { splitProjection } from "../query/parser"
 
 type BsonKeyBinding = NonNullable<TextareaOptions["keyBindings"]>[number]
 
@@ -189,6 +190,13 @@ export function FilterBar({
   const badgeLabel = queryMode === "simple" ? "simple" : "BSON"
   const badgeBg = queryMode === "simple" ? BADGE_SIMPLE_FG : BADGE_BSON_FG
 
+  // Split filter/projection for simple mode display
+  const { filter: filterPart, projection: projPart } = queryMode === "simple"
+    ? splitProjection(query)
+    : { filter: query, projection: "" }
+  const projTokens = projPart.trim().split(/\s+/).filter(Boolean)
+  const projCount = projTokens.length
+
   const sectionCount =
     1 + (bsonSortVisible ? 1 : 0) + (bsonProjectionVisible ? 1 : 0)
   // header row + sections (textarea + label each)
@@ -229,22 +237,32 @@ export function FilterBar({
               </text>
             </>
           ) : (
-            <input
-              value={query}
-              onInput={onQueryChange}
-              onSubmit={onSubmit}
-              placeholder="field:value ..."
-              focused={true}
-              flexGrow={1}
-              backgroundColor={theme.headerBg}
-              textColor={theme.text}
-              placeholderColor={theme.textDim}
-            />
+            <>
+              <input
+                value={query}
+                onInput={onQueryChange}
+                onSubmit={onSubmit}
+                placeholder="field:value ... | col1 col2"
+                focused={true}
+                flexGrow={1}
+                backgroundColor={theme.headerBg}
+                textColor={theme.text}
+                placeholderColor={theme.textDim}
+              />
+            </>
           )
         ) : (
-          <text>
-            <span fg={theme.text}>{query}</span>
-          </text>
+          queryMode === "simple" && projCount > 0 ? (
+            <text>
+              <span fg={theme.text}>{filterPart}</span>
+              <span fg={theme.textMuted}>{filterPart ? " " : ""}| </span>
+              <span fg={theme.secondary}>{projTokens.join(" ")}</span>
+            </text>
+          ) : (
+            <text>
+              <span fg={theme.text}>{query}</span>
+            </text>
+          )
         )}
       </box>
 

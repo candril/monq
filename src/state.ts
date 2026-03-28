@@ -16,7 +16,7 @@ import type {
   Tab,
   View,
 } from "./types"
-import { parseSimpleQuery } from "./query/parser"
+import { parseSimpleQuery, splitProjection, parseProjection } from "./query/parser"
 
 // ============================================================================
 // Actions
@@ -640,14 +640,15 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "OPEN_QUERY_BSON": {
       // Open the query bar in BSON mode directly.
-      // If currently in simple mode, migrate filter + sort first (same as TOGGLE_QUERY_MODE simple→bson).
+      // If currently in simple mode, migrate filter + sort + projection first.
       // If already in BSON mode, just ensure it's visible.
       if (state.queryMode === "bson") {
         return { ...state, queryVisible: true }
       }
+      const { filter: filterPart, projection: projPart } = splitProjection(state.queryInput)
       let bsonFilter = ""
       try {
-        const filter = parseSimpleQuery(state.queryInput, state.schemaMap)
+        const filter = parseSimpleQuery(filterPart, state.schemaMap)
         bsonFilter = Object.keys(filter).length > 0
           ? JSON.stringify(filter, null, 2)
           : "{\n  \n}"
@@ -657,13 +658,19 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       const bsonSort = state.sortField
         ? JSON.stringify({ [state.sortField]: state.sortDirection }, null, 2)
         : state.bsonSort
+      const migratedProj = parseProjection(projPart)
+      const bsonProjection = migratedProj
+        ? JSON.stringify(migratedProj, null, 2)
+        : state.bsonProjection
       return {
         ...state,
         queryVisible: true,
         queryMode: "bson",
         queryInput: bsonFilter,
         bsonSort,
+        bsonProjection,
         bsonSortVisible: bsonSort !== "",
+        bsonProjectionVisible: bsonProjection !== "",
         bsonFocusedSection: "filter",
         sortField: null,
         sortDirection: -1,
@@ -682,10 +689,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "TOGGLE_QUERY_MODE": {
       if (state.queryMode === "simple") {
-        // simple → bson: migrate current filter + sort into BSON textareas
+        // simple → bson: migrate current filter + sort + projection into BSON textareas
+        const { filter: filterPart, projection: projPart } = splitProjection(state.queryInput)
         let bsonFilter = ""
         try {
-          const filter = parseSimpleQuery(state.queryInput, state.schemaMap)
+          const filter = parseSimpleQuery(filterPart, state.schemaMap)
           bsonFilter = Object.keys(filter).length > 0
             ? JSON.stringify(filter, null, 2)
             : "{\n  \n}"
@@ -696,12 +704,18 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         const bsonSort = state.sortField
           ? JSON.stringify({ [state.sortField]: state.sortDirection }, null, 2)
           : state.bsonSort
+        const migratedProj = parseProjection(projPart)
+        const bsonProjection = migratedProj
+          ? JSON.stringify(migratedProj, null, 2)
+          : state.bsonProjection
         return {
           ...state,
           queryMode: "bson",
           queryInput: bsonFilter,
           bsonSort,
+          bsonProjection,
           bsonSortVisible: bsonSort !== "",
+          bsonProjectionVisible: bsonProjection !== "",
           bsonFocusedSection: "filter",
           sortField: null,
           sortDirection: -1,
@@ -737,10 +751,27 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         } catch {
           // Not valid JSON — leave as-is
         }
+        // Carry projection back from BSON textarea if possible (flat inclusion/exclusion map)
+        let projSuffix = ""
+        if (state.bsonProjection.trim()) {
+          try {
+            const proj = JSON.parse(state.bsonProjection.trim()) as Record<string, unknown>
+            const projTokens: string[] = []
+            let projOk = true
+            for (const [key, val] of Object.entries(proj)) {
+              if (val === 1) { projTokens.push(key); continue }
+              if (val === 0) { projTokens.push(`-${key}`); continue }
+              projOk = false; break
+            }
+            if (projOk && projTokens.length > 0) {
+              projSuffix = ` | ${projTokens.join(" ")}`
+            }
+          } catch { /* skip */ }
+        }
         return {
           ...state,
           queryMode: "simple",
-          queryInput: simpleQuery,
+          queryInput: simpleQuery + projSuffix,
           bsonFocusedSection: "filter",
         }
       }

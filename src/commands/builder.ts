@@ -9,6 +9,7 @@ export function buildCommands(state: AppState): Command[] {
   const commands: Command[] = []
   const hasTab = state.activeTabId !== null
   const hasDoc = hasTab && state.documents.length > 0
+  const hasSelection = state.selectedRows.size > 0
 
   // Navigation
   commands.push({
@@ -27,15 +28,33 @@ export function buildCommands(state: AppState): Command[] {
   if (hasDoc) {
     commands.push({
       id: "doc:edit",
-      label: "Edit Document",
+      label: hasSelection ? "Edit Selected Documents" : "Edit Document",
       category: "document",
       shortcut: "e",
+    })
+    commands.push({
+      id: "doc:insert",
+      label: "Insert New Document",
+      category: "document",
+      shortcut: "i",
+    })
+    commands.push({
+      id: "doc:delete",
+      label: hasSelection ? "Delete Selected Documents" : "Delete Document",
+      category: "document",
+      shortcut: "Shift+D",
+    })
+    commands.push({
+      id: "doc:copy-cell",
+      label: "Copy Cell Value",
+      category: "document",
+      shortcut: "y",
     })
     commands.push({
       id: "doc:copy-json",
       label: "Copy Document as JSON",
       category: "document",
-      shortcut: "y",
+      shortcut: "Y",
     })
     commands.push({
       id: "doc:copy-id",
@@ -65,6 +84,20 @@ export function buildCommands(state: AppState): Command[] {
       shortcut: "P",
     })
     commands.push({
+      id: "view:cycle-column-mode",
+      label: "Cycle Column Width Mode",
+      category: "view",
+      shortcut: "w",
+    })
+    if (!state.pipelineMode && state.queryMode !== "bson" && state.documents.length > 0) {
+      commands.push({
+        id: "view:toggle-column-exclude",
+        label: "Hide/Show Column (projection)",
+        category: "view",
+        shortcut: "-",
+      })
+    }
+    commands.push({
       id: "view:toggle-filter-bar",
       label: state.filterBarVisible ? "Hide Filter Bar" : "Show Filter Bar",
       category: "view",
@@ -91,6 +124,12 @@ export function buildCommands(state: AppState): Command[] {
       label: "Open Pipeline Editor",
       category: "query",
       shortcut: "Ctrl+F",
+    })
+    commands.push({
+      id: "query:open-pipeline-tmux",
+      label: "Open Pipeline in Tmux Split",
+      category: "query",
+      shortcut: "Ctrl+E",
     })
     if (state.pipelineMode) {
       commands.push({
@@ -124,6 +163,81 @@ export function buildCommands(state: AppState): Command[] {
       })
     }
   }
+
+  // Tab management
+  if (hasTab) {
+    commands.push({
+      id: "tabs:clone",
+      label: "Clone Tab",
+      category: "tabs",
+      shortcut: "t",
+    })
+    commands.push({
+      id: "tabs:close",
+      label: "Close Tab",
+      category: "tabs",
+      shortcut: "d",
+    })
+    commands.push({
+      id: "tabs:undo-close",
+      label: "Undo Close Tab",
+      category: "tabs",
+      shortcut: "u",
+    })
+    if (state.tabs.length > 1) {
+      commands.push({
+        id: "tabs:prev",
+        label: "Previous Tab",
+        category: "tabs",
+        shortcut: "[",
+      })
+      commands.push({
+        id: "tabs:next",
+        label: "Next Tab",
+        category: "tabs",
+        shortcut: "]",
+      })
+    }
+  }
+
+  // Selection
+  if (hasDoc) {
+    if (state.selectionMode === "none" || state.selectionMode === "selected") {
+      commands.push({
+        id: "selection:enter",
+        label: "Enter Selection Mode",
+        category: "selection",
+        shortcut: "v",
+      })
+    } else {
+      commands.push({
+        id: "selection:freeze",
+        label: "Freeze Selection",
+        category: "selection",
+        shortcut: "v",
+      })
+      commands.push({
+        id: "selection:exit",
+        label: "Exit Selection Mode",
+        category: "selection",
+        shortcut: "Esc",
+      })
+    }
+    commands.push({
+      id: "selection:select-all",
+      label: "Select All",
+      category: "selection",
+      shortcut: "Ctrl+A",
+    })
+  }
+
+  // Global
+  commands.push({
+    id: "app:quit",
+    label: "Quit",
+    category: "navigation",
+    shortcut: "q",
+  })
 
   return commands
 }

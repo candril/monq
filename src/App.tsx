@@ -27,10 +27,12 @@ import { useDocumentLoader } from "./hooks/useDocumentLoader"
 import { buildCommands } from "./commands/builder"
 import { buildCollectionCommands } from "./commands/collections"
 import { buildDatabaseCommands } from "./commands/databases"
+import { splitProjection } from "./query/parser"
 import { editDocument } from "./actions/edit"
-import { openPipelineEditor, pipelineFilePaths } from "./actions/pipeline"
-import { startWatching, reloadFromFile } from "./actions/pipelineWatch"
-import { disconnect, serializeDocument, listDatabases, switchDatabase } from "./providers/mongodb"
+import { openPipelineEditor, writePipelineFile, pipelineFilePaths } from "./actions/pipeline"
+import { startWatching, stopWatching, reloadFromFile, openTmuxSplit } from "./actions/pipelineWatch"
+import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "./actions/editMany"
+import { disconnect, serializeDocument, listDatabases, switchDatabase, deleteDocument } from "./providers/mongodb"
 import { theme } from "./theme"
 import type { Command } from "./commands/types"
 import type { Document } from "mongodb"
@@ -243,6 +245,193 @@ export function App({ uri }: AppProps) {
         }
         break
       }
+      case "query:open-pipeline-tmux": {
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+        if (!activeTab) break
+        writePipelineFile({
+          collectionName: activeTab.collectionName,
+          dbName: state.dbName,
+          tabId: activeTab.id,
+          pipelineSource: state.pipelineSource,
+          currentPipeline: state.pipeline,
+          simpleQuery: state.queryInput,
+          schemaMap: state.schemaMap,
+          sortField: state.pipeline.length > 0 ? null : state.sortField,
+          sortDirection: state.sortDirection,
+        })
+          .then((queryFile) => {
+            const result = openTmuxSplit(queryFile)
+            if (result === "tmux") {
+              startWatching(queryFile, () => reloadFromFile(queryFile, dispatch))
+              dispatch({ type: "START_PIPELINE_WATCH" })
+              dispatch({ type: "SHOW_MESSAGE", message: "Opened in tmux split — watching for saves", kind: "info" })
+            } else if (result === "clipboard") {
+              dispatch({ type: "SHOW_MESSAGE", message: `Path copied to clipboard: ${queryFile}`, kind: "info" })
+            } else {
+              dispatch({ type: "SHOW_MESSAGE", message: `Pipeline file: ${queryFile}`, kind: "info" })
+            }
+          })
+          .catch(() => {})
+        break
+      }
+      case "doc:insert": {
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+        if (!activeTab) break
+        const templateDoc = state.documents[state.selectedIndex]
+        renderer.suspend()
+        openEditorForInsert(activeTab.collectionName, state.dbName, templateDoc, state.schemaMap)
+          .then((outcome) => {
+            renderer.resume()
+            if (outcome.cancelled) return
+            if (outcome.errors.length > 0) {
+              dispatch({ type: "SHOW_MESSAGE", message: outcome.errors[0], kind: "error" })
+            } else if (outcome.inserted > 0) {
+              dispatch({ type: "SHOW_MESSAGE", message: `Inserted ${outcome.inserted} document${outcome.inserted === 1 ? "" : "s"}`, kind: "success" })
+              dispatch({ type: "RELOAD_DOCUMENTS" })
+            } else {
+              dispatch({ type: "SHOW_MESSAGE", message: "No documents inserted", kind: "info" })
+            }
+          })
+          .catch((err: Error) => { renderer.resume(); dispatch({ type: "SHOW_MESSAGE", message: `Insert failed: ${err.message}`, kind: "error" }) })
+        break
+      }
+      case "doc:delete": {
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+        if (!activeTab) break
+        const docsToDelete = state.selectedRows.size > 0
+          ? state.documents.filter((_, i) => state.selectedRows.has(i))
+          : [state.documents[state.selectedIndex]].filter(Boolean)
+        if (docsToDelete.length === 0) break
+        dispatch({
+          type: "SHOW_DELETE_CONFIRM",
+          confirmation: {
+            docs: docsToDelete, focusedIndex: -1,
+            resolve: async (confirmed) => {
+              if (!confirmed) return
+              const errors: string[] = []
+              for (const doc of docsToDelete) {
+                try { await deleteDocument(activeTab.collectionName, doc._id) }
+                catch (err) { errors.push(`Delete failed: ${(err as Error).message}`) }
+              }
+              if (errors.length > 0) {
+                dispatch({ type: "SHOW_MESSAGE", message: errors[0], kind: "error" })
+              } else {
+                const n = docsToDelete.length
+                dispatch({ type: "SHOW_MESSAGE", message: `Deleted ${n} document${n === 1 ? "" : "s"}`, kind: "success" })
+                dispatch({ type: "EXIT_SELECTION_MODE" })
+              }
+              dispatch({ type: "RELOAD_DOCUMENTS" })
+            },
+          },
+        })
+        break
+      }
+      case "doc:copy-cell": {
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        const doc = state.documents[state.selectedIndex]
+        if (!doc) break
+        const visCols2 = state.columns.filter((c) => c.visible)
+        const col = visCols2[state.selectedColumnIndex]
+        if (!col) break
+        const getNestedValue = (d: Record<string, unknown>, field: string): unknown => {
+          const parts = field.split(".")
+          let current: unknown = d
+          for (const part of parts) {
+            if (current == null || typeof current !== "object") return undefined
+            current = (current as Record<string, unknown>)[part]
+          }
+          return current
+        }
+        const val = getNestedValue(doc as Record<string, unknown>, col.field)
+        const text = val === undefined ? ""
+          : typeof val === "object" && val !== null ? JSON.stringify(val, null, 2)
+          : String(val)
+        process.stdout.write(`\x1b]52;c;${btoa(text)}\x07`)
+        dispatch({ type: "SHOW_MESSAGE", message: `Copied ${col.field} to clipboard`, kind: "info" })
+        break
+      }
+      case "view:cycle-column-mode":
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        dispatch({ type: "CYCLE_COLUMN_MODE" })
+        break
+      case "view:toggle-column-exclude": {
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        // Same logic as `-` key — toggle exclusion of current column
+        const visCols = state.columns.filter((c) => c.visible)
+        const col = visCols[state.selectedColumnIndex]
+        if (!col) break
+        const { filter: filterPart2, projection: projPart2 } = splitProjection(state.queryInput)
+        const tokens2 = projPart2.trim().split(/\s+/).filter(Boolean)
+        const excludeToken2 = `-${col.field}`
+        if (tokens2.includes(excludeToken2)) {
+          const newTokens2 = tokens2.filter((t) => t !== excludeToken2)
+          dispatch({ type: "SET_QUERY_INPUT", input: filterPart2 + (newTokens2.length > 0 ? ` | ${newTokens2.join(" ")}` : "") })
+        } else {
+          const newTokens2 = tokens2.filter((t) => t !== col.field)
+          newTokens2.push(excludeToken2)
+          dispatch({ type: "SET_QUERY_INPUT", input: filterPart2 + ` | ${newTokens2.join(" ")}` })
+        }
+        dispatch({ type: "SUBMIT_QUERY" })
+        break
+      }
+      case "tabs:clone":
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        dispatch({ type: "CLONE_TAB" })
+        break
+      case "tabs:close":
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        if (state.activeTabId) dispatch({ type: "CLOSE_TAB", tabId: state.activeTabId })
+        break
+      case "tabs:undo-close":
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        dispatch({ type: "UNDO_CLOSE_TAB" })
+        break
+      case "tabs:prev": {
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId)
+        if (currentIndex > 0) {
+          stopWatching()
+          dispatch({ type: "STOP_PIPELINE_WATCH" })
+          dispatch({ type: "SWITCH_TAB", tabId: state.tabs[currentIndex - 1].id })
+        }
+        break
+      }
+      case "tabs:next": {
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId)
+        if (currentIndex < state.tabs.length - 1) {
+          stopWatching()
+          dispatch({ type: "STOP_PIPELINE_WATCH" })
+          dispatch({ type: "SWITCH_TAB", tabId: state.tabs[currentIndex + 1].id })
+        }
+        break
+      }
+      case "selection:enter":
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        dispatch({ type: "ENTER_SELECTION_MODE" })
+        break
+      case "selection:freeze":
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        dispatch({ type: "FREEZE_SELECTION" })
+        break
+      case "selection:exit":
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        dispatch({ type: "EXIT_SELECTION_MODE" })
+        break
+      case "selection:select-all":
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        dispatch({ type: "SELECT_ALL" })
+        break
+      case "app:quit":
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        stopWatching()
+        disconnect().catch(() => {})
+        renderer.destroy()
+        process.exit(0)
+        break
       default:
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
     }

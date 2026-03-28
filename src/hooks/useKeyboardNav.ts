@@ -15,7 +15,7 @@ import { disconnect, serializeDocument, deleteDocument } from "../providers/mong
 import { openPipelineEditor, writePipelineFile, pipelineFilePaths, extractFindParts, classifyPipeline } from "../actions/pipeline"
 import { startWatching, stopWatching, reloadFromFile, openTmuxSplit } from "../actions/pipelineWatch"
 import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../actions/editMany"
-import { filterToSimple } from "../query/parser"
+import { filterToSimple, splitProjection, parseProjection } from "../query/parser"
 import { formatValue } from "../utils/format"
 
 interface UseKeyboardNavOptions {
@@ -389,6 +389,33 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
         case "w":
           dispatch({ type: "CYCLE_COLUMN_MODE" })
           break
+        case "-": {
+          // Toggle exclusion of current column via projection: appends/removes -fieldname
+          if (state.pipelineMode || state.queryMode === "bson") break
+          const visCols = state.columns.filter((c) => c.visible)
+          const col = visCols[state.selectedColumnIndex]
+          if (!col) break
+          const { filter: filterPart, projection: projPart } = splitProjection(state.queryInput)
+          const tokens = projPart.trim().split(/\s+/).filter(Boolean)
+          const excludeToken = `-${col.field}`
+          const includeToken = col.field
+          if (tokens.includes(excludeToken)) {
+            // Already excluded — remove the exclusion (reveal column)
+            const newTokens = tokens.filter((t) => t !== excludeToken)
+            const newProj = newTokens.length > 0 ? ` | ${newTokens.join(" ")}` : ""
+            dispatch({ type: "SET_QUERY_INPUT", input: filterPart + newProj })
+            dispatch({ type: "SUBMIT_QUERY" })
+            dispatch({ type: "SHOW_MESSAGE", message: `Showing ${col.field}`, kind: "info" })
+          } else {
+            // Exclude this column — also remove any include token for it
+            const newTokens = tokens.filter((t) => t !== includeToken)
+            newTokens.push(excludeToken)
+            dispatch({ type: "SET_QUERY_INPUT", input: filterPart + ` | ${newTokens.join(" ")}` })
+            dispatch({ type: "SUBMIT_QUERY" })
+            dispatch({ type: "SHOW_MESSAGE", message: `Hiding ${col.field}`, kind: "info" })
+          }
+          break
+        }
         case "v":
           if (state.selectionMode === "none" || state.selectionMode === "selected") {
             dispatch({ type: "ENTER_SELECTION_MODE" })
