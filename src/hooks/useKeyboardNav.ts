@@ -15,7 +15,7 @@ import { disconnect, serializeDocument, deleteDocument } from "../providers/mong
 import { openPipelineEditor, writePipelineFile, pipelineFilePaths, extractFindParts, classifyPipeline } from "../actions/pipeline"
 import { startWatching, stopWatching, reloadFromFile, openTmuxSplit } from "../actions/pipelineWatch"
 import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../actions/editMany"
-import { filterToSimple, splitProjection, parseProjection } from "../query/parser"
+import { filterToSimple, projectionToSimple, parseSimpleQueryFull } from "../query/parser"
 import { formatValue } from "../utils/format"
 
 interface UseKeyboardNavOptions {
@@ -24,12 +24,13 @@ interface UseKeyboardNavOptions {
   docListScrollRef: RefObject<ScrollBoxRenderable>
 }
 
-/** Build a pipe projection suffix string from a $project object, e.g. " | name -_id" */
+/** Build +field/-field projection tokens from a $project object */
 function buildProjSuffix(projection: Document | undefined): string {
   if (!projection || typeof projection !== "object") return ""
-  const tokens = Object.entries(projection as Record<string, unknown>)
-    .map(([k, v]) => v === 0 ? `-${k}` : k)
-  return tokens.length > 0 ? ` | ${tokens.join(" ")}` : ""
+  const entries = Object.entries(projection as Record<string, unknown>)
+    .filter(([, v]) => v === 0 || v === 1) as [string, 0 | 1][]
+  if (entries.length === 0) return ""
+  return " " + projectionToSimple(Object.fromEntries(entries) as Record<string, 0 | 1>)
 }
 
 /** Get a nested value from a document */
@@ -443,25 +444,27 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
               isAggregate: classifyPipeline(newPipeline),
             })
           } else if (state.queryMode !== "bson") {
-            // Simple mode: toggle -fieldname in the pipe projection clause
-            const { filter: filterPart, projection: projPart } = splitProjection(state.queryInput)
-            const tokens = projPart.trim().split(/\s+/).filter(Boolean)
-            const excludeToken = `-${col.field}`
-            if (tokens.includes(excludeToken)) {
-              // Already excluded — remove to reveal
-              const newTokens = tokens.filter((t) => t !== excludeToken)
-              const newProj = newTokens.length > 0 ? ` | ${newTokens.join(" ")}` : ""
-              dispatch({ type: "SET_QUERY_INPUT", input: filterPart + newProj })
-              dispatch({ type: "SUBMIT_QUERY" })
+            // Simple mode: toggle -field projection token in the query string
+            const { projection: projObj2 } = parseSimpleQueryFull(state.queryInput)
+            const proj: Record<string, 0 | 1> = { ...(projObj2 ?? {}) }
+            if (proj[col.field] === 0) {
+              delete proj[col.field]
               dispatch({ type: "SHOW_MESSAGE", message: `Showing ${col.field}`, kind: "info" })
             } else {
-              // Exclude — also remove any include token for this field
-              const newTokens = tokens.filter((t) => t !== col.field)
-              newTokens.push(excludeToken)
-              dispatch({ type: "SET_QUERY_INPUT", input: filterPart + ` | ${newTokens.join(" ")}` })
-              dispatch({ type: "SUBMIT_QUERY" })
+              delete proj[col.field]  // remove +field if present
+              proj[col.field] = 0
               dispatch({ type: "SHOW_MESSAGE", message: `Hiding ${col.field}`, kind: "info" })
             }
+            // Rebuild: keep all non-projection tokens, append new projection tokens
+            const nonProjTokens = state.queryInput.trim().split(/\s+/).filter((t: string) => {
+              if (!t) return false
+              if (t.startsWith("+")) return false
+              if (t.startsWith("-") && !/[><!:]/.test(t.slice(1))) return false
+              return true
+            })
+            const projStr = Object.keys(proj).length > 0 ? " " + projectionToSimple(proj) : ""
+            dispatch({ type: "SET_QUERY_INPUT", input: (nonProjTokens.join(" ") + projStr).trim() })
+            dispatch({ type: "SUBMIT_QUERY" })
           }
           break
         }

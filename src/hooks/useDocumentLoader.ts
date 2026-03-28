@@ -8,7 +8,7 @@ import type { Dispatch } from "react"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import { fetchDocuments, fetchAggregate, detectColumns } from "../providers/mongodb"
-import { parseSimpleQuery, parseBsonQuery, splitProjection, parseProjection } from "../query/parser"
+import { parseSimpleQueryFull, parseBsonQuery } from "../query/parser"
 import { buildSchemaMap } from "../query/schema"
 import { classifyPipeline, extractFindParts } from "../actions/pipeline"
 
@@ -93,11 +93,16 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
 
     // Simple / BSON filter mode
     let filter = {}
+    let projection: Record<string, 0 | 1> | undefined
     try {
       if (queryInput.trim()) {
-        filter = queryMode === "bson"
-          ? parseBsonQuery(queryInput)
-          : parseSimpleQuery(queryInput, state.schemaMap)
+        if (queryMode === "bson") {
+          filter = parseBsonQuery(queryInput)
+        } else {
+          const parsed = parseSimpleQueryFull(queryInput, state.schemaMap)
+          filter = parsed.filter
+          projection = parsed.projection
+        }
       }
     } catch {
       // Invalid query — fetch unfiltered
@@ -111,13 +116,9 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
       sort = { [state.sortField]: state.sortDirection as 1 | -1 }
     }
 
-    // Projection: bson mode uses bsonProjection textarea; simple mode uses pipe syntax
-    let projection: Record<string, 0 | 1> | undefined
+    // BSON mode projection: uses bsonProjection textarea
     if (queryMode === "bson" && state.bsonProjection.trim()) {
       try { projection = JSON.parse(state.bsonProjection) } catch { /* skip */ }
-    } else if (queryMode === "simple") {
-      const { projection: projStr } = splitProjection(queryInput)
-      projection = parseProjection(projStr)
     }
 
     fetchDocuments(activeTab.collectionName, filter, { sort, projection, limit: pageSize })
@@ -180,13 +181,18 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
 
     let cancelled = false
 
-    // Reconstruct filter/sort from current state (same as Effect 1)
+    // Reconstruct filter/sort/projection from current state (same as Effect 1)
     let filter = {}
+    let projection: Record<string, 0 | 1> | undefined
     try {
       if (queryInput.trim()) {
-        filter = queryMode === "bson"
-          ? parseBsonQuery(queryInput)
-          : parseSimpleQuery(queryInput, state.schemaMap)
+        if (queryMode === "bson") {
+          filter = parseBsonQuery(queryInput)
+        } else {
+          const parsed = parseSimpleQueryFull(queryInput, state.schemaMap)
+          filter = parsed.filter
+          projection = parsed.projection
+        }
       }
     } catch { /* invalid query — fetch unfiltered */ }
 
@@ -197,12 +203,8 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
       sort = { [state.sortField]: state.sortDirection as 1 | -1 }
     }
 
-    let projection: Record<string, 0 | 1> | undefined
     if (queryMode === "bson" && state.bsonProjection.trim()) {
       try { projection = JSON.parse(state.bsonProjection) } catch { /* skip */ }
-    } else if (queryMode === "simple") {
-      const { projection: projStr } = splitProjection(queryInput)
-      projection = parseProjection(projStr)
     }
 
     fetchDocuments(activeTab.collectionName, filter, {

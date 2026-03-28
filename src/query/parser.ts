@@ -1,12 +1,24 @@
 /**
  * Simple query parser: Key:Value pairs -> MongoDB filter.
  *
+ * Token types:
+ *   field:value          -> { field: value }
+ *   field:[a,b,c]        -> { field: { $in: [a,b,c] } }
+ *   -field:value         -> { field: { $ne: value } }
+ *   -field:[a,b]         -> { field: { $nin: [a,b] } }
+ *   field>25             -> { field: { $gt: 25 } }
+ *   field:/regex/flags   -> { field: { $regex, $options } }
+ *   +field               -> projection include  (bare, no colon)
+ *   -field               -> projection exclude  (bare, no colon)
+ *
  * Examples:
- *   "Author:Peter"              -> { "Author": "Peter" }
- *   "Author:Peter State:Closed" -> { "Author": "Peter", "State": "Closed" }
- *   "age>25"                    -> { "age": { "$gt": 25 } }
- *   "count!=0"                  -> { "count": { "$ne": 0 } }
- *   "name:/^john/i"             -> { "name": { "$regex": "^john", "$options": "i" } }
+ *   "Author:Peter"              -> filter: { "Author": "Peter" }
+ *   "Author:Peter State:Closed" -> filter: { "Author": "Peter", "State": "Closed" }
+ *   "age>25"                    -> filter: { "age": { "$gt": 25 } }
+ *   "name:/^john/i"             -> filter: { "name": { "$regex": "^john", "$options": "i" } }
+ *   "Status:[open,closed]"      -> filter: { "Status": { "$in": ["open","closed"] } }
+ *   "+Name -State"              -> projection: { Name: 1, State: 0 }
+ *   "Author:Peter +Name -State" -> filter + projection combined
  */
 
 import type { Filter, Document } from "mongodb"
@@ -31,17 +43,14 @@ function setFilterValue(
 
   const arrayAncestor = getArrayAncestor(schemaMap, field)
   if (!arrayAncestor) {
-    // Plain dot-notation (object path)
     filter[field] = value
     return
   }
 
-  // Build $elemMatch: split at the array boundary
   const subField = field.slice(arrayAncestor.length + 1)
   const existing = filter[arrayAncestor]
 
   if (existing && typeof existing === "object" && "$elemMatch" in (existing as object)) {
-    // Append to existing $elemMatch
     const elemMatch = (existing as { $elemMatch: Record<string, unknown> }).$elemMatch
     elemMatch[subField] = value
   } else {
@@ -54,12 +63,10 @@ function coerceValue(value: string): string | number | boolean | null | ObjectId
   if (value === "null") return null
   if (value === "true") return true
   if (value === "false") return false
-  // ObjectId literal: ObjectId(abc123...) or ObjectId("abc123...")
   const oidMatch = value.match(/^ObjectId\(["']?([0-9a-fA-F]{24})["']?\)$/)
   if (oidMatch) return new ObjectId(oidMatch[1])
   const num = Number(value)
   if (!isNaN(num) && value.trim() !== "") return num
-  // Strip quotes if present
   if (
     (value.startsWith('"') && value.endsWith('"')) ||
     (value.startsWith("'") && value.endsWith("'"))
@@ -93,25 +100,82 @@ function tokenize(input: string): string[] {
   return tokens
 }
 
-/** Parse a simple query string into a MongoDB filter.
- *  If schemaMap is provided, uses $elemMatch for fields under array ancestors.
- *  The projection part (after `|`) is ignored — use splitProjection + parseProjection for that. */
+/** Valid bare field name: word chars and dots only */
+const VALID_FIELD = /^[\w.]+$/
+
+/**
+ * Classify a token as a filter token or a projection token.
+ *
+ * Projection tokens are bare +field or -field with no operator or colon.
+ *   +field   -> include
+ *   -field   -> exclude (only when no :/>/</ != follows)
+ *
+ * Filter tokens are everything else (field:value, field>n, -field:value, etc.)
+ */
+function isProjectionToken(token: string): boolean {
+  if (token.startsWith("+")) {
+    const field = token.slice(1)
+    return VALID_FIELD.test(field)
+  }
+  if (token.startsWith("-")) {
+    const rest = token.slice(1)
+    // Only bare -field (no colon or operator) is projection
+    return VALID_FIELD.test(rest)
+  }
+  return false
+}
+
+export interface ParsedSimpleQuery {
+  filter: Filter<Document>
+  projection: Record<string, 0 | 1> | undefined
+}
+
+/**
+ * Parse a simple query string into filter + projection.
+ *
+ * +field / bare -field  → projection
+ * everything else       → filter
+ */
 export function parseSimpleQuery(
   input: string,
-  schemaMap?: import("./schema").SchemaMap,
+  schemaMap?: SchemaMap,
 ): Filter<Document> {
-  // Strip projection clause before parsing
-  const { filter: filterPart } = splitProjection(input)
-  const trimmed = filterPart.trim()
-  if (!trimmed) return {}
+  return parseSimpleQueryFull(input, schemaMap).filter
+}
+
+export function parseSimpleQueryFull(
+  input: string,
+  schemaMap?: SchemaMap,
+): ParsedSimpleQuery {
+  const trimmed = input.trim()
+  if (!trimmed) return { filter: {}, projection: undefined }
 
   const tokens = tokenize(trimmed)
   const filter: Record<string, unknown> = {}
+  const proj: Record<string, 0 | 1> = {}
 
   for (let token of tokens) {
-    // Detect negation prefix: -Field:Value -> { Field: { $ne: Value } }
+    // +field → projection include
+    if (token.startsWith("+")) {
+      const field = token.slice(1)
+      if (field && VALID_FIELD.test(field)) { proj[field] = 1; continue }
+    }
+
+    // Detect negation prefix for filter: -field:value -> $ne
+    // But bare -field (no colon/operator) -> projection exclude
     const negated = token.startsWith("-")
-    if (negated) token = token.slice(1)
+    if (negated) {
+      const rest = token.slice(1)
+      // Bare -field → projection exclude
+      if (VALID_FIELD.test(rest) && !rest.includes(":")) {
+        // Double-check: no operator characters anywhere
+        if (!/[><!]/.test(rest)) {
+          proj[rest] = 0
+          continue
+        }
+      }
+      token = rest
+    }
 
     // Regex pattern: field:/pattern/flags
     const regexMatch = token.match(/^([\w.]+):\/(.+)\/([gimsu]*)$/)
@@ -126,13 +190,7 @@ export function parseSimpleQuery(
     const opMatch = token.match(/^([\w.]+)(>=|<=|!=|>|<)(.+)$/)
     if (opMatch) {
       const [, field, op, rawValue] = opMatch
-      const mongoOp = {
-        ">": "$gt",
-        ">=": "$gte",
-        "<": "$lt",
-        "<=": "$lte",
-        "!=": "$ne",
-      }[op]!
+      const mongoOp = { ">": "$gt", ">=": "$gte", "<": "$lt", "<=": "$lte", "!=": "$ne" }[op]!
       setFilterValue(filter, field, { [mongoOp]: coerceValue(rawValue) }, schemaMap)
       continue
     }
@@ -141,7 +199,6 @@ export function parseSimpleQuery(
     const colonMatch = token.match(/^([\w.]+):(.+)$/)
     if (colonMatch) {
       const [, field, rawValue] = colonMatch
-      // Special values
       if (rawValue === "null") {
         setFilterValue(filter, field, negated ? { $ne: null } : null, schemaMap)
       } else if (rawValue === "exists") {
@@ -160,26 +217,18 @@ export function parseSimpleQuery(
       continue
     }
 
-    // Bare text — skip (could be partial input)
+    // Bare text — skip (partial input, no operator)
   }
 
-  return filter
+  return {
+    filter,
+    projection: Object.keys(proj).length > 0 ? proj : undefined,
+  }
 }
 
 /**
  * Try to translate a MongoDB filter object back to simple Key:Value syntax.
  * Returns the query string and whether the translation was lossless.
- *
- * Supports:
- *   { field: "value" }                        → field:value
- *   { field: 42 }                             → field:42
- *   { field: null }                           → field:null
- *   { field: { $ne: "x" } }                  → field!="x"   (also $gt > $gte >= $lt < $lte <=)
- *   { field: { $regex: "x", $options: "i" } } → field:/x/i
- *   { field: { $in: ["a", "b"] } }            → field:[a,b]
- *   { field: { $nin: ["a", "b"] } }           → -field:[a,b]
- *
- * Returns lossless=false for: $and/$or/$elemMatch/nested objects/etc.
  */
 export function filterToSimple(filter: Record<string, unknown>): { query: string; lossless: boolean } {
   const opMap: Record<string, string> = {
@@ -189,7 +238,6 @@ export function filterToSimple(filter: Record<string, unknown>): { query: string
   let lossless = true
 
   for (const [key, val] of Object.entries(filter)) {
-    // Skip top-level logical operators — not expressible in simple mode
     if (key.startsWith("$")) { lossless = false; continue }
 
     if (val === null) {
@@ -204,35 +252,35 @@ export function filterToSimple(filter: Record<string, unknown>): { query: string
       const ops = val as Record<string, unknown>
       const entries = Object.entries(ops)
 
-      // Single comparison operator
       if (entries.length === 1 && opMap[entries[0][0]]) {
         tokens.push(`${key}${opMap[entries[0][0]]}${entries[0][1]}`)
-      }
-      // $in → field:[a,b,c]
-      else if (entries.length === 1 && entries[0][0] === "$in" && Array.isArray(entries[0][1])) {
+      } else if (entries.length === 1 && entries[0][0] === "$in" && Array.isArray(entries[0][1])) {
         tokens.push(`${key}:[${(entries[0][1] as unknown[]).join(",")}]`)
-      }
-      // $nin → -field:[a,b,c]
-      else if (entries.length === 1 && entries[0][0] === "$nin" && Array.isArray(entries[0][1])) {
+      } else if (entries.length === 1 && entries[0][0] === "$nin" && Array.isArray(entries[0][1])) {
         tokens.push(`-${key}:[${(entries[0][1] as unknown[]).join(",")}]`)
-      }
-      // $regex (with optional $options)
-      else if ("$regex" in ops) {
+      } else if ("$regex" in ops) {
         const pattern = ops.$regex as string
         const options = ops.$options as string | undefined
         tokens.push(`${key}:/${pattern}/${options ?? ""}`)
-      }
-      // Anything else is lossy
-      else {
+      } else {
         lossless = false
       }
     } else {
-      // Arrays, nested objects — lossy
       lossless = false
     }
   }
 
   return { query: tokens.join(" "), lossless }
+}
+
+/**
+ * Translate a projection object back to +field/-field tokens.
+ *   { Name: 1, State: 0 } → "+Name -State"
+ */
+export function projectionToSimple(proj: Record<string, 0 | 1>): string {
+  return Object.entries(proj)
+    .map(([k, v]) => v === 1 ? `+${k}` : `-${k}`)
+    .join(" ")
 }
 
 /** Parse a BSON/JSON query string into a MongoDB filter */
@@ -244,91 +292,65 @@ export function parseBsonQuery(input: string): Filter<Document> {
 
 /** Extract the last token being typed (for suggestions) */
 export function getLastToken(input: string): { prefix: string; lastToken: string } {
-  const trimmed = input.trimEnd()
-  const lastSpace = trimmed.lastIndexOf(" ")
+  // If input ends with whitespace, user started a new token
+  if (input.length > 0 && input[input.length - 1] === " ") {
+    return { prefix: input, lastToken: "" }
+  }
+  const lastSpace = input.lastIndexOf(" ")
   if (lastSpace === -1) {
-    return { prefix: "", lastToken: trimmed }
+    return { prefix: "", lastToken: input }
   }
   return {
-    prefix: trimmed.slice(0, lastSpace + 1),
-    lastToken: trimmed.slice(lastSpace + 1),
+    prefix: input.slice(0, lastSpace + 1),
+    lastToken: input.slice(lastSpace + 1),
   }
 }
 
-/**
- * Split a simple query string into filter and projection parts at the first `|`.
- *
- * Examples:
- *   "Author:Peter | name email"  -> { filter: "Author:Peter", projection: "name email" }
- *   "Author:Peter"               -> { filter: "Author:Peter", projection: "" }
- *   "| name email"               -> { filter: "", projection: "name email" }
- */
+// Keep these exports for any code that still references them — they are now no-ops
+// since projection is inlined into the query string via +/- tokens.
+
+/** @deprecated Projection is now encoded via +field/-field tokens inline */
 export function splitProjection(input: string): { filter: string; projection: string } {
-  const idx = input.indexOf("|")
-  if (idx === -1) return { filter: input.trim(), projection: "" }
-  return {
-    filter: input.slice(0, idx).trim(),
-    projection: input.slice(idx + 1).trim(),
+  // Extract projection tokens (+field / bare -field) from the input
+  const tokens = input.trim().split(/\s+/)
+  const filterTokens: string[] = []
+  const projTokens: string[] = []
+  for (const t of tokens) {
+    if (!t) continue
+    if (t.startsWith("+")) {
+      const f = t.slice(1)
+      if (VALID_FIELD.test(f)) { projTokens.push(t); continue }
+    }
+    if (t.startsWith("-")) {
+      const f = t.slice(1)
+      if (VALID_FIELD.test(f) && !/[><!:]/.test(f)) { projTokens.push(t); continue }
+    }
+    filterTokens.push(t)
   }
+  return { filter: filterTokens.join(" "), projection: projTokens.map(t => t.replace(/^\+/, "")).join(" ") }
 }
 
-/** Valid projection field name: word chars and dots only (no colons, commas, etc.) */
-const VALID_PROJ_FIELD = /^[\w.]+$/
-
-/**
- * Parse a projection string into a MongoDB projection object.
- *
- * Token rules:
- *   field       -> { field: 1 }  (include)
- *   dot.path    -> { "dot.path": 1 }
- *   -field      -> { field: 0 }  (exclude)
- *
- * Tokens that are not valid field names (e.g. contain `:` or `,`) are silently
- * ignored — they are likely filter tokens that leaked into the projection side.
- *
- * Returns undefined when projection string is empty or no valid tokens found.
- */
+/** @deprecated Use parseSimpleQueryFull instead */
 export function parseProjection(projection: string): Record<string, 0 | 1> | undefined {
-  const trimmed = projection.trim()
-  if (!trimmed) return undefined
+  if (!projection.trim()) return undefined
   const result: Record<string, 0 | 1> = {}
-  for (const token of trimmed.split(/\s+/)) {
+  for (const token of projection.trim().split(/\s+/)) {
     if (!token) continue
     if (token.startsWith("-")) {
-      const field = token.slice(1)
-      if (field && VALID_PROJ_FIELD.test(field)) result[field] = 0
-    } else {
-      if (VALID_PROJ_FIELD.test(token)) result[token] = 1
+      const f = token.slice(1)
+      if (f && VALID_FIELD.test(f)) result[f] = 0
+    } else if (token.startsWith("+")) {
+      const f = token.slice(1)
+      if (f && VALID_FIELD.test(f)) result[f] = 1
+    } else if (VALID_FIELD.test(token)) {
+      result[token] = 1
     }
   }
   return Object.keys(result).length > 0 ? result : undefined
 }
 
-/**
- * Return whether the cursor is in the projection part (after `|`).
- * Used by FilterSuggestions to decide which suggestions to show.
- */
-export function isInProjection(input: string): boolean {
-  return input.includes("|")
-}
+/** @deprecated No longer needed — projection is inline */
+export function isInProjection(_input: string): boolean { return false }
 
-/**
- * Get the last projection token being typed (for field suggestions after `|`).
- * Returns null if the cursor is not in the projection part.
- */
-export function getLastProjectionToken(input: string): { projPrefix: string; lastToken: string } | null {
-  const pipeIdx = input.indexOf("|")
-  if (pipeIdx === -1) return null
-  const projPart = input.slice(pipeIdx + 1)
-
-  // If projPart ends with whitespace the user just pressed space — new token starting
-  if (projPart.length === 0 || projPart[projPart.length - 1] === " ") {
-    return { projPrefix: input, lastToken: "" }
-  }
-
-  const lastSpace = projPart.lastIndexOf(" ")
-  const lastToken = lastSpace === -1 ? projPart.trim() : projPart.slice(lastSpace + 1)
-  // projPrefix: everything up to and including the last space in the projection part
-  const projPrefix = input.slice(0, pipeIdx + 1) + (lastSpace === -1 ? " " : projPart.slice(0, lastSpace + 1))
-  return { projPrefix, lastToken }
-}
+/** @deprecated No longer needed — use getLastToken */
+export function getLastProjectionToken(_input: string): null { return null }
