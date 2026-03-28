@@ -710,6 +710,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         pipelineSource: "",
         pipelineIsAggregate: false,
         pipelineVisible: false,
+        // Reset to simple mode so the filter bar comes back cleanly
+        queryMode: "simple",
+        queryInput: "",
         documentsLoading: true,
         reloadCounter: state.reloadCounter + 1,
         selectedIndex: 0,

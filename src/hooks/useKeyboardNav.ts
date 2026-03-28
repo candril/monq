@@ -45,6 +45,9 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return
 
+      // When pipeline is active, pipelineSource is re-opened as-is.
+      // When simple filter is active, queryInput migrates into $match.
+      // When both empty, fresh template is shown.
       renderer.suspend()
       openPipelineEditor({
         collectionName: activeTab.collectionName,
@@ -52,7 +55,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         pipelineSource: state.pipelineSource,
         simpleQuery: state.queryInput,
         schemaMap: state.schemaMap,
-        sortField: state.sortField,
+        sortField: state.pipeline.length > 0 ? null : state.sortField,
         sortDirection: state.sortDirection,
       })
         .then((result) => {
@@ -311,6 +314,10 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           }
           break
         case "/":
+          // If a pipeline is active, clear it first then open simple filter
+          if (state.pipeline.length > 0) {
+            dispatch({ type: "CLEAR_PIPELINE" })
+          }
           dispatch({ type: "OPEN_QUERY" })
           break
       }
