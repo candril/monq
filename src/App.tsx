@@ -8,6 +8,7 @@ import { useRenderer } from "@opentui/react"
 import { Shell } from "./components/Shell"
 import { Header } from "./components/Header"
 import { FilterBar } from "./components/FilterBar"
+import { PipelineBar } from "./components/PipelineBar"
 import { Loading } from "./components/Loading"
 import { ErrorView } from "./components/ErrorView"
 import { DocumentList } from "./components/DocumentList"
@@ -22,6 +23,7 @@ import { useDocumentLoader } from "./hooks/useDocumentLoader"
 import { buildCommands } from "./commands/builder"
 import { buildCollectionCommands } from "./commands/collections"
 import { editDocument } from "./actions/edit"
+import { openPipelineEditor } from "./actions/pipeline"
 import { disconnect, serializeDocument } from "./providers/mongodb"
 import type { Command } from "./commands/types"
 
@@ -126,6 +128,39 @@ export function App({ uri }: AppProps) {
       case "query:open-filter-bson":
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
         dispatch({ type: "OPEN_QUERY_BSON" })
+        break
+      case "query:open-pipeline": {
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+        if (!activeTab) break
+        renderer.pause()
+        openPipelineEditor({
+          collectionName: activeTab.collectionName,
+          dbName: state.dbName,
+          pipelineSource: state.pipelineSource,
+          simpleQuery: state.queryInput,
+          schemaMap: state.schemaMap,
+          sortField: state.sortField,
+          sortDirection: state.sortDirection,
+        })
+          .then((result) => {
+            renderer.resume()
+            if (!result) return
+            dispatch({ type: "SET_PIPELINE", pipeline: result.pipeline, source: result.source, isAggregate: result.isAggregate })
+          })
+          .catch((err: Error) => {
+            renderer.resume()
+            dispatch({ type: "SET_ERROR", error: `Pipeline error: ${err.message}` })
+          })
+        break
+      }
+      case "query:clear-pipeline":
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        dispatch({ type: "CLEAR_PIPELINE" })
+        break
+      case "query:toggle-pipeline-bar":
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        dispatch({ type: "TOGGLE_PIPELINE_BAR" })
         break
       case "query:clear-filter":
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
@@ -234,23 +269,32 @@ export function App({ uri }: AppProps) {
         onChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
       />
 
-      <FilterBar
-        query={state.queryInput}
-        queryMode={state.queryMode}
-        bsonSort={state.bsonSort}
-        bsonProjection={state.bsonProjection}
-        bsonFocusedSection={state.bsonFocusedSection}
-        bsonSortVisible={state.bsonSortVisible}
-        bsonProjectionVisible={state.bsonProjectionVisible}
-        bsonExternalVersion={state.bsonExternalVersion}
-        editing={state.queryVisible}
-        columns={state.columns}
-        schemaMap={state.schemaMap}
-        onQueryChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
-        onBsonSortChange={(v) => dispatch({ type: "SET_BSON_SORT", input: v })}
-        onBsonProjectionChange={(v) => dispatch({ type: "SET_BSON_PROJECTION", input: v })}
-        onSubmit={() => dispatch({ type: "SUBMIT_QUERY" })}
+      <PipelineBar
+        pipeline={state.pipeline}
+        visible={state.pipelineVisible}
+        isAggregate={state.pipelineIsAggregate}
       />
+
+      {/* Hide simple filter bar when pipeline is active */}
+      {state.pipeline.length === 0 && (
+        <FilterBar
+          query={state.queryInput}
+          queryMode={state.queryMode}
+          bsonSort={state.bsonSort}
+          bsonProjection={state.bsonProjection}
+          bsonFocusedSection={state.bsonFocusedSection}
+          bsonSortVisible={state.bsonSortVisible}
+          bsonProjectionVisible={state.bsonProjectionVisible}
+          bsonExternalVersion={state.bsonExternalVersion}
+          editing={state.queryVisible}
+          columns={state.columns}
+          schemaMap={state.schemaMap}
+          onQueryChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
+          onBsonSortChange={(v) => dispatch({ type: "SET_BSON_SORT", input: v })}
+          onBsonProjectionChange={(v) => dispatch({ type: "SET_BSON_PROJECTION", input: v })}
+          onSubmit={() => dispatch({ type: "SUBMIT_QUERY" })}
+        />
+      )}
 
       <CommandPalette
         key={effectivePaletteMode}

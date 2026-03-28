@@ -10,6 +10,7 @@ import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import { disconnect, serializeDocument } from "../providers/mongodb"
 import { editDocument } from "../actions/edit"
+import { openPipelineEditor } from "../actions/pipeline"
 import { formatValue } from "../utils/format"
 
 interface UseKeyboardNavOptions {
@@ -38,9 +39,36 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       return
     }
 
-    // Ctrl+F: open filter bar in BSON mode directly (migrates simple filter if needed)
+    // Ctrl+F: open pipeline editor in $EDITOR
     if (key.ctrl && key.name === "f") {
-      dispatch({ type: "OPEN_QUERY_BSON" })
+      if (state.view !== "documents" || !state.activeTabId) return
+      const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+      if (!activeTab) return
+
+      renderer.pause()
+      openPipelineEditor({
+        collectionName: activeTab.collectionName,
+        dbName: state.dbName,
+        pipelineSource: state.pipelineSource,
+        simpleQuery: state.queryInput,
+        schemaMap: state.schemaMap,
+        sortField: state.sortField,
+        sortDirection: state.sortDirection,
+      })
+        .then((result) => {
+          renderer.resume()
+          if (!result) return
+          dispatch({
+            type: "SET_PIPELINE",
+            pipeline: result.pipeline,
+            source: result.source,
+            isAggregate: result.isAggregate,
+          })
+        })
+        .catch((err: Error) => {
+          renderer.resume()
+          dispatch({ type: "SET_ERROR", error: `Pipeline error: ${err.message}` })
+        })
       return
     }
 
@@ -102,9 +130,21 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       process.exit(0)
     }
 
-    // Backspace clears filter when bar is closed
-    if (key.name === "backspace" && state.queryInput && state.view === "documents") {
-      dispatch({ type: "CLEAR_QUERY" })
+    // Backspace clears filter or pipeline when bar is closed
+    if (key.name === "backspace" && state.view === "documents") {
+      if (state.pipeline.length > 0) {
+        dispatch({ type: "CLEAR_PIPELINE" })
+        return
+      }
+      if (state.queryInput) {
+        dispatch({ type: "CLEAR_QUERY" })
+        return
+      }
+    }
+
+    // F: toggle pipeline bar expanded/collapsed (only when pipeline is active)
+    if (key.name === "F" && state.view === "documents" && state.pipeline.length > 0) {
+      dispatch({ type: "TOGGLE_PIPELINE_BAR" })
       return
     }
 

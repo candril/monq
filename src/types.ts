@@ -102,6 +102,16 @@ export interface AppState {
   dbName: string
   host: string
 
+  // Pipeline query (set via external $EDITOR)
+  /** Parsed pipeline stages — empty means no pipeline active */
+  pipeline: import("mongodb").Document[]
+  /** Raw JSON5 source — preserved for re-opening the editor */
+  pipelineSource: string
+  /** Whether the pipeline bar is expanded (F key) */
+  pipelineVisible: boolean
+  /** True when pipeline has stages that can't be expressed as find() */
+  pipelineIsAggregate: boolean
+
   // Collection browser
   collections: CollectionInfo[]
   collectionsLoading: boolean

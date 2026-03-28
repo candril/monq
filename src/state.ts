@@ -64,6 +64,10 @@ export type AppAction =
   | { type: "FORMAT_BSON_SECTION" }
   | { type: "SUBMIT_QUERY" }
   | { type: "CLEAR_QUERY" }
+  // Pipeline
+  | { type: "SET_PIPELINE"; pipeline: import("mongodb").Document[]; source: string; isAggregate: boolean }
+  | { type: "CLEAR_PIPELINE" }
+  | { type: "TOGGLE_PIPELINE_BAR" }
   // Preview
   | { type: "TOGGLE_PREVIEW" }
   | { type: "CYCLE_PREVIEW_POSITION" }
@@ -110,6 +114,10 @@ export function createInitialState(): AppState {
     bsonSortVisible: false,
     bsonProjectionVisible: false,
     bsonExternalVersion: 0,
+    pipeline: [],
+    pipelineSource: "",
+    pipelineVisible: false,
+    pipelineIsAggregate: false,
     previewPosition: null,
     previewScrollOffset: 0,
     commandPaletteVisible: false,
@@ -678,6 +686,37 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           t.id === state.activeTabId ? { ...t, query: "" } : t
         ),
       }
+
+    // Pipeline
+    case "SET_PIPELINE":
+      return {
+        ...state,
+        pipeline: action.pipeline,
+        pipelineSource: action.source,
+        pipelineIsAggregate: action.isAggregate,
+        pipelineVisible: true,
+        // Clear simple filter when pipeline is set
+        queryInput: "",
+        queryMode: "simple",
+        documentsLoading: true,
+        reloadCounter: state.reloadCounter + 1,
+        selectedIndex: 0,
+      }
+
+    case "CLEAR_PIPELINE":
+      return {
+        ...state,
+        pipeline: [],
+        pipelineSource: "",
+        pipelineIsAggregate: false,
+        pipelineVisible: false,
+        documentsLoading: true,
+        reloadCounter: state.reloadCounter + 1,
+        selectedIndex: 0,
+      }
+
+    case "TOGGLE_PIPELINE_BAR":
+      return { ...state, pipelineVisible: !state.pipelineVisible }
 
     // Preview
     case "TOGGLE_PREVIEW":

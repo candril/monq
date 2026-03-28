@@ -7,9 +7,10 @@ import { useEffect } from "react"
 import type { Dispatch } from "react"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
-import { fetchDocuments, detectColumns } from "../providers/mongodb"
+import { fetchDocuments, fetchAggregate, detectColumns } from "../providers/mongodb"
 import { parseSimpleQuery, parseBsonQuery } from "../query/parser"
 import { buildSchemaMap } from "../query/schema"
+import { classifyPipeline, extractFindParts } from "../actions/pipeline"
 
 interface UseDocumentLoaderOptions {
   state: AppState
@@ -24,8 +25,40 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
     if (!activeTab || !documentsLoading) return
 
     let cancelled = false
+    const existingColumns = state.columns
 
-    // Parse filter from query
+    // Pipeline mode — aggregate or find-compatible pipeline
+    if (state.pipeline.length > 0) {
+      const isAggregate = classifyPipeline(state.pipeline)
+
+      const fetchPipeline = isAggregate
+        ? fetchAggregate(activeTab.collectionName, state.pipeline)
+        : (() => {
+            const { filter, sort, projection } = extractFindParts(state.pipeline)
+            return fetchDocuments(activeTab.collectionName, filter, { sort, projection })
+          })()
+
+      fetchPipeline
+        .then(({ documents, count }) => {
+          if (cancelled) return
+          const detectedFields = detectColumns(documents)
+          const existingByField = new Map(existingColumns.map((c) => [c.field, c]))
+          const columns = detectedFields.map((field) => {
+            const existing = existingByField.get(field)
+            return existing ?? { field, frequency: 1, visible: true, displayMode: "normal" as const }
+          })
+          dispatch({ type: "SET_DOCUMENTS", documents, count, totalCount: count })
+          dispatch({ type: "SET_COLUMNS", columns })
+          dispatch({ type: "SET_SCHEMA", schemaMap: buildSchemaMap(documents) })
+        })
+        .catch((err: Error) => {
+          if (!cancelled) dispatch({ type: "SET_ERROR", error: err.message })
+        })
+
+      return () => { cancelled = true }
+    }
+
+    // Simple / BSON filter mode
     let filter = {}
     try {
       if (queryInput.trim()) {
@@ -37,28 +70,18 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
       // Invalid query — fetch unfiltered
     }
 
-    const existingColumns = state.columns
-
-    // Sort: in bson mode use bsonSort textarea, otherwise use simple sort state
+    // Sort: bson mode uses bsonSort textarea, simple mode uses sortField
     let sort: Record<string, 1 | -1> | undefined
     if (queryMode === "bson" && state.bsonSort.trim()) {
-      try {
-        sort = JSON.parse(state.bsonSort) as Record<string, 1 | -1>
-      } catch {
-        // Invalid sort JSON — skip
-      }
+      try { sort = JSON.parse(state.bsonSort) } catch { /* skip */ }
     } else if (state.sortField) {
       sort = { [state.sortField]: state.sortDirection as 1 | -1 }
     }
 
-    // Projection: only in bson mode
+    // Projection: bson mode only
     let projection: Record<string, 0 | 1> | undefined
     if (queryMode === "bson" && state.bsonProjection.trim()) {
-      try {
-        projection = JSON.parse(state.bsonProjection) as Record<string, 0 | 1>
-      } catch {
-        // Invalid projection JSON — skip
-      }
+      try { projection = JSON.parse(state.bsonProjection) } catch { /* skip */ }
     }
 
     fetchDocuments(activeTab.collectionName, filter, { sort, projection })

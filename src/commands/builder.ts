@@ -76,11 +76,25 @@ export function buildCommands(state: AppState): Command[] {
       shortcut: "/",
     })
     commands.push({
-      id: "query:open-filter-bson",
-      label: "Filter (BSON)",
+      id: "query:open-pipeline",
+      label: "Open Pipeline Editor",
       category: "query",
       shortcut: "Ctrl+F",
     })
+    if (state.pipeline.length > 0) {
+      commands.push({
+        id: "query:clear-pipeline",
+        label: "Clear Pipeline",
+        category: "query",
+        shortcut: "⌫",
+      })
+      commands.push({
+        id: "query:toggle-pipeline-bar",
+        label: state.pipelineVisible ? "Collapse Pipeline Bar" : "Expand Pipeline Bar",
+        category: "query",
+        shortcut: "F",
+      })
+    }
     if (state.queryInput) {
       commands.push({
         id: "query:clear-filter",

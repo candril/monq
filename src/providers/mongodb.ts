@@ -82,6 +82,27 @@ export async function fetchDocuments(
   return { documents, count, totalCount: hasFilter ? totalCount : count }
 }
 
+/** Run an aggregation pipeline */
+export async function fetchAggregate(
+  collectionName: string,
+  pipeline: Document[],
+  options: { limit?: number } = {}
+): Promise<{ documents: Document[]; count: number }> {
+  const collection = getDb().collection(collectionName)
+  const { limit = 200 } = options
+
+  // Run pipeline + a parallel count pipeline (append $count stage)
+  const countPipeline = [...pipeline, { $count: "__count" }]
+
+  const [documents, countResult] = await Promise.all([
+    collection.aggregate(pipeline).limit(limit).toArray(),
+    collection.aggregate(countPipeline).toArray(),
+  ])
+
+  const count = (countResult[0] as any)?.__count ?? documents.length
+  return { documents, count }
+}
+
 /** Replace a document by its original _id */
 export async function replaceDocument(
   collectionName: string,
