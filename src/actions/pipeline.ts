@@ -335,6 +335,32 @@ export function pipelineFilePaths(dbName: string, collectionName: string, tabId:
   }
 }
 
+/**
+ * Write the pipeline file and schema sidecar to disk (without opening an editor).
+ * Used by Ctrl+E to ensure the file exists before handing it to an external tool.
+ */
+export async function writePipelineFile(params: {
+  collectionName: string
+  dbName: string
+  tabId: string
+  pipelineSource: string
+  simpleQuery: string
+  schemaMap: SchemaMap
+  sortField: string | null
+  sortDirection: 1 | -1
+}): Promise<string> {
+  const {
+    collectionName, dbName, tabId, pipelineSource, simpleQuery,
+    schemaMap, sortField, sortDirection,
+  } = params
+  const { dir, queryFile, schemaFile } = pipelineFilePaths(dbName, collectionName, tabId)
+  await mkdir(dir, { recursive: true })
+  await Bun.write(schemaFile, buildJsonSchema(collectionName, schemaMap))
+  const content = buildTemplate(collectionName, dbName, pipelineSource, simpleQuery, schemaMap, sortField, sortDirection)
+  await Bun.write(queryFile, content)
+  return queryFile
+}
+
 export async function openPipelineEditor(params: {
   collectionName: string
   dbName: string

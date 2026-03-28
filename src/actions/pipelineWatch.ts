@@ -107,8 +107,11 @@ export function openTmuxSplit(filePath: string): "tmux" | "clipboard" | "none" {
   if (process.env.TMUX) {
     const splitFlag = process.env.MONQ_TMUX_SPLIT === "h" ? "-v" : "-h"
     const pct = "50"
-    const cmd = `${editor} "${filePath}"`
-    spawn("tmux", ["split-window", splitFlag, "-p", pct, cmd], {
+    // Pass editor and filepath as separate argv elements so tmux exec's the
+    // editor directly rather than trying to exec a shell command string.
+    // Any extra args from $EDITOR (e.g. "nvim --noplugin") are split here too.
+    const editorArgs = editor.split(/\s+/)
+    spawn("tmux", ["split-window", splitFlag, "-p", pct, ...editorArgs, filePath], {
       detached: true,
       stdio: "ignore",
     }).unref()

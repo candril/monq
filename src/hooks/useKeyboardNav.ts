@@ -6,12 +6,12 @@
 
 import type { Dispatch } from "react"
 import { useKeyboard, useRenderer } from "@opentui/react"
-import { mkdir } from "fs/promises"
+
 import { ObjectId } from "mongodb"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import { disconnect, serializeDocument, deleteDocument } from "../providers/mongodb"
-import { openPipelineEditor, pipelineFilePaths, extractFindParts, classifyPipeline } from "../actions/pipeline"
+import { openPipelineEditor, writePipelineFile, pipelineFilePaths, extractFindParts, classifyPipeline } from "../actions/pipeline"
 import { startWatching, stopWatching, reloadFromFile, openTmuxSplit } from "../actions/pipelineWatch"
 import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../actions/editMany"
 import { filterToSimple } from "../query/parser"
@@ -91,14 +91,18 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return
 
-      const { dir, queryFile } = pipelineFilePaths(state.dbName, activeTab.collectionName, activeTab.id)
-
-      // Ensure dir + file exist with current pipeline source, then open split
-      mkdir(dir, { recursive: true })
-        .then(async () => {
-          if (state.pipelineSource.trim()) {
-            await Bun.write(queryFile, state.pipelineSource).catch(() => {})
-          }
+      // Write the pipeline file (template if no active pipeline) then open split
+      writePipelineFile({
+        collectionName: activeTab.collectionName,
+        dbName: state.dbName,
+        tabId: activeTab.id,
+        pipelineSource: state.pipelineSource,
+        simpleQuery: state.queryInput,
+        schemaMap: state.schemaMap,
+        sortField: state.pipeline.length > 0 ? null : state.sortField,
+        sortDirection: state.sortDirection,
+      })
+        .then((queryFile) => {
           const result = openTmuxSplit(queryFile)
           if (result === "tmux") {
             startWatching(queryFile, () => reloadFromFile(queryFile, dispatch))
