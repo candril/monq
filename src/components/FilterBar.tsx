@@ -29,13 +29,14 @@ type BsonKeyBinding = NonNullable<TextareaOptions["keyBindings"]>[number]
 
 /**
  * Custom key bindings for BSON textareas:
- * - Enter → submit (instead of default newline)
- * - Ctrl+J → newline
- * - Shift+Enter → newline
+ * - Enter → newline (default — submit is handled by useKeyboardNav instead)
+ * - Ctrl+J → newline (extra alias)
+ * - Shift+Enter → newline (extra alias)
+ * Submit is dispatched directly from useKeyboardNav when Enter is pressed
+ * in BSON mode, which is more reliable than wiring textarea onSubmit.
  */
 const BSON_KEY_BINDINGS: BsonKeyBinding[] = [
-  { name: "return", action: "submit" },
-  { name: "return", ctrl: true, action: "newline" },
+  { name: "j", ctrl: true, action: "newline" },
   { name: "return", shift: true, action: "newline" },
 ]
 
@@ -63,15 +64,6 @@ interface FilterBarProps {
   onSubmit?: () => void
 }
 
-// ── Field suggestions for BSON mode ────────────────────────────────────────
-
-function buildBsonSuggestions(columns: DetectedColumn[], schemaMap: SchemaMap): string[] {
-  const fields = new Set(columns.map((c) => c.field))
-  for (const [path, info] of schemaMap) {
-    if (!path.includes(".") && info.children.length > 0) fields.add(path)
-  }
-  return [...fields]
-}
 
 // ── BsonTextarea ────────────────────────────────────────────────────────────
 
@@ -197,15 +189,10 @@ export function FilterBar({
   const badgeLabel = queryMode === "simple" ? "[Simple]" : "[BSON]"
   const badgeFg = queryMode === "simple" ? BADGE_SIMPLE_FG : BADGE_BSON_FG
 
-  const suggestions = editing && queryMode === "bson"
-    ? buildBsonSuggestions(columns, schemaMap)
-    : []
-  const hasSuggestions = suggestions.length > 0
-
   const sectionCount =
     1 + (bsonSortVisible ? 1 : 0) + (bsonProjectionVisible ? 1 : 0)
-  // header row + optional suggestions row + sections (textarea + label each)
-  const bsonHeight = 1 + (hasSuggestions ? 1 : 0) + sectionCount * (TEXTAREA_HEIGHT + 1)
+  // header row + sections (textarea + label each)
+  const bsonHeight = 1 + sectionCount * (TEXTAREA_HEIGHT + 1)
 
   return (
     <box
@@ -260,22 +247,6 @@ export function FilterBar({
           </text>
         )}
       </box>
-
-      {/* Field name suggestions row — in-flow, just above the textareas */}
-      {editing && queryMode === "bson" && hasSuggestions && (
-        <box height={1} flexDirection="row" gap={1} paddingLeft={1}>
-          {suggestions.slice(0, 20).map((field) => {
-            const info = schemaMap.get(field)
-            const typeHint = info?.type ? `:${info.type}` : ""
-            return (
-              <text key={field}>
-                <span fg={theme.textDim}>{field}</span>
-                <span fg={theme.textMuted}>{typeHint}</span>
-              </text>
-            )
-          })}
-        </box>
-      )}
 
       {/* BSON sections — only when editing in bson mode */}
       {editing && queryMode === "bson" && (

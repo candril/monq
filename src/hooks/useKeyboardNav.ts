@@ -63,6 +63,13 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         }
         return
       }
+      // Enter submits in BSON mode (textarea keybinding fires submit() but
+      // the onSubmit wiring is unreliable — handle it here directly instead)
+      if ((key.name === "return" || key.name === "enter") && state.queryMode === "bson") {
+        dispatch({ type: "SUBMIT_QUERY" })
+        return
+      }
+
       // BSON-mode only controls
       if (state.queryMode === "bson") {
         // Ctrl+O: toggle sort section

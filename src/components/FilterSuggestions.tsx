@@ -30,6 +30,24 @@ interface FilterSuggestionsProps {
   onChange: (query: string) => void
 }
 
+function buildBsonSuggestions(
+  columns: DetectedColumn[],
+  schemaMap: SchemaMap,
+): Suggestion[] {
+  const fields = new Set(columns.map((c) => c.field))
+  for (const [path, info] of schemaMap) {
+    if (!path.includes(".") && info.children.length > 0) fields.add(path)
+  }
+  return [...fields].map((field) => {
+    const info = schemaMap.get(field)
+    return {
+      label: field,
+      value: field,
+      hint: info?.type,
+    }
+  })
+}
+
 function buildSuggestions(
   query: string,
   columns: DetectedColumn[],
@@ -113,13 +131,13 @@ export function FilterSuggestions({
   schemaMap,
   onChange,
 }: FilterSuggestionsProps) {
-  // No suggestions in BSON mode — user is writing raw JSON
-  if (queryMode === "bson") return null
   const [selectedIndex, setSelectedIndex] = useState(0)
 
   const suggestions = useMemo(
-    () => buildSuggestions(query, columns, schemaMap),
-    [query, columns, schemaMap],
+    () => queryMode === "bson"
+      ? buildBsonSuggestions(columns, schemaMap)
+      : buildSuggestions(query, columns, schemaMap),
+    [query, queryMode, columns, schemaMap],
   )
 
   useEffect(() => {

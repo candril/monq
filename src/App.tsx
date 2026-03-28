@@ -225,9 +225,8 @@ export function App({ uri }: AppProps) {
         )}
       </box>
 
-      {/* Simple mode: field suggestions popup */}
       <FilterSuggestions
-        visible={state.queryVisible && state.queryMode === "simple"}
+        visible={state.queryVisible}
         query={state.queryInput}
         queryMode={state.queryMode}
         columns={state.columns}
