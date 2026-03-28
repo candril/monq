@@ -55,88 +55,122 @@ function buildTemplate(
   sortField: string | null,
   sortDirection: 1 | -1,
 ): string {
-  // If we already have a pipeline source, re-open it as-is
+  // Re-open existing pipeline as-is
   if (currentPipelineSource.trim()) {
     return currentPipelineSource
   }
 
   // Build $match from simple query if present
-  let matchContent = ""
+  let matchObj: Record<string, unknown> = {}
   if (simpleQuery.trim()) {
     try {
-      const filter = parseSimpleQuery(simpleQuery, schemaMap)
-      matchContent = JSON.stringify(filter, null, 4)
-        .split("\n")
-        .map((l, i) => i === 0 ? l : `    ${l}`)
-        .join("\n")
+      matchObj = parseSimpleQuery(simpleQuery, schemaMap) as Record<string, unknown>
     } catch {
-      matchContent = "{}"
+      matchObj = {}
     }
-  } else {
-    matchContent = "{}"
   }
 
-  // Build $sort from active sort state if present
-  const sortContent = sortField
-    ? JSON.stringify({ [sortField]: sortDirection })
-    : "{ _id: -1 }"
+  // Build $sort
+  const sortObj = sortField
+    ? { [sortField]: sortDirection }
+    : { _id: -1 }
 
-  // Field hints comment from schema
+  // Compose as proper JSON (JSONC — supports // comments)
+  // The $schema key must be first for jsonls to pick it up
+  const doc = {
+    $schema: "./.monq-pipeline-schema.json",
+    pipeline: [
+      { $match: matchObj },
+      { $sort: sortObj },
+    ],
+  }
+
+  // Pretty-print with helpful comments injected
   const topFields = [...schemaMap.entries()]
     .filter(([p]) => !p.includes("."))
-    .slice(0, 8)
+    .slice(0, 10)
     .map(([p, info]) => `${p}: ${info.type}`)
     .join(", ")
-  const fieldHint = topFields ? `// Fields: ${topFields}` : ""
 
-  return `// Mon-Q pipeline — ${collectionName} @ ${dbName}
-// Edit and save (:wq) to apply. Quit without saving (:q!) to cancel.
-// Ctrl+F opens this file again. F toggles the pipeline bar.
-//
-// $schema provides field completions if your editor supports jsonls.
-${fieldHint}
-{
-  $schema: "./.monq-pipeline-schema.json",
+  const json = JSON.stringify(doc, null, 2)
 
-  pipeline: [
-    // $match: filter documents
-    { $match: ${matchContent} },
+  // Inject comment header and inline hints via string manipulation
+  const header = [
+    `// Mon-Q pipeline — ${collectionName} @ ${dbName}`,
+    `// Edit and save (:wq) to apply. Quit without saving (:q!) to cancel.`,
+    `// Ctrl+F re-opens. F toggles pipeline bar. ⌫ clears.`,
+    `//`,
+    topFields ? `// Fields: ${topFields}` : `//`,
+    `// Operators in $match: $eq $ne $gt $gte $lt $lte $in $nin $regex $exists $elemMatch`,
+    ``,
+  ].join("\n")
 
-    // $sort: 1 = asc, -1 = desc
-    { $sort: ${sortContent} },
-
-    // $project: include/exclude fields (remove stage for all fields)
-    // { $project: { fieldName: 1, _id: 0 } },
-
-    // Add more stages: $group, $lookup, $unwind, $limit, $addFields ...
-  ],
-}
-`
+  return header + json + "\n"
 }
 
 // ── JSON Schema sidecar ─────────────────────────────────────────────────────
 
+/**
+ * Schema for a field value in $match — typed as object so jsonls always
+ * suggests the $ operators when the user types { inside the field value.
+ * We don't use oneOf (jsonls picks the first matching branch and stops).
+ */
+function fieldValueSchema(fieldName: string, fieldType: string): Record<string, unknown> {
+  return {
+    description: `${fieldName} (${fieldType})`,
+    // No "type" restriction — accept direct value OR operator object.
+    // jsonls will suggest all properties when user types {.
+    properties: {
+      // Comparison
+      $eq:        { description: "Equal to value" },
+      $ne:        { description: "Not equal to value" },
+      $gt:        { description: "Greater than value" },
+      $gte:       { description: "Greater than or equal to value" },
+      $lt:        { description: "Less than value" },
+      $lte:       { description: "Less than or equal to value" },
+      // Array membership
+      $in:        { type: "array", description: "Matches any value in array", items: {} },
+      $nin:       { type: "array", description: "Matches no value in array", items: {} },
+      $all:       { type: "array", description: "Array contains all values", items: {} },
+      // Existence / type
+      $exists:    { type: "boolean", description: "true = field exists, false = field missing" },
+      $type:      { description: "BSON type: string | number | bool | date | objectId | array | object | null | int | long | double | decimal" },
+      // String / regex
+      $regex:     { type: "string", description: "Regular expression pattern (e.g. \"^stefan\")" },
+      $options:   { type: "string", description: "Regex flags: i (case-insensitive), m (multiline), s (dotAll), x (extended)" },
+      // Array operators
+      $elemMatch: { type: "object", description: "At least one array element matches all conditions", properties: {} },
+      $size:      { type: "number", description: "Array has exactly N elements" },
+      // Arithmetic
+      $mod:       { type: "array", description: "[divisor, remainder] — value mod divisor = remainder", items: { type: "number" } },
+      // Negation
+      $not:       { type: "object", description: "Negates operator expression, e.g. { $not: { $gt: 5 } }", properties: {} },
+    },
+  }
+}
+
 function buildJsonSchema(collectionName: string, schemaMap: SchemaMap): string {
-  const typeMap: Record<string, string> = {
-    string: "string",
-    number: "number",
-    boolean: "boolean",
-    array: "array",
-    object: "object",
-    objectid: "string",
-    date: "string",
-    null: "null",
-    mixed: "string",
+  // $match properties — top-level logical operators + per-field operators
+  const matchProperties: Record<string, unknown> = {
+    $and:  { type: "array", description: "All conditions must match", items: { type: "object" } },
+    $or:   { type: "array", description: "At least one condition must match", items: { type: "object" } },
+    $nor:  { type: "array", description: "No conditions match", items: { type: "object" } },
+    $expr: { type: "object", description: "Aggregation expression in query context" },
+    $text: {
+      type: "object",
+      description: "Full-text search",
+      properties: {
+        $search:        { type: "string", description: "Search string" },
+        $language:      { type: "string", description: "Language for stemming" },
+        $caseSensitive: { type: "boolean" },
+        $diacriticSensitive: { type: "boolean" },
+      },
+    },
   }
 
-  // Build $match properties from top-level schema fields
-  const matchProperties: Record<string, unknown> = {}
   for (const [path, info] of schemaMap) {
     if (path.includes(".")) continue
-    matchProperties[path] = {
-      description: `type: ${info.type}`,
-      ...(typeMap[info.type] ? { type: typeMap[info.type] } : {}),
-    }
+    matchProperties[path] = fieldValueSchema(path, info.type)
   }
 
   const schema = {
@@ -255,7 +289,8 @@ export async function openPipelineEditor(params: {
   // Stable temp dir per collection
   const dir = join(tmpdir(), "monq", collectionName)
   await mkdir(dir, { recursive: true })
-  const queryFile  = join(dir, "pipeline.json5")
+  // Use .jsonc so jsonls activates automatically (supports // comments)
+  const queryFile  = join(dir, "pipeline.jsonc")
   const schemaFile = join(dir, ".monq-pipeline-schema.json")
 
   // Write schema sidecar

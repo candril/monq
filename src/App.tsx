@@ -133,7 +133,7 @@ export function App({ uri }: AppProps) {
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
         const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
         if (!activeTab) break
-        renderer.pause()
+        renderer.suspend()
         openPipelineEditor({
           collectionName: activeTab.collectionName,
           dbName: state.dbName,
@@ -144,13 +144,14 @@ export function App({ uri }: AppProps) {
           sortDirection: state.sortDirection,
         })
           .then((result) => {
-            renderer.resume()
             if (!result) return
             dispatch({ type: "SET_PIPELINE", pipeline: result.pipeline, source: result.source, isAggregate: result.isAggregate })
           })
           .catch((err: Error) => {
-            renderer.resume()
             dispatch({ type: "SET_ERROR", error: `Pipeline error: ${err.message}` })
+          })
+          .finally(() => {
+            renderer.resume()
           })
         break
       }

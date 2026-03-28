@@ -45,7 +45,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return
 
-      renderer.pause()
+      renderer.suspend()
       openPipelineEditor({
         collectionName: activeTab.collectionName,
         dbName: state.dbName,
@@ -56,7 +56,6 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         sortDirection: state.sortDirection,
       })
         .then((result) => {
-          renderer.resume()
           if (!result) return
           dispatch({
             type: "SET_PIPELINE",
@@ -66,8 +65,10 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           })
         })
         .catch((err: Error) => {
-          renderer.resume()
           dispatch({ type: "SET_ERROR", error: `Pipeline error: ${err.message}` })
+        })
+        .finally(() => {
+          renderer.resume()
         })
       return
     }
