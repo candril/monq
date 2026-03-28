@@ -7,6 +7,7 @@
  */
 
 import { watch, type FSWatcher } from "fs"
+import { dirname, basename } from "path"
 import { spawn } from "child_process"
 import JSON5 from "json5"
 import { EJSON } from "bson"
@@ -23,14 +24,20 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null
 export function startWatching(filePath: string, onReload: () => void) {
   stopWatching()
   try {
-    activeWatcher = watch(filePath, () => {
+    const dir = dirname(filePath)
+    const filename = basename(filePath)
+    // Watch the directory rather than the file so atomic saves (rename-based
+    // writes from nvim, vim, etc.) are detected reliably. Watching the file
+    // directly loses the watch after the first atomic rename.
+    activeWatcher = watch(dir, (_event, name) => {
+      if (name !== filename) return
       if (debounceTimer) clearTimeout(debounceTimer)
       debounceTimer = setTimeout(onReload, 150)
     })
-    // Ignore errors on the watcher itself (e.g. file deleted)
+    // Ignore errors on the watcher itself (e.g. directory deleted)
     activeWatcher.on("error", () => stopWatching())
   } catch {
-    // File may not exist yet — that's fine, watcher just won't fire
+    // Directory may not exist yet — that's fine, watcher just won't fire
   }
 }
 
