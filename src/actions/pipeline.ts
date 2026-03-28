@@ -12,6 +12,7 @@ import { join } from "path"
 import { mkdir } from "fs/promises"
 import type { Document } from "mongodb"
 import JSON5 from "json5"
+import { EJSON } from "bson"
 import type { SchemaMap } from "../query/schema"
 import { parseSimpleQuery } from "../query/parser"
 
@@ -436,15 +437,18 @@ export async function openPipelineEditor(params: {
       continue  // re-open editor
     }
 
-    const pipeline: Document[] = Array.isArray(parsed.pipeline)
+    const rawPipeline: Document[] = Array.isArray(parsed.pipeline)
       ? parsed.pipeline
       : Array.isArray(parsed)
         ? parsed  // user wrote just a bare array
         : []
 
-    if (pipeline.length === 0) {
+    if (rawPipeline.length === 0) {
       return null
     }
+
+    // Deserialize EJSON extended types (e.g. { "$oid": "..." } → ObjectId)
+    const pipeline = EJSON.deserialize(rawPipeline) as Document[]
 
     const isAggregate = classifyPipeline(pipeline)
     return { pipeline, source: content, isAggregate }

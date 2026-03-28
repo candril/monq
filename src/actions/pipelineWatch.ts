@@ -9,6 +9,7 @@
 import { watch, type FSWatcher } from "fs"
 import { spawn } from "child_process"
 import JSON5 from "json5"
+import { EJSON } from "bson"
 import type { Document } from "mongodb"
 import type { Dispatch } from "react"
 import type { AppAction } from "../state"
@@ -73,11 +74,15 @@ export async function reloadFromFile(
     return
   }
 
-  const pipeline: Document[] = Array.isArray(parsed)
+  const rawPipeline: Document[] = Array.isArray(parsed)
     ? parsed
     : Array.isArray((parsed as { pipeline?: Document[] }).pipeline)
       ? (parsed as { pipeline: Document[] }).pipeline
       : []
+
+  // Deserialize EJSON extended types (e.g. { "$oid": "..." } → ObjectId)
+  // so that filters on typed fields like _id work correctly against MongoDB.
+  const pipeline = EJSON.deserialize(rawPipeline) as Document[]
 
   if (pipeline.length === 0) return
 
