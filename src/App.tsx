@@ -26,7 +26,8 @@ import { useDocumentLoader } from "./hooks/useDocumentLoader"
 import { buildCommands } from "./commands/builder"
 import { buildCollectionCommands } from "./commands/collections"
 import { editDocument } from "./actions/edit"
-import { openPipelineEditor } from "./actions/pipeline"
+import { openPipelineEditor, pipelineFilePaths } from "./actions/pipeline"
+import { startWatching, reloadFromFile } from "./actions/pipelineWatch"
 import { disconnect, serializeDocument } from "./providers/mongodb"
 import { theme } from "./theme"
 import type { Command } from "./commands/types"
@@ -155,6 +156,7 @@ export function App({ uri }: AppProps) {
         openPipelineEditor({
           collectionName: activeTab.collectionName,
           dbName: state.dbName,
+          tabId: activeTab.id,
           pipelineSource: state.pipelineSource,
           simpleQuery: state.queryInput,
           schemaMap: state.schemaMap,
@@ -164,6 +166,9 @@ export function App({ uri }: AppProps) {
           .then((result) => {
             if (!result) return
             dispatch({ type: "SET_PIPELINE", pipeline: result.pipeline, source: result.source, isAggregate: result.isAggregate })
+            const { queryFile } = pipelineFilePaths(state.dbName, activeTab.collectionName, activeTab.id)
+            startWatching(queryFile, () => reloadFromFile(queryFile, dispatch))
+            dispatch({ type: "START_PIPELINE_WATCH" })
           })
           .catch((err: Error) => {
             dispatch({ type: "SET_ERROR", error: `Pipeline error: ${err.message}` })
@@ -295,6 +300,7 @@ export function App({ uri }: AppProps) {
         <PipelineBar
           pipeline={state.pipeline}
           isAggregate={state.pipelineIsAggregate}
+          watching={state.pipelineWatching}
         />
       )}
 

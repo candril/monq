@@ -10,9 +10,10 @@ import { theme } from "../theme"
 interface PipelineBarProps {
   pipeline: Document[]
   isAggregate: boolean
+  watching: boolean
 }
 
-export function PipelineBar({ pipeline, isAggregate }: PipelineBarProps) {
+export function PipelineBar({ pipeline, isAggregate, watching }: PipelineBarProps) {
   if (pipeline.length === 0) {
     // Pipeline mode but no stages yet (e.g. just switched, no filter)
     return (
@@ -20,7 +21,7 @@ export function PipelineBar({ pipeline, isAggregate }: PipelineBarProps) {
         <box backgroundColor={theme.queryBson} paddingX={1}>
           <text><span fg={theme.bg}><strong>pipeline</strong></span></text>
         </box>
-        <text><span fg={theme.textMuted}>no stages — Ctrl+F to edit</span></text>
+        <text><span fg={theme.textMuted}>no stages — Ctrl+F to edit, Ctrl+E tmux split</span></text>
       </box>
     )
   }
@@ -46,11 +47,11 @@ export function PipelineBar({ pipeline, isAggregate }: PipelineBarProps) {
     <box height={1 + pipeline.length} backgroundColor={theme.headerBg} flexDirection="column">
       <box height={1} paddingX={1} flexDirection="row" gap={1}>
         <box backgroundColor={badgeBg} paddingX={1}>
-          <text><span fg={theme.bg}><strong>{badge}</strong></span></text>
+          <text><span fg={theme.bg}><strong>{badge}{watching ? " ~" : ""}</strong></span></text>
         </box>
         <text><span fg={theme.textMuted}>{pipeline.length} stage{pipeline.length !== 1 ? "s" : ""}</span></text>
         <box flexGrow={1} />
-        <text><span fg={theme.textMuted}>Tab→simple  Ctrl+F edit  ⌫ clear</span></text>
+        <text><span fg={theme.textMuted}>Tab→simple  Ctrl+F edit  Ctrl+E split  ⌫ clear</span></text>
       </box>
       {stageRows}
     </box>

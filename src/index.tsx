@@ -2,6 +2,12 @@ import { createCliRenderer, ConsolePosition, getTreeSitterClient } from "@opentu
 import { createRoot } from "@opentui/react"
 import { App } from "./App"
 import { registerSyntaxParsers } from "./syntax-parsers"
+import { stopWatching } from "./actions/pipelineWatch"
+
+// Stop file watcher on exit (covers Ctrl+C, SIGTERM, etc.)
+process.on("exit", () => stopWatching())
+process.on("SIGINT", () => { stopWatching(); process.exit(0) })
+process.on("SIGTERM", () => { stopWatching(); process.exit(0) })
 
 // Register tree-sitter parsers (JSON for document preview)
 registerSyntaxParsers()

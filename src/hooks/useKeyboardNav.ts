@@ -6,11 +6,13 @@
 
 import type { Dispatch } from "react"
 import { useKeyboard, useRenderer } from "@opentui/react"
+import { mkdir } from "fs/promises"
 import { ObjectId } from "mongodb"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import { disconnect, serializeDocument, deleteDocument } from "../providers/mongodb"
-import { openPipelineEditor, extractFindParts, classifyPipeline } from "../actions/pipeline"
+import { openPipelineEditor, pipelineFilePaths, extractFindParts, classifyPipeline } from "../actions/pipeline"
+import { startWatching, stopWatching, reloadFromFile, openTmuxSplit } from "../actions/pipelineWatch"
 import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../actions/editMany"
 import { filterToSimple } from "../query/parser"
 import { formatValue } from "../utils/format"
@@ -41,19 +43,18 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       return
     }
 
-    // Ctrl+F: open pipeline editor in $EDITOR
+    // Ctrl+F: open pipeline editor in $EDITOR (blocking, renderer suspended)
     if (key.ctrl && key.name === "f") {
       if (state.view !== "documents" || !state.activeTabId) return
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return
 
-      // When pipeline is active, pipelineSource is re-opened as-is.
-      // When simple filter is active, queryInput migrates into $match.
-      // When both empty, fresh template is shown.
+      stopWatching()
       renderer.suspend()
       openPipelineEditor({
         collectionName: activeTab.collectionName,
         dbName: state.dbName,
+        tabId: activeTab.id,
         pipelineSource: state.pipelineSource,
         simpleQuery: state.queryInput,
         schemaMap: state.schemaMap,
@@ -68,6 +69,12 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
             source: result.source,
             isAggregate: result.isAggregate,
           })
+          // Start watching for external saves after returning from editor
+          const { queryFile } = pipelineFilePaths(state.dbName, activeTab.collectionName, activeTab.id)
+          startWatching(queryFile, () => {
+            reloadFromFile(queryFile, dispatch)
+          })
+          dispatch({ type: "START_PIPELINE_WATCH" })
         })
         .catch((err: Error) => {
           dispatch({ type: "SET_ERROR", error: `Pipeline error: ${err.message}` })
@@ -75,6 +82,35 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         .finally(() => {
           renderer.resume()
         })
+      return
+    }
+
+    // Ctrl+E: open pipeline file in tmux split (non-blocking) or copy path to clipboard
+    if (key.ctrl && key.name === "e") {
+      if (state.view !== "documents" || !state.activeTabId) return
+      const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+      if (!activeTab) return
+
+      const { dir, queryFile } = pipelineFilePaths(state.dbName, activeTab.collectionName, activeTab.id)
+
+      // Ensure dir + file exist with current pipeline source, then open split
+      mkdir(dir, { recursive: true })
+        .then(async () => {
+          if (state.pipelineSource.trim()) {
+            await Bun.write(queryFile, state.pipelineSource).catch(() => {})
+          }
+          const result = openTmuxSplit(queryFile)
+          if (result === "tmux") {
+            startWatching(queryFile, () => reloadFromFile(queryFile, dispatch))
+            dispatch({ type: "START_PIPELINE_WATCH" })
+            dispatch({ type: "SHOW_MESSAGE", message: `Opened in tmux split — watching for saves`, kind: "info" })
+          } else if (result === "clipboard") {
+            dispatch({ type: "SHOW_MESSAGE", message: `Path copied to clipboard: ${queryFile}`, kind: "info" })
+          } else {
+            dispatch({ type: "SHOW_MESSAGE", message: `Pipeline file: ${queryFile}`, kind: "info" })
+          }
+        })
+        .catch(() => {})
       return
     }
 
@@ -189,6 +225,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
 
     // Quit
     if (key.name === "q") {
+      stopWatching()
       disconnect().catch(() => {})
       renderer.destroy()
       process.exit(0)
@@ -243,6 +280,8 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       if (key.sequence && /^[1-9]$/.test(key.sequence)) {
         const tabIndex = parseInt(key.sequence) - 1
         if (tabIndex < state.tabs.length) {
+          stopWatching()
+          dispatch({ type: "STOP_PIPELINE_WATCH" })
           dispatch({ type: "SWITCH_TAB", tabId: state.tabs[tabIndex].id })
         }
         return
@@ -251,6 +290,8 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       if (key.name === "[" || (key.sequence === "[")) {
         const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId)
         if (currentIndex > 0) {
+          stopWatching()
+          dispatch({ type: "STOP_PIPELINE_WATCH" })
           dispatch({ type: "SWITCH_TAB", tabId: state.tabs[currentIndex - 1].id })
         }
         return
@@ -258,6 +299,8 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       if (key.name === "]" || (key.sequence === "]")) {
         const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId)
         if (currentIndex < state.tabs.length - 1) {
+          stopWatching()
+          dispatch({ type: "STOP_PIPELINE_WATCH" })
           dispatch({ type: "SWITCH_TAB", tabId: state.tabs[currentIndex + 1].id })
         }
         return
