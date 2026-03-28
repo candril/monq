@@ -42,9 +42,13 @@ test-watch:
 typecheck:
     bun x tsc --noEmit
 
-# Build standalone binary
+# Build standalone binary for current platform
 build:
-    bun build src/index.tsx --compile --outfile dist/monq
+    bun scripts/build.ts
+
+# Build standalone binaries for all platforms
+build-all:
+    bun scripts/build.ts --all
 
 # Clean node_modules and reinstall
 clean:
