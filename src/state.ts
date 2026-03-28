@@ -78,6 +78,8 @@ export type AppAction =
   | { type: "CONFIRM_OVERWRITE_SIMPLE"; query: string }
   | { type: "CONFIRM_NEW_TAB_SIMPLE"; query: string }
   | { type: "ADD_PIPELINE_MATCH_CONDITION"; field: string; value: unknown }
+  | { type: "START_PIPELINE_WATCH" }
+  | { type: "STOP_PIPELINE_WATCH" }
   // Preview
   | { type: "TOGGLE_PREVIEW" }
   | { type: "CYCLE_PREVIEW_POSITION" }
@@ -149,6 +151,7 @@ export function createInitialState(): AppState {
     pipelineSource: "",
     pipelineIsAggregate: false,
     pipelineConfirm: null,
+    pipelineWatching: false,
     previewPosition: null,
     previewScrollOffset: 0,
     commandPaletteVisible: false,
@@ -785,6 +788,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         pipelineSource: "",
         pipelineIsAggregate: false,
         pipelineConfirm: null,
+        pipelineWatching: false,
         queryMode: "simple",
         queryInput: "",
         documentsLoading: true,
@@ -1040,6 +1044,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       if (!state.deleteConfirmation) return state
       return { ...state, deleteConfirmation: { ...state.deleteConfirmation, focusedIndex: action.index } }
     }
+
+    case "START_PIPELINE_WATCH":
+      return { ...state, pipelineWatching: true }
+
+    case "STOP_PIPELINE_WATCH":
+      return { ...state, pipelineWatching: false }
 
     default:
       return state

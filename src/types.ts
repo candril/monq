@@ -138,6 +138,8 @@ export interface AppState {
   pipelineIsAggregate: boolean
   /** When set, show the pipeline→simple confirmation dialog */
   pipelineConfirm: { simpleQuery: string; focusedIndex: number } | null
+  /** True while fs.watch is active on the pipeline file */
+  pipelineWatching: boolean
 
   // Collection browser
   collections: CollectionInfo[]

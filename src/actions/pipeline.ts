@@ -325,9 +325,20 @@ function buildEditorArgs(editorBase: string, queryFile: string, content: string)
 
 // ── Main entry point ────────────────────────────────────────────────────────
 
+/** Derive the stable pipeline file paths for a given tab */
+export function pipelineFilePaths(dbName: string, collectionName: string, tabId: string) {
+  const dir = join(tmpdir(), "monq", dbName, collectionName, tabId)
+  return {
+    dir,
+    queryFile:  join(dir, "pipeline.jsonc"),
+    schemaFile: join(dir, ".monq-pipeline-schema.json"),
+  }
+}
+
 export async function openPipelineEditor(params: {
   collectionName: string
   dbName: string
+  tabId: string
   pipelineSource: string
   simpleQuery: string
   schemaMap: SchemaMap
@@ -335,16 +346,13 @@ export async function openPipelineEditor(params: {
   sortDirection: 1 | -1
 }): Promise<PipelineResult | null> {
   const {
-    collectionName, dbName, pipelineSource, simpleQuery,
+    collectionName, dbName, tabId, pipelineSource, simpleQuery,
     schemaMap, sortField, sortDirection,
   } = params
 
-  // Stable temp dir per collection
-  const dir = join(tmpdir(), "monq", collectionName)
+  // Stable temp dir scoped to db + collection + tab
+  const { dir, queryFile, schemaFile } = pipelineFilePaths(dbName, collectionName, tabId)
   await mkdir(dir, { recursive: true })
-  // Use .jsonc so jsonls activates automatically (supports // comments)
-  const queryFile  = join(dir, "pipeline.jsonc")
-  const schemaFile = join(dir, ".monq-pipeline-schema.json")
 
   // Write schema sidecar
   await Bun.write(schemaFile, buildJsonSchema(collectionName, schemaMap))
