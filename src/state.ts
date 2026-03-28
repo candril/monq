@@ -86,7 +86,7 @@ export type AppAction =
   | { type: "OPEN_COMMAND_PALETTE" }
   | { type: "CLOSE_COMMAND_PALETTE" }
   // Messages
-  | { type: "SHOW_MESSAGE"; message: string }
+  | { type: "SHOW_MESSAGE"; message: string; kind?: "info" | "success" | "warning" | "error" }
   | { type: "CLEAR_MESSAGE" }
   // Selection
   | { type: "ENTER_SELECTION_MODE" }
@@ -924,7 +924,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     // Messages
     case "SHOW_MESSAGE":
-      return { ...state, message: action.message }
+      return { ...state, message: { text: action.message, kind: action.kind ?? "info" } }
 
     case "CLEAR_MESSAGE":
       return { ...state, message: null }

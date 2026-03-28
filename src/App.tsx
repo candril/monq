@@ -105,7 +105,7 @@ export function App({ uri }: AppProps) {
           // Copy to clipboard via OSC 52
           const b64 = btoa(json)
           process.stdout.write(`\x1b]52;c;${b64}\x07`)
-          dispatch({ type: "SHOW_MESSAGE", message: "Copied to clipboard" })
+          dispatch({ type: "SHOW_MESSAGE", message: "Copied to clipboard", kind: "info" })
         }
         break
       }
@@ -116,7 +116,7 @@ export function App({ uri }: AppProps) {
           const id = String(doc._id)
           const b64 = btoa(id)
           process.stdout.write(`\x1b]52;c;${b64}\x07`)
-          dispatch({ type: "SHOW_MESSAGE", message: "Copied _id" })
+          dispatch({ type: "SHOW_MESSAGE", message: "Copied _id", kind: "info" })
         }
         break
       }

@@ -318,7 +318,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
             const json = serializeDocument(doc)
             const b64 = btoa(json)
             process.stdout.write(`\x1b]52;c;${b64}\x07`)
-            dispatch({ type: "SHOW_MESSAGE", message: "Document copied to clipboard" })
+            dispatch({ type: "SHOW_MESSAGE", message: "Document copied to clipboard", kind: "info" })
           } else {
             // y: yank current cell value
             const visCols = state.columns.filter((c) => c.visible)
@@ -330,7 +330,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
               : String(val)
             const b64 = btoa(text)
             process.stdout.write(`\x1b]52;c;${b64}\x07`)
-            dispatch({ type: "SHOW_MESSAGE", message: `Copied ${col.field} to clipboard` })
+            dispatch({ type: "SHOW_MESSAGE", message: `Copied ${col.field} to clipboard`, kind: "info" })
           }
           break
         }
@@ -353,12 +353,12 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
             // Pipeline mode: try to add to $match
             const matchStage = state.pipeline.find((s) => "$match" in s) as any
             if (!matchStage) {
-              dispatch({ type: "SHOW_MESSAGE", message: "Cannot add filter: pipeline has no $match stage" })
+              dispatch({ type: "SHOW_MESSAGE", message: "Cannot add filter: pipeline has no $match stage", kind: "warning" })
               break
             }
             // Skip if this field is already in $match
             if (col.field in (matchStage.$match ?? {})) {
-              dispatch({ type: "SHOW_MESSAGE", message: `${col.field} is already in $match — edit pipeline with Ctrl+F to change it` })
+              dispatch({ type: "SHOW_MESSAGE", message: `${col.field} is already in $match — edit pipeline with Ctrl+F to change it`, kind: "warning" })
               break
             }
             // Check for complex value types that can't be merged simply
@@ -367,7 +367,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
               || typeof val === "number"
               || typeof val === "boolean"
             if (!isSimpleValue) {
-              dispatch({ type: "SHOW_MESSAGE", message: `Cannot filter by ${col.field}: complex value — edit pipeline with Ctrl+F` })
+              dispatch({ type: "SHOW_MESSAGE", message: `Cannot filter by ${col.field}: complex value — edit pipeline with Ctrl+F`, kind: "warning" })
               break
             }
             dispatch({ type: "ADD_PIPELINE_MATCH_CONDITION", field: col.field, value: val })
@@ -377,7 +377,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
               .split(" ")
               .some((t) => t.startsWith(`${col.field}:`) || t.startsWith(`${col.field}>`) || t.startsWith(`${col.field}<`) || t.startsWith(`${col.field}!`))
             if (alreadyFiltered) {
-              dispatch({ type: "SHOW_MESSAGE", message: `${col.field} is already in filter — use / to edit` })
+              dispatch({ type: "SHOW_MESSAGE", message: `${col.field} is already in filter — use / to edit`, kind: "warning" })
               break
             }
             let formatted: string
@@ -413,12 +413,12 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
               renderer.resume()
               if (outcome.cancelled) return
               const { result, applyEdits, editedDocs } = outcome
-              if (result.errors.length > 0) { dispatch({ type: "SHOW_MESSAGE", message: result.errors[0] }); return }
+              if (result.errors.length > 0) { dispatch({ type: "SHOW_MESSAGE", message: result.errors[0], kind: "error" }); return }
               await applyEdits()
               const hasSideEffects = result.missing.length > 0 || result.added.length > 0
               if (!hasSideEffects) {
                 const n = result.updated
-                dispatch({ type: "SHOW_MESSAGE", message: n > 0 ? `Updated ${n} document${n === 1 ? "" : "s"}` : "No changes" })
+                dispatch({ type: "SHOW_MESSAGE", message: n > 0 ? `Updated ${n} document${n === 1 ? "" : "s"}` : "No changes", kind: n > 0 ? "success" : "info" })
                 dispatch({ type: "FREEZE_SELECTION" })
                 dispatch({ type: "RELOAD_DOCUMENTS" })
                 return
@@ -436,22 +436,22 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
                         await o2.applyEdits()
                         if (o2.result.missing.length === 0 && o2.result.added.length === 0) {
                           const n2 = o2.result.updated
-                          dispatch({ type: "SHOW_MESSAGE", message: n2 > 0 ? `Updated ${n2} document${n2 === 1 ? "" : "s"}` : "No changes" })
+                          dispatch({ type: "SHOW_MESSAGE", message: n2 > 0 ? `Updated ${n2} document${n2 === 1 ? "" : "s"}` : "No changes", kind: n2 > 0 ? "success" : "info" })
                           dispatch({ type: "FREEZE_SELECTION" })
                           dispatch({ type: "RELOAD_DOCUMENTS" })
                         } else { showConfirm(o2.result, o2.editedDocs) }
                       })
-                      .catch((err: Error) => { renderer.resume(); dispatch({ type: "SHOW_MESSAGE", message: `Edit failed: ${err.message}` }) })
+                      .catch((err: Error) => { renderer.resume(); dispatch({ type: "SHOW_MESSAGE", message: `Edit failed: ${err.message}`, kind: "error" }) })
                   },
                   resolve: async (missingAction, addedAction) => {
                     const errors = await applyConfirmActions(activeTab.collectionName, cr, missingAction, addedAction)
-                    if (errors.length > 0) { dispatch({ type: "SHOW_MESSAGE", message: errors[0] }) }
+                    if (errors.length > 0) { dispatch({ type: "SHOW_MESSAGE", message: errors[0], kind: "error" }) }
                     else {
                       const parts: string[] = []
                       if (cr.updated > 0) parts.push(`${cr.updated} updated`)
                       if (missingAction === "delete" && cr.missing.length > 0) parts.push(`${cr.missing.length} deleted`)
                       if (addedAction === "insert" && cr.added.length > 0) parts.push(`${cr.added.length} inserted`)
-                      dispatch({ type: "SHOW_MESSAGE", message: parts.join(", ") || "Done" })
+                      dispatch({ type: "SHOW_MESSAGE", message: parts.join(", ") || "Done", kind: "success" })
                     }
                     dispatch({ type: "FREEZE_SELECTION" })
                     dispatch({ type: "RELOAD_DOCUMENTS" })
@@ -460,7 +460,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
               })
               showConfirm(result, editedDocs)
             })
-            .catch((err: Error) => { renderer.resume(); dispatch({ type: "SHOW_MESSAGE", message: `Edit failed: ${err.message}` }) })
+            .catch((err: Error) => { renderer.resume(); dispatch({ type: "SHOW_MESSAGE", message: `Edit failed: ${err.message}`, kind: "error" }) })
           break
         }
         case "i": {
@@ -472,13 +472,13 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
             .then((outcome) => {
               renderer.resume()
               if (outcome.cancelled) return
-              if (outcome.errors.length > 0) { dispatch({ type: "SHOW_MESSAGE", message: outcome.errors[0] }) }
+              if (outcome.errors.length > 0) { dispatch({ type: "SHOW_MESSAGE", message: outcome.errors[0], kind: "error" }) }
               else if (outcome.inserted > 0) {
-                dispatch({ type: "SHOW_MESSAGE", message: `Inserted ${outcome.inserted} document${outcome.inserted === 1 ? "" : "s"}` })
+                dispatch({ type: "SHOW_MESSAGE", message: `Inserted ${outcome.inserted} document${outcome.inserted === 1 ? "" : "s"}`, kind: "success" })
                 dispatch({ type: "RELOAD_DOCUMENTS" })
-              } else { dispatch({ type: "SHOW_MESSAGE", message: "No documents inserted" }) }
+              } else { dispatch({ type: "SHOW_MESSAGE", message: "No documents inserted", kind: "info" }) }
             })
-            .catch((err: Error) => { renderer.resume(); dispatch({ type: "SHOW_MESSAGE", message: `Insert failed: ${err.message}` }) })
+            .catch((err: Error) => { renderer.resume(); dispatch({ type: "SHOW_MESSAGE", message: `Insert failed: ${err.message}`, kind: "error" }) })
           break
         }
         case "d":
@@ -500,10 +500,10 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
                     try { await deleteDocument(activeTab.collectionName, doc._id) }
                     catch (err) { errors.push(`Delete failed: ${(err as Error).message}`) }
                   }
-                  if (errors.length > 0) { dispatch({ type: "SHOW_MESSAGE", message: errors[0] }) }
+                  if (errors.length > 0) { dispatch({ type: "SHOW_MESSAGE", message: errors[0], kind: "error" }) }
                   else {
                     const n = docsToDelete.length
-                    dispatch({ type: "SHOW_MESSAGE", message: `Deleted ${n} document${n === 1 ? "" : "s"}` })
+                    dispatch({ type: "SHOW_MESSAGE", message: `Deleted ${n} document${n === 1 ? "" : "s"}`, kind: "success" })
                     dispatch({ type: "EXIT_SELECTION_MODE" })
                   }
                   dispatch({ type: "RELOAD_DOCUMENTS" })

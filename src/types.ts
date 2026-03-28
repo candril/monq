@@ -197,7 +197,7 @@ export interface AppState {
   commandPaletteVisible: boolean
 
   // Messages
-  message: string | null
+  message: { text: string; kind: "info" | "success" | "warning" | "error" } | null
 
   // Errors
   error: string | null
