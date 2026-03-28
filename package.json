@@ -2,9 +2,23 @@
   "name": "monq",
   "version": "0.1.0",
   "description": "Terminal-based MongoDB browser and query tool",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/candril/monq.git"
+  },
+  "homepage": "https://github.com/candril/monq",
+  "keywords": [
+    "mongodb",
+    "terminal",
+    "tui",
+    "cli",
+    "database",
+    "browser",
+    "bun"
+  ],
   "module": "src/index.tsx",
   "type": "module",
-  "private": true,
   "bin": {
     "monq": "./dist/monq"
   },
