@@ -226,8 +226,8 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
     // Tab: readonly pipeline view → back to simple filter bar
     if (key.name === "tab" && state.view === "documents" && state.pipelineVisible && !state.queryVisible) {
       if (state.previewPipeline.length > 0) {
-        // Preview of simple filter — just toggle back, reopen simple bar
-        dispatch({ type: "TOGGLE_PIPELINE_BAR" })
+        // Preview of simple filter — clear preview and reopen simple bar
+        dispatch({ type: "CLEAR_PREVIEW_PIPELINE" })
         dispatch({ type: "OPEN_QUERY" })
       } else if (state.pipeline.length > 0) {
         // Real pipeline — try lossless translation, otherwise confirm

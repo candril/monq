@@ -73,6 +73,7 @@ export type AppAction =
   | { type: "TOGGLE_PIPELINE_BAR" }
   | { type: "SHOW_PIPELINE_BAR" }
   | { type: "SHOW_SIMPLE_AS_PIPELINE" }
+  | { type: "CLEAR_PREVIEW_PIPELINE" }
   // Confirm dialog
   | { type: "SHOW_CONFIRM"; pending: "pipeline-to-simple"; simpleQuery: string }
   | { type: "DISMISS_CONFIRM" }
@@ -829,6 +830,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "SHOW_PIPELINE_BAR":
       return { ...state, pipelineVisible: true }
+
+    case "CLEAR_PREVIEW_PIPELINE":
+      return { ...state, previewPipeline: [], pipelineVisible: false }
 
     case "SHOW_SIMPLE_AS_PIPELINE": {
       const stages = rebuildPreview(state.queryInput, state.schemaMap, state.sortField, state.sortDirection)
