@@ -346,8 +346,8 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           const col = visibleCols[state.selectedColumnIndex]
           if (!doc || !col) break
 
-          const val = getNestedValue(doc as Record<string, unknown>, col.field)
-          if (val === undefined) break
+          // Treat absent fields (undefined) the same as null — both produce field:null
+          const val = getNestedValue(doc as Record<string, unknown>, col.field) ?? null
 
           if (state.pipelineMode) {
             // Pipeline mode: try to add to $match

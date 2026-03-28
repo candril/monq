@@ -42,11 +42,16 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
         .then(({ documents, count }) => {
           if (cancelled) return
           const detectedFields = detectColumns(documents)
+          const detectedSet = new Set(detectedFields)
           const existingByField = new Map(existingColumns.map((c) => [c.field, c]))
-          const columns = detectedFields.map((field) => {
+          // New fields detected in this result page
+          const newColumns = detectedFields.map((field) => {
             const existing = existingByField.get(field)
             return existing ?? { field, frequency: 1, visible: true, displayMode: "normal" as const }
           })
+          // Preserve existing columns not in this result so they don't vanish after filtering
+          const preserved = existingColumns.filter((c) => !detectedSet.has(c.field))
+          const columns = [...newColumns, ...preserved]
           dispatch({ type: "SET_DOCUMENTS", documents, count, totalCount: count })
           dispatch({ type: "SET_COLUMNS", columns })
           dispatch({ type: "SET_SCHEMA", schemaMap: buildSchemaMap(documents) })
@@ -88,13 +93,17 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
       .then(({ documents, count, totalCount }) => {
         if (cancelled) return
         const detectedFields = detectColumns(documents)
+        const detectedSet = new Set(detectedFields)
 
         // Preserve display modes for existing columns, add new ones as "normal"
         const existingByField = new Map(existingColumns.map((c) => [c.field, c]))
-        const columns = detectedFields.map((field) => {
+        const newColumns = detectedFields.map((field) => {
           const existing = existingByField.get(field)
           return existing ?? { field, frequency: 1, visible: true, displayMode: "normal" as const }
         })
+        // Preserve existing columns not in this result so they don't vanish after filtering
+        const preserved = existingColumns.filter((c) => !detectedSet.has(c.field))
+        const columns = [...newColumns, ...preserved]
 
         dispatch({ type: "SET_DOCUMENTS", documents, count, totalCount })
         dispatch({ type: "SET_COLUMNS", columns })
