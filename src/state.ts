@@ -109,6 +109,7 @@ export function createInitialState(): AppState {
     bsonFocusedSection: "filter",
     bsonSortVisible: false,
     bsonProjectionVisible: false,
+    bsonExternalVersion: 0,
     previewPosition: null,
     previewScrollOffset: 0,
     commandPaletteVisible: false,
@@ -500,10 +501,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         const filter = parseSimpleQuery(state.queryInput, state.schemaMap)
         bsonFilter = Object.keys(filter).length > 0
           ? JSON.stringify(filter, null, 2)
-          : ""
+          : "{\n  \n}"
       } catch {
-        // Unparseable simple query — start with empty BSON filter
-        bsonFilter = ""
+        bsonFilter = "{\n  \n}"
       }
       const bsonSort = state.sortField
         ? JSON.stringify({ [state.sortField]: state.sortDirection }, null, 2)
@@ -518,6 +518,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         bsonFocusedSection: "filter",
         sortField: null,
         sortDirection: -1,
+        bsonExternalVersion: state.bsonExternalVersion + 1,
       }
     }
 
@@ -538,10 +539,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           const filter = parseSimpleQuery(state.queryInput, state.schemaMap)
           bsonFilter = Object.keys(filter).length > 0
             ? JSON.stringify(filter, null, 2)
-            : ""
+            : "{\n  \n}"
         } catch {
-          // Unparseable simple query — start with empty BSON filter
-          bsonFilter = ""
+          bsonFilter = "{\n  \n}"
         }
         // Migrate active sort into sort textarea
         const bsonSort = state.sortField
@@ -554,9 +554,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           bsonSort,
           bsonSortVisible: bsonSort !== "",
           bsonFocusedSection: "filter",
-          // Clear simple-mode sort — BSON mode owns it now
           sortField: null,
           sortDirection: -1,
+          bsonExternalVersion: state.bsonExternalVersion + 1,
         }
       } else {
         // bson → simple: try to convert BSON filter back to simple Key:Value syntax
@@ -646,9 +646,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       } catch {
         // Not valid JSON yet — leave as-is
       }
-      if (section === "filter") return { ...state, queryInput: formatted }
-      if (section === "sort") return { ...state, bsonSort: formatted }
-      return { ...state, bsonProjection: formatted }
+      const ver = state.bsonExternalVersion + 1
+      if (section === "filter") return { ...state, queryInput: formatted, bsonExternalVersion: ver }
+      if (section === "sort") return { ...state, bsonSort: formatted, bsonExternalVersion: ver }
+      return { ...state, bsonProjection: formatted, bsonExternalVersion: ver }
     }
 
     case "SUBMIT_QUERY":

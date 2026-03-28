@@ -145,6 +145,12 @@ export interface AppState {
   bsonSortVisible: boolean
   /** Whether projection section is visible in BSON editor */
   bsonProjectionVisible: boolean
+  /**
+   * Incremented whenever BSON content is changed externally (mode migration,
+   * format). BsonTextarea watches this to know when to push externalValue
+   * into the textarea, ignoring changes that came from user typing.
+   */
+  bsonExternalVersion: number
 
   // Preview
   previewPosition: PreviewPosition

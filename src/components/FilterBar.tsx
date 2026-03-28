@@ -51,6 +51,8 @@ interface FilterBarProps {
   bsonFocusedSection: BsonSection
   bsonSortVisible: boolean
   bsonProjectionVisible: boolean
+  /** Incremented by state on external BSON changes (migration, format) */
+  bsonExternalVersion: number
   editing?: boolean
   columns: DetectedColumn[]
   schemaMap: SchemaMap
@@ -111,58 +113,78 @@ function BsonFieldSuggestions({
 
 // ── BsonTextarea ────────────────────────────────────────────────────────────
 
+/** Safe wrapper around getTextRange — guards against destroyed buffer */
+function safeGetText(ta: TextareaRenderable): string {
+  try {
+    return ta.getTextRange(0, 1_000_000)
+  } catch {
+    return ""
+  }
+}
+
 /**
  * A single labelled BSON textarea section.
- * Uses a callback ref so onContentChange + onSubmit are wired immediately
- * when the renderable is created (avoids the timing issue with useRef + useEffect).
+ *
+ * initialValue  — seeds the textarea on first mount (e.g. "{\n  \n}" or translated filter)
+ * externalValue — only pushed in when changed by external actions (format, migration).
+ *                 We track the last pushed value to avoid fighting user edits.
+ *
+ * onSubmit is wired imperatively via callback ref because the React reconciler
+ * only handles onSubmit for InputRenderable, not TextareaRenderable.
  */
 function BsonTextarea({
   label,
   initialValue,
-  externalValue,
+  currentValue,
+  externalVersion,
   focused,
   onChange,
   onSubmit,
 }: {
   label: string
+  /** Seeds the textarea on first mount */
   initialValue: string
-  externalValue: string
+  /** Current value from state — only pushed in when externalVersion changes */
+  currentValue: string
+  /** Incremented externally (migration, format) to trigger a push of currentValue */
+  externalVersion: number
   focused: boolean
   onChange: (v: string) => void
   onSubmit?: () => void
 }) {
-  // Keep latest callbacks in a ref so the callback-ref closure stays fresh
   const callbacksRef = useRef({ onChange, onSubmit })
   callbacksRef.current = { onChange, onSubmit }
 
   const taRef = useRef<TextareaRenderable | null>(null)
 
-  // Callback ref: called with the instance when mounted, null when unmounted
   const setRef = useCallback((ta: TextareaRenderable | null) => {
     if (taRef.current) {
-      taRef.current.onContentChange = undefined
-      taRef.current.onSubmit = undefined
+      try {
+        taRef.current.onContentChange = undefined
+        taRef.current.onSubmit = undefined
+      } catch { /* already destroyed */ }
     }
     taRef.current = ta
     if (!ta) return
 
     ta.onContentChange = () => {
-      callbacksRef.current.onChange(ta.getTextRange(0, 1_000_000))
+      const text = safeGetText(ta)
+      callbacksRef.current.onChange(text)
     }
     ta.onSubmit = () => {
       callbacksRef.current.onSubmit?.()
     }
   }, [])
 
-  // Push external changes (format, migration) into the textarea
+  // Only push currentValue into the textarea when an external change happens
+  // (version bump). Never on user-typed changes to avoid cursor reset + crash loops.
   useEffect(() => {
     const ta = taRef.current
     if (!ta) return
-    const current = ta.getTextRange(0, 1_000_000)
-    if (current !== externalValue) {
-      ta.replaceText(externalValue)
-    }
-  }, [externalValue])
+    try {
+      ta.replaceText(currentValue)
+    } catch { /* destroyed */ }
+  }, [externalVersion]) // intentionally NOT currentValue
 
   return (
     <box flexDirection="column">
@@ -182,7 +204,6 @@ function BsonTextarea({
         backgroundColor={theme.bg}
         focusedBackgroundColor={theme.bg}
         textColor={theme.text}
-        placeholderColor={theme.textDim}
         wrapMode="word"
         keyBindings={BSON_KEY_BINDINGS}
       />
@@ -200,6 +221,7 @@ export function FilterBar({
   bsonFocusedSection,
   bsonSortVisible,
   bsonProjectionVisible,
+  bsonExternalVersion,
   editing,
   columns,
   schemaMap,
@@ -279,7 +301,8 @@ export function FilterBar({
           <BsonTextarea
             label="filter"
             initialValue={query}
-            externalValue={query}
+            currentValue={query}
+            externalVersion={bsonExternalVersion}
             focused={bsonFocusedSection === "filter"}
             onChange={onQueryChange ?? (() => {})}
             onSubmit={onSubmit}
@@ -288,7 +311,8 @@ export function FilterBar({
             <BsonTextarea
               label="sort"
               initialValue={bsonSort}
-              externalValue={bsonSort}
+              currentValue={bsonSort}
+              externalVersion={bsonExternalVersion}
               focused={bsonFocusedSection === "sort"}
               onChange={onBsonSortChange ?? (() => {})}
               onSubmit={onSubmit}
@@ -298,7 +322,8 @@ export function FilterBar({
             <BsonTextarea
               label="projection"
               initialValue={bsonProjection}
-              externalValue={bsonProjection}
+              currentValue={bsonProjection}
+              externalVersion={bsonExternalVersion}
               focused={bsonFocusedSection === "projection"}
               onChange={onBsonProjectionChange ?? (() => {})}
               onSubmit={onSubmit}

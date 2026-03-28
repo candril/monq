@@ -250,6 +250,7 @@ export function App({ uri }: AppProps) {
         bsonFocusedSection={state.bsonFocusedSection}
         bsonSortVisible={state.bsonSortVisible}
         bsonProjectionVisible={state.bsonProjectionVisible}
+        bsonExternalVersion={state.bsonExternalVersion}
         editing={state.queryVisible}
         columns={state.columns}
         schemaMap={state.schemaMap}
