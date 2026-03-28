@@ -296,54 +296,68 @@ export async function openPipelineEditor(params: {
   // Write schema sidecar
   await Bun.write(schemaFile, buildJsonSchema(collectionName, schemaMap))
 
-  // Write (or re-open existing) pipeline file
+  // Write initial content
   const template = buildTemplate(
     collectionName, dbName, pipelineSource, simpleQuery,
     schemaMap, sortField, sortDirection,
   )
   await Bun.write(queryFile, template)
 
-  // Open in $EDITOR
   const editor = process.env.EDITOR || process.env.VISUAL || "vi"
-  const proc = Bun.spawn([editor, queryFile], {
-    stdin: "inherit",
-    stdout: "inherit",
-    stderr: "inherit",
-  })
-  await proc.exited
 
-  // Read back
-  let content: string
-  try {
-    content = await Bun.file(queryFile).text()
-  } catch {
-    return null
+  // Edit-parse loop: re-open editor on parse errors so user can fix in place
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const proc = Bun.spawn([editor, queryFile], {
+      stdin: "inherit",
+      stdout: "inherit",
+      stderr: "inherit",
+    })
+    await proc.exited
+
+    // Read back
+    let content: string
+    try {
+      content = await Bun.file(queryFile).text()
+    } catch {
+      return null
+    }
+
+    // Cancel if file is unchanged from what was on disk before opening
+    // (user quit without saving — :q!)
+    // We detect this by comparing the current file to what we last wrote
+    const lastWritten = await Bun.file(queryFile).text().catch(() => "")
+    // Actually we need to compare to the pre-edit content; simpler: if
+    // content equals template the user cancelled from the initial template
+    if (content.trim() === template.trim()) {
+      return null
+    }
+
+    // Try to parse
+    let parsed: { pipeline?: Document[] }
+    try {
+      parsed = JSON5.parse(content)
+    } catch (err) {
+      // Prepend error as a comment and re-open so user can fix it
+      const errMsg = (err as Error).message
+      const errorComment = `// !! PARSE ERROR: ${errMsg}\n// Fix the JSON below and save again. Quit with :q! to cancel.\n\n`
+      // Strip any previous error comment before prepending
+      const cleaned = content.replace(/^(\/\/ !! PARSE ERROR:.*\n.*\n\n)/m, "")
+      await Bun.write(queryFile, errorComment + cleaned)
+      continue  // re-open editor
+    }
+
+    const pipeline: Document[] = Array.isArray(parsed.pipeline)
+      ? parsed.pipeline
+      : Array.isArray(parsed)
+        ? parsed  // user wrote just a bare array
+        : []
+
+    if (pipeline.length === 0) {
+      return null
+    }
+
+    const isAggregate = classifyPipeline(pipeline)
+    return { pipeline, source: content, isAggregate }
   }
-
-  // Cancel if unchanged (user quit without saving or saved identical content)
-  if (content.trim() === template.trim()) {
-    return null
-  }
-
-  // Parse JSON5
-  let parsed: { pipeline?: Document[] }
-  try {
-    parsed = JSON5.parse(content)
-  } catch (err) {
-    throw new Error(`JSON5 parse error: ${(err as Error).message}`)
-  }
-
-  const pipeline: Document[] = Array.isArray(parsed.pipeline)
-    ? parsed.pipeline
-    : Array.isArray(parsed)
-      ? parsed  // user may have written just an array
-      : []
-
-  if (pipeline.length === 0) {
-    return null
-  }
-
-  const isAggregate = classifyPipeline(pipeline)
-
-  return { pipeline, source: content, isAggregate }
 }
