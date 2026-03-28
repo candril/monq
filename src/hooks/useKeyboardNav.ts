@@ -6,6 +6,7 @@
 
 import type { Dispatch } from "react"
 import { useKeyboard, useRenderer } from "@opentui/react"
+import { ObjectId } from "mongodb"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import { disconnect, serializeDocument, deleteDocument } from "../providers/mongodb"
@@ -379,8 +380,14 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
               dispatch({ type: "SHOW_MESSAGE", message: `${col.field} is already in filter — use / to edit` })
               break
             }
-            const raw = typeof val === "string" ? val : String(val)
-            const formatted = raw.includes(" ") ? `"${raw}"` : raw
+            let formatted: string
+            if (val instanceof ObjectId) {
+              formatted = `ObjectId(${val.toHexString()})`
+            } else if (typeof val === "string") {
+              formatted = val.includes(" ") ? `"${val}"` : val
+            } else {
+              formatted = String(val)
+            }
             const token = `${col.field}:${formatted}`
             const newQuery = state.queryInput
               ? `${state.queryInput} ${token}`

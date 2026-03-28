@@ -10,6 +10,7 @@
  */
 
 import type { Filter, Document } from "mongodb"
+import { ObjectId } from "mongodb"
 import { getArrayAncestor, type SchemaMap } from "./schema"
 
 /**
@@ -49,10 +50,13 @@ function setFilterValue(
 }
 
 /** Coerce a string value to its natural type */
-function coerceValue(value: string): string | number | boolean | null {
+function coerceValue(value: string): string | number | boolean | null | ObjectId {
   if (value === "null") return null
   if (value === "true") return true
   if (value === "false") return false
+  // ObjectId literal: ObjectId(abc123...) or ObjectId("abc123...")
+  const oidMatch = value.match(/^ObjectId\(["']?([0-9a-fA-F]{24})["']?\)$/)
+  if (oidMatch) return new ObjectId(oidMatch[1])
   const num = Number(value)
   if (!isNaN(num) && value.trim() !== "") return num
   // Strip quotes if present
@@ -180,6 +184,8 @@ export function filterToSimple(filter: Record<string, unknown>): { query: string
 
     if (val === null) {
       tokens.push(`${key}:null`)
+    } else if (val instanceof ObjectId) {
+      tokens.push(`${key}:ObjectId(${val.toHexString()})`)
     } else if (typeof val === "string") {
       tokens.push(`${key}:${val.includes(" ") ? `"${val}"` : val}`)
     } else if (typeof val === "number" || typeof val === "boolean") {
