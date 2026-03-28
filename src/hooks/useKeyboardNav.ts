@@ -44,38 +44,40 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         dispatch({ type: "CLOSE_QUERY" })
         return
       }
-      if (key.name === "tab" && !key.shift) {
+      // Tab always toggles mode (simple→bson or bson→simple), carrying state across
+      // In BSON mode, also cycles sections on subsequent Tab presses would be confusing,
+      // so Tab always toggles; sections cycle via a separate action if needed.
+      if (key.name === "tab") {
         if (state.queryMode === "simple") {
-          // Simple mode: Tab → switch to BSON (migrates current filter + sort)
+          // simple → bson (migrate filter + sort)
           dispatch({ type: "TOGGLE_QUERY_MODE" })
         } else {
-          // BSON mode: Tab → cycle focus between visible sections
-          dispatch({ type: "CYCLE_BSON_SECTION" })
+          // bson → simple (attempt reverse conversion)
+          dispatch({ type: "TOGGLE_QUERY_MODE" })
         }
-        return
-      }
-      // Shift+Tab: BSON → back to simple mode
-      if (key.name === "tab" && key.shift && state.queryMode === "bson") {
-        dispatch({ type: "TOGGLE_QUERY_MODE" })
         return
       }
       // BSON-mode only controls
       if (state.queryMode === "bson") {
+        // Ctrl+O: toggle sort section
         if (key.ctrl && key.name === "o") {
           dispatch({ type: "TOGGLE_BSON_SORT" })
           return
         }
-        if (key.ctrl && key.name === "j") {
+        // Ctrl+K: toggle projection section
+        if (key.ctrl && key.name === "k") {
           dispatch({ type: "TOGGLE_BSON_PROJECTION" })
           return
         }
+        // Ctrl+F: format (pretty-print) focused section
         if (key.ctrl && key.name === "f") {
           dispatch({ type: "FORMAT_BSON_SECTION" })
           return
         }
-        // Ctrl+Enter submits in BSON mode (regular Enter inserts newlines in textarea)
-        if (key.ctrl && key.name === "return") {
-          dispatch({ type: "SUBMIT_QUERY" })
+        // Cycle focus between sections when more than one is open
+        // (Enter submits via textarea's own onSubmit, so we need a separate binding)
+        if (key.ctrl && key.name === "n") {
+          dispatch({ type: "CYCLE_BSON_SECTION" })
           return
         }
       }

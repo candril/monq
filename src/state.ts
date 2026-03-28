@@ -523,11 +523,39 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           sortDirection: -1,
         }
       } else {
-        // bson → simple: carry raw filter string back as query input
+        // bson → simple: try to convert BSON filter back to simple Key:Value syntax
+        // If the filter is a flat { key: primitiveValue } object we can round-trip it.
+        // Otherwise fall back to the raw JSON string so nothing is lost.
+        let simpleQuery = state.queryInput
+        try {
+          const filter = JSON.parse(state.queryInput.trim() || "{}")
+          const tokens: string[] = []
+          let canConvert = true
+          for (const [key, val] of Object.entries(filter)) {
+            if (val === null) { tokens.push(`${key}:null`); continue }
+            if (typeof val === "string") { tokens.push(`${key}:${val.includes(" ") ? `"${val}"` : val}`); continue }
+            if (typeof val === "number" || typeof val === "boolean") { tokens.push(`${key}:${val}`); continue }
+            // Comparison operators: { $gt, $gte, $lt, $lte, $ne }
+            if (typeof val === "object" && !Array.isArray(val)) {
+              const ops = val as Record<string, unknown>
+              const opMap: Record<string, string> = { $gt: ">", $gte: ">=", $lt: "<", $lte: "<=", $ne: "!=" }
+              const entries = Object.entries(ops)
+              if (entries.length === 1 && opMap[entries[0][0]]) {
+                tokens.push(`${key}${opMap[entries[0][0]]}${entries[0][1]}`)
+                continue
+              }
+            }
+            canConvert = false
+            break
+          }
+          simpleQuery = canConvert ? tokens.join(" ") : state.queryInput
+        } catch {
+          // Not valid JSON — leave as-is
+        }
         return {
           ...state,
           queryMode: "simple",
-          queryInput: state.queryInput,
+          queryInput: simpleQuery,
           bsonFocusedSection: "filter",
         }
       }

@@ -18,9 +18,23 @@
  */
 
 import { useRef, useEffect } from "react"
-import type { TextareaRenderable } from "@opentui/core"
+import type { TextareaRenderable, TextareaOptions } from "@opentui/core"
 import { theme } from "../theme"
 import type { BsonSection, QueryMode } from "../types"
+
+type BsonKeyBinding = NonNullable<TextareaOptions["keyBindings"]>[number]
+
+/**
+ * Custom key bindings for BSON textareas:
+ * - Enter → submit (instead of default newline)
+ * - Ctrl+J → newline
+ * - Shift+Enter → newline
+ */
+const BSON_KEY_BINDINGS: BsonKeyBinding[] = [
+  { name: "return", action: "submit" },
+  { name: "return", ctrl: true, action: "newline" },
+  { name: "return", shift: true, action: "newline" },
+]
 
 const BADGE_SIMPLE_FG = theme.querySimple
 const BADGE_BSON_FG = theme.queryBson
@@ -53,27 +67,39 @@ function BsonTextarea({
   externalValue,
   focused,
   onChange,
+  onSubmit,
 }: {
   label: string
   initialValue: string
   externalValue: string
   focused: boolean
   onChange: (v: string) => void
+  onSubmit?: () => void
 }) {
   const ref = useRef<TextareaRenderable>(null)
 
-  // Wire onContentChange once ref is available
+  // Wire onContentChange + onSubmit once ref is available
   useEffect(() => {
     const ta = ref.current
     if (!ta) return
     ta.onContentChange = () => {
-      // getTextRange(0, large number) reads the full buffer
       onChange(ta.getTextRange(0, 1_000_000))
     }
+    ta.onSubmit = onSubmit ? () => onSubmit() : undefined
     return () => {
-      if (ref.current) ref.current.onContentChange = undefined
+      if (ref.current) {
+        ref.current.onContentChange = undefined
+        ref.current.onSubmit = undefined
+      }
     }
   }, [ref.current]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep onSubmit callback fresh without re-running the effect
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.onSubmit = onSubmit ? () => onSubmit() : undefined
+    }
+  }, [onSubmit])
 
   // Push external changes (format, migration) back into the textarea
   useEffect(() => {
@@ -106,6 +132,7 @@ function BsonTextarea({
         textColor={theme.text}
         placeholderColor={theme.textDim}
         wrapMode="word"
+        keyBindings={BSON_KEY_BINDINGS}
       />
     </box>
   )
@@ -151,7 +178,7 @@ export function FilterBar({
           queryMode === "bson" ? (
             <text>
               <span fg={theme.textMuted}>
-                Tab cycle · Shift+Tab→simple · Ctrl+F format · Ctrl+O sort · Ctrl+J project · Ctrl+↵ submit
+                Tab→simple · Ctrl+↵/Shift+↵ newline · Ctrl+F format · Ctrl+O sort · Ctrl+K project · ↵ submit
               </span>
             </text>
           ) : (
@@ -183,6 +210,7 @@ export function FilterBar({
             externalValue={query}
             focused={bsonFocusedSection === "filter"}
             onChange={onQueryChange ?? (() => {})}
+            onSubmit={onSubmit}
           />
           {bsonSortVisible && (
             <BsonTextarea
@@ -191,6 +219,7 @@ export function FilterBar({
               externalValue={bsonSort}
               focused={bsonFocusedSection === "sort"}
               onChange={onBsonSortChange ?? (() => {})}
+              onSubmit={onSubmit}
             />
           )}
           {bsonProjectionVisible && (
@@ -200,6 +229,7 @@ export function FilterBar({
               externalValue={bsonProjection}
               focused={bsonFocusedSection === "projection"}
               onChange={onBsonProjectionChange ?? (() => {})}
+              onSubmit={onSubmit}
             />
           )}
         </>
