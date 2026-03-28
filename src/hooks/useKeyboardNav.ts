@@ -206,16 +206,15 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
       opts.push({ key: "c", exec: () => { dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" }) } })
 
       if (key.name === "return") {
-        if (focusedIndex >= 0) opts[focusedIndex]?.exec()
+        // Enter confirms the currently focused option
+        opts[focusedIndex]?.exec()
       }
       else if (key.name === "j" || key.name === "down") { dispatch({ type: "MOVE_BULK_EDIT_FOCUS", delta: 1 }) }
       else if (key.name === "k" || key.name === "up") { dispatch({ type: "MOVE_BULK_EDIT_FOCUS", delta: -1 }) }
       else {
+        // Letter keys only move focus — Enter is required to confirm
         const match = opts.findIndex((o) => o.key === key.name)
-        if (match !== -1) {
-          if (focusedIndex === match) { opts[match].exec() }
-          else { dispatch({ type: "SET_BULK_EDIT_FOCUS", index: match }) }
-        }
+        if (match !== -1) dispatch({ type: "SET_BULK_EDIT_FOCUS", index: match })
       }
       return
     }
@@ -224,20 +223,22 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
     if (state.deleteConfirmation) {
       const { resolve, focusedIndex } = state.deleteConfirmation
       const opts = [
-        { key: "c", exec: () => { dispatch({ type: "CLEAR_DELETE_CONFIRM" }); resolve(false) } },
         { key: "d", exec: () => { dispatch({ type: "CLEAR_DELETE_CONFIRM" }); resolve(true) } },
+        { key: "c", exec: () => { dispatch({ type: "CLEAR_DELETE_CONFIRM" }); resolve(false) } },
       ]
       if (key.name === "return") {
-        if (focusedIndex >= 0) opts[focusedIndex]?.exec()
+        // Enter confirms the currently focused option
+        opts[focusedIndex]?.exec()
+      }
+      else if (key.name === "escape") {
+        dispatch({ type: "CLEAR_DELETE_CONFIRM" }); resolve(false)
       }
       else if (key.name === "j" || key.name === "down") { dispatch({ type: "MOVE_DELETE_FOCUS", delta: 1 }) }
       else if (key.name === "k" || key.name === "up") { dispatch({ type: "MOVE_DELETE_FOCUS", delta: -1 }) }
       else {
+        // Letter keys only move focus — Enter is required to confirm
         const match = opts.findIndex((o) => o.key === key.name)
-        if (match !== -1) {
-          if (focusedIndex === match) { opts[match].exec() }
-          else { dispatch({ type: "SET_DELETE_FOCUS", index: match }) }
-        }
+        if (match !== -1) dispatch({ type: "SET_DELETE_FOCUS", index: match })
       }
       return
     }
@@ -520,7 +521,7 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
               const showConfirm = (cr: typeof result, ce: typeof editedDocs) => dispatch({
                 type: "SHOW_BULK_EDIT_CONFIRM",
                 confirmation: {
-                  missing: cr.missing, added: cr.added, focusedIndex: -1,
+                  missing: cr.missing, added: cr.added, focusedIndex: 0,
                   goBack: () => {
                     renderer.suspend()
                     openEditorForMany(activeTab.collectionName, state.dbName, docsToEdit, ce, state.schemaMap)
@@ -586,7 +587,7 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
             dispatch({
               type: "SHOW_DELETE_CONFIRM",
               confirmation: {
-                docs: docsToDelete, focusedIndex: -1,
+                docs: docsToDelete, focusedIndex: 0,
                 resolve: async (confirmed) => {
                   if (!confirmed) return
                   const errors: string[] = []
