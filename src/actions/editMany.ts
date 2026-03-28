@@ -144,6 +144,7 @@ async function openEditorWithError(tmpFile: string, content: string, errorMsg: s
   const editor = process.env.EDITOR || process.env.VISUAL || "vi"
   const proc = Bun.spawn([editor, tmpFile], { stdin: "inherit", stdout: "inherit", stderr: "inherit" })
   await proc.exited
+  if (proc.exitCode !== 0) return null
   try { return await Bun.file(tmpFile).text() } catch { return null }
 }
 
@@ -175,6 +176,8 @@ export async function openEditorForMany(
   const editor = process.env.EDITOR || process.env.VISUAL || "vi"
   const proc = Bun.spawn([editor, tmpFile], { stdin: "inherit", stdout: "inherit", stderr: "inherit" })
   await proc.exited
+
+  if (proc.exitCode !== 0) return { cancelled: true }
 
   let edited: string
   try { edited = await Bun.file(tmpFile).text() } catch { return { cancelled: true } }
@@ -267,6 +270,8 @@ export async function openEditorForInsert(
   const editor = process.env.EDITOR || process.env.VISUAL || "vi"
   const proc = Bun.spawn([editor, tmpFile], { stdin: "inherit", stdout: "inherit", stderr: "inherit" })
   await proc.exited
+
+  if (proc.exitCode !== 0) return { cancelled: true }
 
   let edited: string
   try { edited = await Bun.file(tmpFile).text() } catch { return { cancelled: true } }

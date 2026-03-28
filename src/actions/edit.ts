@@ -78,6 +78,11 @@ export async function editDocument(
     })
     await proc.exited
 
+    if (proc.exitCode !== 0) {
+      await unlink(tmpFile).catch(() => {})
+      return { updated: false }
+    }
+
     let editedContent: string
     try {
       editedContent = await Bun.file(tmpFile).text()
