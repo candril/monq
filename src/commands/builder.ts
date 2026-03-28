@@ -81,18 +81,12 @@ export function buildCommands(state: AppState): Command[] {
       category: "query",
       shortcut: "Ctrl+F",
     })
-    if (state.pipeline.length > 0) {
+    if (state.pipelineMode) {
       commands.push({
         id: "query:clear-pipeline",
         label: "Clear Pipeline",
         category: "query",
         shortcut: "⌫",
-      })
-      commands.push({
-        id: "query:toggle-pipeline-bar",
-        label: state.pipelineVisible ? "Collapse Pipeline Bar" : "Expand Pipeline Bar",
-        category: "query",
-        shortcut: "F",
       })
     }
     if (state.queryInput) {

@@ -28,7 +28,7 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
     const existingColumns = state.columns
 
     // Pipeline mode — aggregate or find-compatible pipeline
-    if (state.pipeline.length > 0) {
+    if (state.pipelineMode && state.pipeline.length > 0) {
       const isAggregate = classifyPipeline(state.pipeline)
 
       const fetchPipeline = isAggregate

@@ -127,23 +127,17 @@ export interface AppState {
   dbName: string
   host: string
 
-  // Pipeline query (set via external $EDITOR)
-  /** Parsed pipeline stages — empty means no pipeline active */
+  // Filter mode: simple (field:value) or pipeline ($EDITOR)
+  /** True = pipeline mode active, False = simple filter mode */
+  pipelineMode: boolean
+  /** Parsed pipeline stages — active when pipelineMode = true */
   pipeline: import("mongodb").Document[]
   /** Raw JSON5 source — preserved for re-opening the editor */
   pipelineSource: string
-  /** Whether the pipeline bar is expanded (F key) */
-  pipelineVisible: boolean
-  /** Synthesized display-only pipeline from simple filter (no real pipeline set) */
-  previewPipeline: import("mongodb").Document[]
   /** True when pipeline has stages that can't be expressed as find() */
   pipelineIsAggregate: boolean
-
-  // Confirmation dialog
-  /** When set, the confirm dialog is shown */
-  confirmPending: "pipeline-to-simple" | null
-  /** Translated simple query from pipeline $match (used in confirm flow) */
-  confirmSimpleQuery: string
+  /** When set, show the pipeline→simple confirmation dialog */
+  pipelineConfirm: { simpleQuery: string; focusedIndex: number } | null
 
   // Collection browser
   collections: CollectionInfo[]

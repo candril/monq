@@ -83,48 +83,11 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         dispatch({ type: "CLOSE_QUERY" })
         return
       }
-      // Tab: simple filter bar → readonly pipeline view
+      // Tab from simple filter bar: switch to pipeline mode
       if (key.name === "tab") {
         dispatch({ type: "CLOSE_QUERY" })
-        if (state.pipeline.length > 0) {
-          // Real pipeline — show it expanded
-          dispatch({ type: "SHOW_PIPELINE_BAR" })
-        } else {
-          // No pipeline — show simple filter as pipeline preview
-          dispatch({ type: "SHOW_SIMPLE_AS_PIPELINE" })
-        }
+        dispatch({ type: "ENTER_PIPELINE_MODE" })
         return
-      }
-      // Pipeline active — filter bar shouldn't be visible, close it
-      if (state.pipeline.length > 0) {
-        dispatch({ type: "CLOSE_QUERY" })
-        return
-      }
-      // Enter submits in BSON mode (textarea keybinding fires submit() but
-      // the onSubmit wiring is unreliable — handle it here directly instead)
-      if ((key.name === "return" || key.name === "enter") && state.queryMode === "bson") {
-        dispatch({ type: "SUBMIT_QUERY" })
-        return
-      }
-
-      // BSON-mode only controls
-      if (state.queryMode === "bson") {
-        // Ctrl+O: toggle sort section
-        if (key.ctrl && key.name === "o") {
-          dispatch({ type: "TOGGLE_BSON_SORT" })
-          return
-        }
-        // Ctrl+K: toggle projection section
-        if (key.ctrl && key.name === "k") {
-          dispatch({ type: "TOGGLE_BSON_PROJECTION" })
-          return
-        }
-        // Cycle focus between sections when more than one is open
-        // (Enter submits via textarea's own onSubmit, so we need a separate binding)
-        if (key.ctrl && key.name === "n") {
-          dispatch({ type: "CYCLE_BSON_SECTION" })
-          return
-        }
       }
       return
     }
@@ -132,22 +95,29 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
     // Don't handle keys when command palette is open
     if (state.commandPaletteVisible) return
 
-    // Confirmation dialog key handling
-    if (state.confirmPending === "pipeline-to-simple") {
-      if (key.name === "s") {
-        dispatch({ type: "CONFIRM_PIPELINE_TO_SIMPLE" })
-      } else if (key.name === "n") {
-        // Open in new tab with the translated simple query, keep pipeline in current tab
-        const { filter } = extractFindParts(state.pipeline)
-        const { query } = filterToSimple(filter as Record<string, unknown>)
-        dispatch({ type: "DISMISS_CONFIRM" })
-        // Clone tab then set simple query on the new tab
-        dispatch({ type: "CLONE_TAB" })
-        dispatch({ type: "CLEAR_PIPELINE" })
-        dispatch({ type: "SET_QUERY_INPUT", input: query })
-        dispatch({ type: "SUBMIT_QUERY" })
-      } else if (key.name === "escape") {
-        dispatch({ type: "DISMISS_CONFIRM" })
+    // Pipeline→simple confirmation dialog
+    if (state.pipelineConfirm) {
+      const confirm = state.pipelineConfirm
+      if (key.name === "escape") {
+        dispatch({ type: "DISMISS_PIPELINE_CONFIRM" })
+      } else if (key.name === "j" || key.name === "down") {
+        dispatch({ type: "MOVE_PIPELINE_CONFIRM_FOCUS", delta: 1 })
+      } else if (key.name === "k" || key.name === "up") {
+        dispatch({ type: "MOVE_PIPELINE_CONFIRM_FOCUS", delta: -1 })
+      } else if (key.name === "return" && confirm.focusedIndex >= 0) {
+        if (confirm.focusedIndex === 0) {
+          // New tab with clean filter
+          dispatch({ type: "CONFIRM_NEW_TAB_SIMPLE", query: confirm.simpleQuery })
+          dispatch({ type: "CLONE_TAB" })
+          dispatch({ type: "CLEAR_PIPELINE" })
+          dispatch({ type: "OPEN_QUERY" })
+        } else if (confirm.focusedIndex === 1) {
+          // Overwrite: use translated query
+          dispatch({ type: "CONFIRM_OVERWRITE_SIMPLE", query: confirm.simpleQuery })
+        } else {
+          // Cancel
+          dispatch({ type: "DISMISS_PIPELINE_CONFIRM" })
+        }
       }
       return
     }
@@ -223,30 +193,23 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       process.exit(0)
     }
 
-    // Tab: readonly pipeline view → back to simple filter bar
-    if (key.name === "tab" && state.view === "documents" && state.pipelineVisible && !state.queryVisible) {
-      if (state.previewPipeline.length > 0) {
-        // Preview of simple filter — clear preview and reopen simple bar
-        dispatch({ type: "CLEAR_PREVIEW_PIPELINE" })
+    // Tab from pipeline mode → back to simple
+    if (key.name === "tab" && state.view === "documents" && state.pipelineMode && !state.queryVisible) {
+      const { filter } = extractFindParts(state.pipeline)
+      const { query, lossless } = filterToSimple(filter as Record<string, unknown>)
+      const hasComplexStages = classifyPipeline(state.pipeline)
+      if (lossless && !hasComplexStages) {
+        dispatch({ type: "ENTER_SIMPLE_MODE", query })
         dispatch({ type: "OPEN_QUERY" })
-      } else if (state.pipeline.length > 0) {
-        // Real pipeline — try lossless translation, otherwise confirm
-        const { filter } = extractFindParts(state.pipeline)
-        const { query, lossless } = filterToSimple(filter as Record<string, unknown>)
-        const hasComplexStages = classifyPipeline(state.pipeline)
-        if (lossless && !hasComplexStages) {
-          dispatch({ type: "SWITCH_TO_SIMPLE", query })
-          dispatch({ type: "OPEN_QUERY" })
-        } else {
-          dispatch({ type: "SHOW_CONFIRM", pending: "pipeline-to-simple", simpleQuery: query })
-        }
+      } else {
+        dispatch({ type: "SHOW_PIPELINE_CONFIRM", simpleQuery: query })
       }
       return
     }
 
-    // Backspace clears filter or pipeline when bar is closed
+    // Backspace clears filter or pipeline
     if (key.name === "backspace" && state.view === "documents") {
-      if (state.pipeline.length > 0) {
+      if (state.pipelineMode) {
         dispatch({ type: "CLEAR_PIPELINE" })
         return
       }
@@ -254,28 +217,6 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         dispatch({ type: "CLEAR_QUERY" })
         return
       }
-    }
-
-    // F (Shift+f): toggle pipeline bar
-    // - real pipeline active → expand/collapse it
-    // - simple filter active, no pipeline → show filter translated as pipeline stages
-    // - nothing active → show empty bar with hint
-    if (key.name === "f" && key.shift && state.view === "documents") {
-      if (state.pipeline.length > 0) {
-        // Real pipeline: toggle expand/collapse
-        dispatch({ type: "TOGGLE_PIPELINE_BAR" })
-      } else if (state.queryInput || state.sortField) {
-        // Simple filter and/or sort: toggle preview on/off
-        if (state.pipelineVisible) {
-          dispatch({ type: "TOGGLE_PIPELINE_BAR" })
-        } else {
-          dispatch({ type: "SHOW_SIMPLE_AS_PIPELINE" })
-        }
-      } else {
-        // Nothing active: toast
-        dispatch({ type: "SHOW_MESSAGE", message: "No filter active — use / for simple filter or Ctrl+F for pipeline editor" })
-      }
-      return
     }
 
     // Tab management (available in document view)
@@ -407,7 +348,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           const val = getNestedValue(doc as Record<string, unknown>, col.field)
           if (val === undefined) break
 
-          if (state.pipeline.length > 0) {
+          if (state.pipelineMode) {
             // Pipeline mode: try to add to $match
             const matchStage = state.pipeline.find((s) => "$match" in s) as any
             if (!matchStage) {
@@ -579,22 +520,18 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           }
           break
         case "/":
-          if (state.pipeline.length > 0) {
-            // Real pipeline — try lossless translation, otherwise confirm
+          if (state.pipelineMode) {
+            // In pipeline mode, / switches to simple (same as Tab)
             const { filter } = extractFindParts(state.pipeline)
             const { query, lossless } = filterToSimple(filter as Record<string, unknown>)
             const hasComplexStages = classifyPipeline(state.pipeline)
             if (lossless && !hasComplexStages) {
-              dispatch({ type: "SWITCH_TO_SIMPLE", query })
+              dispatch({ type: "ENTER_SIMPLE_MODE", query })
               dispatch({ type: "OPEN_QUERY" })
             } else {
-              dispatch({ type: "SHOW_CONFIRM", pending: "pipeline-to-simple", simpleQuery: query })
+              dispatch({ type: "SHOW_PIPELINE_CONFIRM", simpleQuery: query })
             }
           } else {
-            // Clear any preview pipeline before opening simple filter
-            if (state.previewPipeline.length > 0) {
-              dispatch({ type: "TOGGLE_PIPELINE_BAR" })
-            }
             dispatch({ type: "OPEN_QUERY" })
           }
           break

@@ -177,10 +177,7 @@ export function App({ uri }: AppProps) {
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
         dispatch({ type: "CLEAR_PIPELINE" })
         break
-      case "query:toggle-pipeline-bar":
-        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
-        dispatch({ type: "TOGGLE_PIPELINE_BAR" })
-        break
+
       case "query:clear-filter":
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
         dispatch({ type: "CLEAR_QUERY" })
@@ -283,9 +280,9 @@ export function App({ uri }: AppProps) {
         )}
       </box>
 
-      {/* Suggestions only in simple mode with no pipeline */}
+      {/* Suggestions only in simple mode */}
       <FilterSuggestions
-        visible={state.queryVisible && state.pipeline.length === 0 && state.previewPipeline.length === 0 && state.queryMode === "simple"}
+        visible={state.queryVisible && !state.pipelineMode && state.queryMode === "simple"}
         query={state.queryInput}
         queryMode={state.queryMode}
         columns={state.columns}
@@ -293,15 +290,16 @@ export function App({ uri }: AppProps) {
         onChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
       />
 
-      <PipelineBar
-        pipeline={state.pipeline}
-        previewPipeline={state.previewPipeline}
-        visible={state.pipelineVisible}
-        isAggregate={state.pipelineIsAggregate}
-      />
+      {/* Pipeline bar — shown in pipeline mode */}
+      {state.pipelineMode && (
+        <PipelineBar
+          pipeline={state.pipeline}
+          isAggregate={state.pipelineIsAggregate}
+        />
+      )}
 
-      {/* Filter bar only when no pipeline and no preview active */}
-      {state.pipeline.length === 0 && state.previewPipeline.length === 0 && (
+      {/* Filter bar — shown in simple mode */}
+      {!state.pipelineMode && (
         <FilterBar
           query={state.queryInput}
           queryMode={state.queryMode}
@@ -330,20 +328,37 @@ export function App({ uri }: AppProps) {
         placeholder={effectivePlaceholder}
       />
 
-      <ConfirmChoiceDialog
-        visible={state.confirmPending === "pipeline-to-simple"}
-        title="Switch to simple filter?"
-        message={
-          state.pipeline.some((s) => !["$match","$sort","$project"].includes(Object.keys(s)[0]))
-            ? "Pipeline has complex stages ($group, $lookup, etc.) that cannot be expressed in simple mode."
-            : "Some filter conditions may not be fully representable in simple mode."
-        }
-        choices={[
-          { key: "s", label: "Switch to simple (drop complex conditions)", color: "#9ece6a" },
-          { key: "n", label: "Open simple filter in new tab", color: "#7aa2f7" },
-          { key: "Esc", label: "Cancel", color: "#565f89" },
-        ]}
-      />
+      {state.pipelineConfirm && (() => {
+        const hasComplex = state.pipeline.some(
+          (s) => !["$match","$sort","$project"].includes(Object.keys(s)[0])
+        )
+        const lines: import("./components/ConfirmDialog").ConfirmLine[] = [
+          { text: hasComplex
+            ? "Pipeline has complex stages that cannot be expressed in simple mode."
+            : "Some filter conditions cannot be fully translated to simple mode.",
+            dim: true
+          },
+          { text: "" },
+          { text: state.pipelineConfirm.simpleQuery
+              ? `Translated: ${state.pipelineConfirm.simpleQuery}`
+              : "(no translatable conditions)",
+            dim: true
+          },
+        ]
+        const options: import("./components/ConfirmDialog").ConfirmOption[] = [
+          { key: "n", label: "New tab (clean filter)", color: theme.primary },
+          { key: "o", label: "Overwrite (use translated portion)", color: theme.warning },
+          { key: "Esc", label: "Cancel", color: theme.textMuted },
+        ]
+        return (
+          <ConfirmDialog
+            title="Switch to simple filter?"
+            lines={lines}
+            options={options}
+            focusedIndex={state.pipelineConfirm.focusedIndex}
+          />
+        )
+      })()}
 
       <Toast
         message={state.message}

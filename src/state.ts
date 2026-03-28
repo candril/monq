@@ -70,15 +70,13 @@ export type AppAction =
   // Pipeline
   | { type: "SET_PIPELINE"; pipeline: import("mongodb").Document[]; source: string; isAggregate: boolean }
   | { type: "CLEAR_PIPELINE" }
-  | { type: "TOGGLE_PIPELINE_BAR" }
-  | { type: "SHOW_PIPELINE_BAR" }
-  | { type: "SHOW_SIMPLE_AS_PIPELINE" }
-  | { type: "CLEAR_PREVIEW_PIPELINE" }
-  // Confirm dialog
-  | { type: "SHOW_CONFIRM"; pending: "pipeline-to-simple"; simpleQuery: string }
-  | { type: "DISMISS_CONFIRM" }
-  | { type: "CONFIRM_PIPELINE_TO_SIMPLE" }
-  | { type: "SWITCH_TO_SIMPLE"; query: string }
+  | { type: "ENTER_PIPELINE_MODE" }
+  | { type: "ENTER_SIMPLE_MODE"; query: string }
+  | { type: "SHOW_PIPELINE_CONFIRM"; simpleQuery: string }
+  | { type: "DISMISS_PIPELINE_CONFIRM" }
+  | { type: "MOVE_PIPELINE_CONFIRM_FOCUS"; delta: number }
+  | { type: "CONFIRM_OVERWRITE_SIMPLE"; query: string }
+  | { type: "CONFIRM_NEW_TAB_SIMPLE"; query: string }
   | { type: "ADD_PIPELINE_MATCH_CONDITION"; field: string; value: unknown }
   // Preview
   | { type: "TOGGLE_PREVIEW" }
@@ -110,23 +108,6 @@ export type AppAction =
 // ============================================================================
 // Helpers
 // ============================================================================
-
-/** Rebuild previewPipeline from current simple filter + sort. Used whenever
- *  sort or filter changes while the preview is showing. */
-function rebuildPreview(
-  queryInput: string,
-  schemaMap: AppState["schemaMap"],
-  sortField: string | null,
-  sortDirection: 1 | -1,
-): import("mongodb").Document[] {
-  const stages: import("mongodb").Document[] = []
-  try {
-    const filter = parseSimpleQuery(queryInput, schemaMap)
-    if (Object.keys(filter).length > 0) stages.push({ $match: filter })
-  } catch { /* skip */ }
-  if (sortField) stages.push({ $sort: { [sortField]: sortDirection } })
-  return stages
-}
 
 // ============================================================================
 // Initial State
@@ -163,13 +144,11 @@ export function createInitialState(): AppState {
     bsonSortVisible: false,
     bsonProjectionVisible: false,
     bsonExternalVersion: 0,
+    pipelineMode: false,
     pipeline: [],
     pipelineSource: "",
-    pipelineVisible: false,
     pipelineIsAggregate: false,
-    previewPipeline: [],
-    confirmPending: null,
-    confirmSimpleQuery: "",
+    pipelineConfirm: null,
     previewPosition: null,
     previewScrollOffset: 0,
     commandPaletteVisible: false,
@@ -556,10 +535,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         documentsLoading: true,
         reloadCounter: state.reloadCounter + 1,
         selectedIndex: 0,
-        // Keep preview pipeline in sync if it's currently showing
-        previewPipeline: state.previewPipeline.length > 0
-          ? rebuildPreview(state.queryInput, state.schemaMap, sortField, sortDirection)
-          : state.previewPipeline,
+
       }
     }
 
@@ -771,10 +747,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             ? { ...t, query: state.queryInput, queryMode: state.queryMode }
             : t
         ),
-        // Refresh preview if showing
-        previewPipeline: state.previewPipeline.length > 0
-          ? rebuildPreview(state.queryInput, state.schemaMap, state.sortField, state.sortDirection)
-          : state.previewPipeline,
       }
 
      case "CLEAR_QUERY":
@@ -782,8 +754,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
          ...state,
          queryInput: "",
          queryVisible: false,
-         previewPipeline: [],
-         pipelineVisible: false,
          documentsLoading: true,
          reloadCounter: state.reloadCounter + 1,
          selectedIndex: 0,
@@ -796,14 +766,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "SET_PIPELINE":
       return {
         ...state,
+        pipelineMode: true,
         pipeline: action.pipeline,
         pipelineSource: action.source,
         pipelineIsAggregate: action.isAggregate,
-        pipelineVisible: true,
-        previewPipeline: [],
-        // Clear simple filter when pipeline is set
+        pipelineConfirm: null,
         queryInput: "",
-        queryMode: "simple",
         documentsLoading: true,
         reloadCounter: state.reloadCounter + 1,
         selectedIndex: 0,
@@ -812,12 +780,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "CLEAR_PIPELINE":
       return {
         ...state,
+        pipelineMode: false,
         pipeline: [],
         pipelineSource: "",
         pipelineIsAggregate: false,
-        pipelineVisible: false,
-        previewPipeline: [],
-        // Reset to simple mode so the filter bar comes back cleanly
+        pipelineConfirm: null,
         queryMode: "simple",
         queryInput: "",
         documentsLoading: true,
@@ -825,42 +792,81 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         selectedIndex: 0,
       }
 
-    case "TOGGLE_PIPELINE_BAR":
-      return { ...state, pipelineVisible: !state.pipelineVisible }
-
-    case "SHOW_PIPELINE_BAR":
-      return { ...state, pipelineVisible: true }
-
-    case "CLEAR_PREVIEW_PIPELINE":
-      return { ...state, previewPipeline: [], pipelineVisible: false }
-
-    case "SHOW_SIMPLE_AS_PIPELINE": {
-      const stages = rebuildPreview(state.queryInput, state.schemaMap, state.sortField, state.sortDirection)
-      return { ...state, previewPipeline: stages, pipelineVisible: true }
-    }
-
-    case "SHOW_CONFIRM":
-      return { ...state, confirmPending: action.pending, confirmSimpleQuery: action.simpleQuery }
-
-    case "DISMISS_CONFIRM":
-      return { ...state, confirmPending: null, confirmSimpleQuery: "" }
-
-    case "CONFIRM_PIPELINE_TO_SIMPLE":
+    // Tab switches mode: simple → pipeline (no reload — same data, just display change)
+    case "ENTER_PIPELINE_MODE": {
+      const stages: import("mongodb").Document[] = []
+      try {
+        const filter = parseSimpleQuery(state.queryInput, state.schemaMap)
+        if (Object.keys(filter).length > 0) stages.push({ $match: filter })
+      } catch { /* skip */ }
+      if (state.sortField) {
+        stages.push({ $sort: { [state.sortField]: state.sortDirection } })
+      }
       return {
         ...state,
-        confirmPending: null,
-        confirmSimpleQuery: "",
+        pipelineMode: true,
+        pipeline: stages,
+        pipelineSource: "",
+        pipelineIsAggregate: false,
+        pipelineConfirm: null,
+        queryVisible: false,
+        // Keep queryInput + sortField — they are the source of truth in simple mode
+        // No reload needed: data is already shown with the same filter
+      }
+    }
+
+    // Tab switches mode: pipeline → simple (lossless)
+    case "ENTER_SIMPLE_MODE":
+      return {
+        ...state,
+        pipelineMode: false,
         pipeline: [],
         pipelineSource: "",
         pipelineIsAggregate: false,
-        pipelineVisible: false,
-        queryMode: "simple",
-        queryInput: state.confirmSimpleQuery,
+        pipelineConfirm: null,
+        queryInput: action.query,
         queryVisible: false,
         documentsLoading: true,
         reloadCounter: state.reloadCounter + 1,
         selectedIndex: 0,
       }
+
+    // Tab pipeline→simple but lossy: show confirm dialog
+    case "SHOW_PIPELINE_CONFIRM":
+      return { ...state, pipelineConfirm: { simpleQuery: action.simpleQuery, focusedIndex: -1 } }
+
+    case "DISMISS_PIPELINE_CONFIRM":
+      return { ...state, pipelineConfirm: null }
+
+    case "MOVE_PIPELINE_CONFIRM_FOCUS":
+      if (!state.pipelineConfirm) return state
+      return {
+        ...state,
+        pipelineConfirm: {
+          ...state.pipelineConfirm,
+          focusedIndex: Math.max(0, Math.min(2, state.pipelineConfirm.focusedIndex + action.delta)),
+        },
+      }
+
+    // Confirm: overwrite simple filter with translated query, reload
+    case "CONFIRM_OVERWRITE_SIMPLE":
+      return {
+        ...state,
+        pipelineMode: false,
+        pipeline: [],
+        pipelineSource: "",
+        pipelineIsAggregate: false,
+        pipelineConfirm: null,
+        queryInput: action.query,
+        queryVisible: true,
+        documentsLoading: true,
+        reloadCounter: state.reloadCounter + 1,
+        selectedIndex: 0,
+      }
+
+    // Confirm: open new tab with clean filter (handled in App.tsx via CLONE_TAB + CLEAR_PIPELINE)
+    case "CONFIRM_NEW_TAB_SIMPLE":
+      return { ...state, pipelineConfirm: null }
 
     case "ADD_PIPELINE_MATCH_CONDITION": {
       // Add/merge a field:value condition into the $match stage of the pipeline.
@@ -886,21 +892,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         selectedIndex: 0,
       }
     }
-
-    case "SWITCH_TO_SIMPLE":
-      return {
-        ...state,
-        pipeline: [],
-        pipelineSource: "",
-        pipelineIsAggregate: false,
-        pipelineVisible: false,
-        queryMode: "simple",
-        queryInput: action.query,
-        queryVisible: false,
-        documentsLoading: true,
-        reloadCounter: state.reloadCounter + 1,
-        selectedIndex: 0,
-      }
 
     // Preview
     case "TOGGLE_PREVIEW":
