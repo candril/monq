@@ -14,7 +14,7 @@ import type { Document } from "mongodb"
 import JSON5 from "json5"
 import { EJSON } from "bson"
 import type { SchemaMap } from "../query/schema"
-import { parseSimpleQuery } from "../query/parser"
+import { parseSimpleQuery, splitProjection, parseProjection } from "../query/parser"
 
 // Stages that can be expressed as find(filter, { sort, projection })
 const FIND_COMPATIBLE_STAGES = new Set(["$match", "$sort", "$project"])
@@ -69,11 +69,12 @@ function buildTemplate(
     return JSON.stringify(doc, null, 2) + "\n"
   }
 
-  // Build $match from simple query if present
+  // Build $match from simple query if present (strip pipe projection first)
+  const { filter: filterStr, projection: projStr } = splitProjection(simpleQuery)
   let matchObj: Record<string, unknown> = {}
-  if (simpleQuery.trim()) {
+  if (filterStr.trim()) {
     try {
-      matchObj = parseSimpleQuery(simpleQuery, schemaMap) as Record<string, unknown>
+      matchObj = parseSimpleQuery(filterStr, schemaMap) as Record<string, unknown>
     } catch {
       matchObj = {}
     }
@@ -84,14 +85,21 @@ function buildTemplate(
     ? { [sortField]: sortDirection }
     : { _id: -1 }
 
+  // Build $project from pipe projection if present
+  const projObj = parseProjection(projStr)
+
+  // Compose pipeline stages
+  const pipelineStages: Document[] = [
+    { $match: matchObj },
+    { $sort: sortObj },
+  ]
+  if (projObj) pipelineStages.push({ $project: projObj })
+
   // Compose as proper JSON (JSONC — supports // comments)
   // The $schema key must be first for jsonls to pick it up
   const doc = {
     $schema: "./.monq-pipeline-schema.json",
-    pipeline: [
-      { $match: matchObj },
-      { $sort: sortObj },
-    ],
+    pipeline: pipelineStages,
   }
 
   // Pretty-print with helpful comments injected

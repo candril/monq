@@ -893,13 +893,16 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     // Tab switches mode: simple → pipeline (no reload — same data, just display change)
     case "ENTER_PIPELINE_MODE": {
       const stages: import("mongodb").Document[] = []
+      const { filter: filterPart, projection: projPart } = splitProjection(state.queryInput)
       try {
-        const filter = parseSimpleQuery(state.queryInput, state.schemaMap)
+        const filter = parseSimpleQuery(filterPart, state.schemaMap)
         if (Object.keys(filter).length > 0) stages.push({ $match: filter })
       } catch { /* skip */ }
       if (state.sortField) {
         stages.push({ $sort: { [state.sortField]: state.sortDirection } })
       }
+      const projObj = parseProjection(projPart)
+      if (projObj) stages.push({ $project: projObj })
       return {
         ...state,
         pipelineMode: true,

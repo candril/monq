@@ -24,6 +24,14 @@ interface UseKeyboardNavOptions {
   docListScrollRef: RefObject<ScrollBoxRenderable>
 }
 
+/** Build a pipe projection suffix string from a $project object, e.g. " | name -_id" */
+function buildProjSuffix(projection: Document | undefined): string {
+  if (!projection || typeof projection !== "object") return ""
+  const tokens = Object.entries(projection as Record<string, unknown>)
+    .map(([k, v]) => v === 0 ? `-${k}` : k)
+  return tokens.length > 0 ? ` | ${tokens.join(" ")}` : ""
+}
+
 /** Get a nested value from a document */
 function getNestedValue(doc: Record<string, unknown>, field: string): unknown {
   const parts = field.split(".")
@@ -271,16 +279,19 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
 
     // Tab from pipeline mode → back to simple
     if (key.name === "tab" && state.view === "documents" && state.pipelineMode && !state.queryVisible) {
-      const { filter } = extractFindParts(state.pipeline)
+      const { filter, projection } = extractFindParts(state.pipeline)
       const { query, lossless } = filterToSimple(filter as Record<string, unknown>)
       const hasComplexStages = classifyPipeline(state.pipeline)
+      // Carry $project stage back as pipe projection suffix
+      const projSuffix = buildProjSuffix(projection)
+      const simpleQueryWithProj = query + projSuffix
       if (lossless && !hasComplexStages) {
         stopWatching()
         dispatch({ type: "STOP_PIPELINE_WATCH" })
-        dispatch({ type: "ENTER_SIMPLE_MODE", query })
+        dispatch({ type: "ENTER_SIMPLE_MODE", query: simpleQueryWithProj })
         dispatch({ type: "OPEN_QUERY" })
       } else {
-        dispatch({ type: "SHOW_PIPELINE_CONFIRM", simpleQuery: query })
+        dispatch({ type: "SHOW_PIPELINE_CONFIRM", simpleQuery: simpleQueryWithProj })
       }
       return
     }
@@ -390,29 +401,67 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
           dispatch({ type: "CYCLE_COLUMN_MODE" })
           break
         case "-": {
-          // Toggle exclusion of current column via projection: appends/removes -fieldname
-          if (state.pipelineMode || state.queryMode === "bson") break
+          // Toggle exclusion of current column via projection
           const visCols = state.columns.filter((c) => c.visible)
           const col = visCols[state.selectedColumnIndex]
           if (!col) break
-          const { filter: filterPart, projection: projPart } = splitProjection(state.queryInput)
-          const tokens = projPart.trim().split(/\s+/).filter(Boolean)
-          const excludeToken = `-${col.field}`
-          const includeToken = col.field
-          if (tokens.includes(excludeToken)) {
-            // Already excluded — remove the exclusion (reveal column)
-            const newTokens = tokens.filter((t) => t !== excludeToken)
-            const newProj = newTokens.length > 0 ? ` | ${newTokens.join(" ")}` : ""
-            dispatch({ type: "SET_QUERY_INPUT", input: filterPart + newProj })
-            dispatch({ type: "SUBMIT_QUERY" })
-            dispatch({ type: "SHOW_MESSAGE", message: `Showing ${col.field}`, kind: "info" })
-          } else {
-            // Exclude this column — also remove any include token for it
-            const newTokens = tokens.filter((t) => t !== includeToken)
-            newTokens.push(excludeToken)
-            dispatch({ type: "SET_QUERY_INPUT", input: filterPart + ` | ${newTokens.join(" ")}` })
-            dispatch({ type: "SUBMIT_QUERY" })
-            dispatch({ type: "SHOW_MESSAGE", message: `Hiding ${col.field}`, kind: "info" })
+
+          if (state.pipelineMode) {
+            // Pipeline mode: add/update $project stage in the live pipeline
+            const existingProjIdx = state.pipeline.findIndex((s) => "$project" in s)
+            const existingProj: Record<string, 0 | 1> = existingProjIdx !== -1
+              ? { ...(state.pipeline[existingProjIdx] as any).$project }
+              : {}
+
+            if (existingProj[col.field] === 0) {
+              // Already excluded — remove to reveal
+              delete existingProj[col.field]
+              dispatch({ type: "SHOW_MESSAGE", message: `Showing ${col.field}`, kind: "info" })
+            } else {
+              // Exclude this column
+              existingProj[col.field] = 0
+              dispatch({ type: "SHOW_MESSAGE", message: `Hiding ${col.field}`, kind: "info" })
+            }
+
+            let newPipeline: import("mongodb").Document[]
+            if (Object.keys(existingProj).length === 0) {
+              // Empty $project — remove the stage entirely
+              newPipeline = state.pipeline.filter((_, i) => i !== existingProjIdx)
+            } else if (existingProjIdx !== -1) {
+              newPipeline = state.pipeline.map((s, i) =>
+                i === existingProjIdx ? { $project: existingProj } : s
+              )
+            } else {
+              newPipeline = [...state.pipeline, { $project: existingProj }]
+            }
+
+            const newSource = JSON.stringify({ pipeline: newPipeline }, null, 2)
+            dispatch({
+              type: "SET_PIPELINE",
+              pipeline: newPipeline,
+              source: newSource,
+              isAggregate: classifyPipeline(newPipeline),
+            })
+          } else if (state.queryMode !== "bson") {
+            // Simple mode: toggle -fieldname in the pipe projection clause
+            const { filter: filterPart, projection: projPart } = splitProjection(state.queryInput)
+            const tokens = projPart.trim().split(/\s+/).filter(Boolean)
+            const excludeToken = `-${col.field}`
+            if (tokens.includes(excludeToken)) {
+              // Already excluded — remove to reveal
+              const newTokens = tokens.filter((t) => t !== excludeToken)
+              const newProj = newTokens.length > 0 ? ` | ${newTokens.join(" ")}` : ""
+              dispatch({ type: "SET_QUERY_INPUT", input: filterPart + newProj })
+              dispatch({ type: "SUBMIT_QUERY" })
+              dispatch({ type: "SHOW_MESSAGE", message: `Showing ${col.field}`, kind: "info" })
+            } else {
+              // Exclude — also remove any include token for this field
+              const newTokens = tokens.filter((t) => t !== col.field)
+              newTokens.push(excludeToken)
+              dispatch({ type: "SET_QUERY_INPUT", input: filterPart + ` | ${newTokens.join(" ")}` })
+              dispatch({ type: "SUBMIT_QUERY" })
+              dispatch({ type: "SHOW_MESSAGE", message: `Hiding ${col.field}`, kind: "info" })
+            }
           }
           break
         }
@@ -657,18 +706,20 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
         case "/":
           if (state.pipelineMode) {
             // In pipeline mode, / switches to simple (same as Tab)
-            const { filter } = extractFindParts(state.pipeline)
+            const { filter, projection } = extractFindParts(state.pipeline)
             const { query, lossless } = filterToSimple(filter as Record<string, unknown>)
             const hasComplexStages = classifyPipeline(state.pipeline)
+            const projSuffix2 = buildProjSuffix(projection)
+            const simpleQueryWithProj2 = query + projSuffix2
             if (lossless && !hasComplexStages) {
               stopWatching()
               dispatch({ type: "STOP_PIPELINE_WATCH" })
-              dispatch({ type: "ENTER_SIMPLE_MODE", query })
+              dispatch({ type: "ENTER_SIMPLE_MODE", query: simpleQueryWithProj2 })
               if (!state.filterBarVisible) dispatch({ type: "TOGGLE_FILTER_BAR" })
               dispatch({ type: "OPEN_QUERY" })
             } else {
               if (!state.filterBarVisible) dispatch({ type: "TOGGLE_FILTER_BAR" })
-              dispatch({ type: "SHOW_PIPELINE_CONFIRM", simpleQuery: query })
+              dispatch({ type: "SHOW_PIPELINE_CONFIRM", simpleQuery: simpleQueryWithProj2 })
             }
           } else {
             if (!state.filterBarVisible) dispatch({ type: "TOGGLE_FILTER_BAR" })

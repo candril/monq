@@ -132,13 +132,40 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
           const existing = existingByField.get(field)
           return existing ?? { field, frequency: 1, visible: true, displayMode: "normal" as const }
         })
-        // Preserve existing columns not in this result so they don't vanish after filtering
-        const preserved = existingColumns.filter((c) => !detectedSet.has(c.field))
+
+        // When a simple-mode projection is active, don't preserve columns that
+        // were excluded or are outside the inclusion set — they weren't fetched
+        // and would show as null in every row.
+        const hasSimpleProjection = queryMode === "simple" && projection != null
+        const proj = hasSimpleProjection ? projection! : null
+        const exclusions = proj
+          ? new Set(Object.entries(proj).filter(([, v]) => v === 0).map(([k]) => k))
+          : null
+        const inclusions = proj && Object.values(proj).some(v => v === 1)
+          ? new Set(Object.entries(proj).filter(([, v]) => v === 1).map(([k]) => k))
+          : null
+
+        const preserved = existingColumns.filter((c) => {
+          if (detectedSet.has(c.field)) return false  // already in newColumns
+          if (exclusions?.has(c.field)) return false   // explicitly excluded
+          if (inclusions && !inclusions.has(c.field)) return false  // not included
+          return true
+        })
         const columns = [...newColumns, ...preserved]
 
         dispatch({ type: "SET_DOCUMENTS", documents, count, totalCount })
         dispatch({ type: "SET_COLUMNS", columns })
-        dispatch({ type: "SET_SCHEMA", schemaMap: buildSchemaMap(documents) })
+
+        // When projection is active in simple mode, merge new schema into existing
+        // so that excluded fields are still available for filter suggestions and
+        // the pipeline JSON schema sidecar.
+        if (hasSimpleProjection) {
+          const merged = new Map(state.schemaMap)
+          for (const [key, val] of buildSchemaMap(documents)) merged.set(key, val)
+          dispatch({ type: "SET_SCHEMA", schemaMap: merged })
+        } else {
+          dispatch({ type: "SET_SCHEMA", schemaMap: buildSchemaMap(documents) })
+        }
       })
       .catch((err: Error) => {
         if (!cancelled) dispatch({ type: "SET_ERROR", error: err.message })
