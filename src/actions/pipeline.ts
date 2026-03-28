@@ -270,6 +270,54 @@ function buildJsonSchema(collectionName: string, schemaMap: SchemaMap): string {
   return JSON.stringify(schema, null, 2)
 }
 
+// ── Editor argument builder ─────────────────────────────────────────────────
+
+/**
+ * Build editor command args, positioning cursor inside the $match braces.
+ *
+ * For vim/nvim: use `+call cursor(line, col)` to place the cursor.
+ * The target is the opening `{` of the $match value, one character in.
+ *
+ * For other editors: just open the file with no position args.
+ */
+function buildEditorArgs(editorBase: string, queryFile: string, content: string): string[] {
+  const isVimLike = /^(nvim|vim|vi|gvim|view|rvim)$/.test(editorBase)
+
+  if (!isVimLike) {
+    return [editorBase, queryFile]
+  }
+
+  // Find the line containing "$match": { — we want the cursor on the
+  // line after that (the first key inside $match), column 1.
+  const lines = content.split("\n")
+  let targetLine = 0
+  let targetCol = 1
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    // Match the "$match" key line e.g.: `    { "$match": {`
+    if (/"?\$match"?\s*:\s*\{/.test(line)) {
+      // The opening brace is on this line — place cursor on next line, col 1
+      // so user is ready to type the first field
+      targetLine = i + 2  // 1-indexed, +1 for next line
+      targetCol = 1
+      // Try to find indentation of that next line for better positioning
+      const nextLine = lines[i + 1] ?? ""
+      const indent = nextLine.match(/^(\s*)/)?.[1].length ?? 0
+      targetCol = indent + 1
+      break
+    }
+  }
+
+  if (targetLine === 0) {
+    // Fallback: just open the file
+    return [editorBase, queryFile]
+  }
+
+  // nvim/vim: `+call cursor(line, col)` positions cursor before loading
+  return [editorBase, `+call cursor(${targetLine}, ${targetCol})`, queryFile]
+}
+
 // ── Main entry point ────────────────────────────────────────────────────────
 
 export async function openPipelineEditor(params: {
@@ -304,11 +352,13 @@ export async function openPipelineEditor(params: {
   await Bun.write(queryFile, template)
 
   const editor = process.env.EDITOR || process.env.VISUAL || "vi"
+  const editorBase = editor.split("/").pop() ?? editor
 
   // Edit-parse loop: re-open editor on parse errors so user can fix in place
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const proc = Bun.spawn([editor, queryFile], {
+    const args = buildEditorArgs(editorBase, queryFile, template)
+    const proc = Bun.spawn(args, {
       stdin: "inherit",
       stdout: "inherit",
       stderr: "inherit",
