@@ -17,7 +17,8 @@ import { theme } from "../theme"
 
 interface PipelineBarProps {
   pipeline: Document[]
-  visible: boolean       // expanded
+  previewPipeline: Document[]
+  visible: boolean
   isAggregate: boolean
 }
 
@@ -31,18 +32,16 @@ function stagePreview(value: unknown): string {
   }
 }
 
-export function PipelineBar({ pipeline, visible, isAggregate }: PipelineBarProps) {
-  // No pipeline — show a minimal hint bar when visible (toggled by F)
-  if (pipeline.length === 0) {
-    if (!visible) return null
-    return (
-      <box height={1} backgroundColor={theme.headerBg} paddingX={1} flexDirection="row" gap={1}>
-        <text><span fg={theme.textMuted}>[no filter]</span></text>
-        <box flexGrow={1} />
-        <text><span fg={theme.textMuted}>Ctrl+F open pipeline editor  F hide</span></text>
-      </box>
-    )
-  }
+export function PipelineBar({ pipeline, previewPipeline, visible, isAggregate }: PipelineBarProps) {
+  // If no real pipeline but preview (from simple filter), use that for display
+  const isPreview = pipeline.length === 0 && previewPipeline.length > 0
+  const displayPipeline = pipeline.length > 0 ? pipeline : previewPipeline
+
+  if (displayPipeline.length === 0) return null
+  if (!visible) {
+    // Collapsed 1-row summary
+    const badge = isPreview ? "[simple]" : (isAggregate ? "[aggregate]" : "[pipeline]")
+    const badgeFg = isPreview ? theme.querySimple : (isAggregate ? theme.warning : theme.queryBson)
 
   const badge = isAggregate ? "[aggregate]" : "[pipeline]"
   const badgeFg = isAggregate ? theme.warning : theme.queryBson

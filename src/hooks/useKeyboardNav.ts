@@ -167,9 +167,21 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       }
     }
 
-    // F (Shift+f): toggle pipeline bar expanded/collapsed
+    // F (Shift+f): toggle pipeline bar
+    // - real pipeline active → expand/collapse it
+    // - simple filter active, no pipeline → show filter translated as pipeline stages
+    // - nothing active → show empty bar with hint
     if (key.name === "f" && key.shift && state.view === "documents") {
-      dispatch({ type: "TOGGLE_PIPELINE_BAR" })
+      if (state.pipeline.length > 0) {
+        // Real pipeline: toggle expand/collapse
+        dispatch({ type: "TOGGLE_PIPELINE_BAR" })
+      } else if (state.queryInput) {
+        // Simple filter active: show it translated as a read-only pipeline preview
+        dispatch({ type: "SHOW_SIMPLE_AS_PIPELINE" })
+      } else {
+        // Nothing active: toast
+        dispatch({ type: "SHOW_MESSAGE", message: "No filter active — use / for simple filter or Ctrl+F for pipeline editor" })
+      }
       return
     }
 

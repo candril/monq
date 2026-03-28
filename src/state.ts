@@ -69,6 +69,7 @@ export type AppAction =
   | { type: "CLEAR_PIPELINE" }
   | { type: "TOGGLE_PIPELINE_BAR" }
   | { type: "SHOW_PIPELINE_BAR" }
+  | { type: "SHOW_SIMPLE_AS_PIPELINE" }
   // Confirm dialog
   | { type: "SHOW_CONFIRM"; pending: "pipeline-to-simple"; simpleQuery: string }
   | { type: "DISMISS_CONFIRM" }
@@ -125,6 +126,7 @@ export function createInitialState(): AppState {
     pipelineSource: "",
     pipelineVisible: false,
     pipelineIsAggregate: false,
+    previewPipeline: [],
     confirmPending: null,
     confirmSimpleQuery: "",
     previewPosition: null,
@@ -704,6 +706,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         pipelineSource: action.source,
         pipelineIsAggregate: action.isAggregate,
         pipelineVisible: true,
+        previewPipeline: [],
         // Clear simple filter when pipeline is set
         queryInput: "",
         queryMode: "simple",
@@ -719,6 +722,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         pipelineSource: "",
         pipelineIsAggregate: false,
         pipelineVisible: false,
+        previewPipeline: [],
         // Reset to simple mode so the filter bar comes back cleanly
         queryMode: "simple",
         queryInput: "",
@@ -728,10 +732,22 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       }
 
     case "TOGGLE_PIPELINE_BAR":
-      return { ...state, pipelineVisible: !state.pipelineVisible }
+      return { ...state, pipelineVisible: !state.pipelineVisible, previewPipeline: [] }
 
     case "SHOW_PIPELINE_BAR":
       return { ...state, pipelineVisible: true }
+
+    case "SHOW_SIMPLE_AS_PIPELINE": {
+      const stages: import("mongodb").Document[] = []
+      try {
+        const filter = parseSimpleQuery(state.queryInput, state.schemaMap)
+        if (Object.keys(filter).length > 0) stages.push({ $match: filter })
+      } catch { /* skip */ }
+      if (state.sortField) {
+        stages.push({ $sort: { [state.sortField]: state.sortDirection } })
+      }
+      return { ...state, previewPipeline: stages, pipelineVisible: true }
+    }
 
     case "SHOW_CONFIRM":
       return { ...state, confirmPending: action.pending, confirmSimpleQuery: action.simpleQuery }

@@ -109,6 +109,8 @@ export interface AppState {
   pipelineSource: string
   /** Whether the pipeline bar is expanded (F key) */
   pipelineVisible: boolean
+  /** Synthesized display-only pipeline from simple filter (no real pipeline set) */
+  previewPipeline: import("mongodb").Document[]
   /** True when pipeline has stages that can't be expressed as find() */
   pipelineIsAggregate: boolean
 
