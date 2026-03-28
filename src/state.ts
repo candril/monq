@@ -68,6 +68,12 @@ export type AppAction =
   | { type: "SET_PIPELINE"; pipeline: import("mongodb").Document[]; source: string; isAggregate: boolean }
   | { type: "CLEAR_PIPELINE" }
   | { type: "TOGGLE_PIPELINE_BAR" }
+  // Confirm dialog
+  | { type: "SHOW_CONFIRM"; pending: "pipeline-to-simple"; simpleQuery: string }
+  | { type: "DISMISS_CONFIRM" }
+  | { type: "CONFIRM_PIPELINE_TO_SIMPLE" }
+  | { type: "SWITCH_TO_SIMPLE"; query: string }
+  | { type: "ADD_PIPELINE_MATCH_CONDITION"; field: string; value: unknown }
   // Preview
   | { type: "TOGGLE_PREVIEW" }
   | { type: "CYCLE_PREVIEW_POSITION" }
@@ -118,6 +124,8 @@ export function createInitialState(): AppState {
     pipelineSource: "",
     pipelineVisible: false,
     pipelineIsAggregate: false,
+    confirmPending: null,
+    confirmSimpleQuery: "",
     previewPosition: null,
     previewScrollOffset: 0,
     commandPaletteVisible: false,
@@ -720,6 +728,69 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "TOGGLE_PIPELINE_BAR":
       return { ...state, pipelineVisible: !state.pipelineVisible }
+
+    case "SHOW_CONFIRM":
+      return { ...state, confirmPending: action.pending, confirmSimpleQuery: action.simpleQuery }
+
+    case "DISMISS_CONFIRM":
+      return { ...state, confirmPending: null, confirmSimpleQuery: "" }
+
+    case "CONFIRM_PIPELINE_TO_SIMPLE":
+      return {
+        ...state,
+        confirmPending: null,
+        confirmSimpleQuery: "",
+        pipeline: [],
+        pipelineSource: "",
+        pipelineIsAggregate: false,
+        pipelineVisible: false,
+        queryMode: "simple",
+        queryInput: state.confirmSimpleQuery,
+        queryVisible: true,
+        documentsLoading: true,
+        reloadCounter: state.reloadCounter + 1,
+        selectedIndex: 0,
+      }
+
+    case "ADD_PIPELINE_MATCH_CONDITION": {
+      // Add/merge a field:value condition into the $match stage of the pipeline.
+      // Only supported when pipeline has a $match stage (find-compatible).
+      const matchIdx = state.pipeline.findIndex((s) => "$match" in s)
+      if (matchIdx === -1) return state  // no $match — caller should show toast
+
+      const updatedPipeline = state.pipeline.map((stage, i) => {
+        if (i !== matchIdx) return stage
+        const existingMatch = (stage as any).$match ?? {}
+        return { $match: { ...existingMatch, [action.field]: action.value } }
+      })
+
+      // Regenerate source JSON
+      const newSource = JSON.stringify({ pipeline: updatedPipeline }, null, 2)
+
+      return {
+        ...state,
+        pipeline: updatedPipeline,
+        pipelineSource: newSource,
+        documentsLoading: true,
+        reloadCounter: state.reloadCounter + 1,
+        selectedIndex: 0,
+      }
+    }
+
+    case "SWITCH_TO_SIMPLE":
+      return {
+        ...state,
+        pipeline: [],
+        pipelineSource: "",
+        pipelineIsAggregate: false,
+        pipelineVisible: false,
+        queryMode: "simple",
+        queryInput: action.query,
+        queryVisible: true,
+        documentsLoading: true,
+        reloadCounter: state.reloadCounter + 1,
+        selectedIndex: 0,
+      }
 
     // Preview
     case "TOGGLE_PREVIEW":

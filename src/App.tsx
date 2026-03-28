@@ -9,6 +9,7 @@ import { Shell } from "./components/Shell"
 import { Header } from "./components/Header"
 import { FilterBar } from "./components/FilterBar"
 import { PipelineBar } from "./components/PipelineBar"
+import { ConfirmDialog } from "./components/ConfirmDialog"
 import { Loading } from "./components/Loading"
 import { ErrorView } from "./components/ErrorView"
 import { DocumentList } from "./components/DocumentList"
@@ -261,8 +262,9 @@ export function App({ uri }: AppProps) {
         )}
       </box>
 
+      {/* Suggestions only in simple mode with no pipeline */}
       <FilterSuggestions
-        visible={state.queryVisible}
+        visible={state.queryVisible && state.pipeline.length === 0}
         query={state.queryInput}
         queryMode={state.queryMode}
         columns={state.columns}
@@ -276,7 +278,7 @@ export function App({ uri }: AppProps) {
         isAggregate={state.pipelineIsAggregate}
       />
 
-      {/* Hide simple filter bar when pipeline is active */}
+      {/* Filter bar only when no pipeline active */}
       {state.pipeline.length === 0 && (
         <FilterBar
           query={state.queryInput}
@@ -304,6 +306,21 @@ export function App({ uri }: AppProps) {
         onSelect={handlePaletteSelect}
         onClose={handlePaletteClose}
         placeholder={effectivePlaceholder}
+      />
+
+      <ConfirmDialog
+        visible={state.confirmPending === "pipeline-to-simple"}
+        title="Switch to simple filter?"
+        message={
+          state.pipeline.some((s) => !["$match","$sort","$project"].includes(Object.keys(s)[0]))
+            ? "Pipeline has complex stages ($group, $lookup, etc.) that cannot be expressed in simple mode."
+            : "Some filter conditions may not be fully representable in simple mode."
+        }
+        choices={[
+          { key: "s", label: "Switch to simple (drop complex conditions)", color: "#9ece6a" },
+          { key: "n", label: "Open simple filter in new tab", color: "#7aa2f7" },
+          { key: "Esc", label: "Cancel", color: "#565f89" },
+        ]}
       />
     </Shell>
   )

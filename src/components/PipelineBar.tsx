@@ -53,7 +53,7 @@ export function PipelineBar({ pipeline, visible, isAggregate }: PipelineBarProps
         <text><span fg={badgeFg}>{badge}</span></text>
         <text><span fg={theme.text}>{summary}{more}</span></text>
         <box flexGrow={1} />
-        <text><span fg={theme.textMuted}>Ctrl+F edit  F expand  ⌫ clear</span></text>
+        <text><span fg={theme.textMuted}>Ctrl+F edit  F expand  / simple  ⌫ clear</span></text>
       </box>
     )
   }

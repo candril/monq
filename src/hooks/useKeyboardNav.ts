@@ -10,7 +10,8 @@ import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import { disconnect, serializeDocument } from "../providers/mongodb"
 import { editDocument } from "../actions/edit"
-import { openPipelineEditor } from "../actions/pipeline"
+import { openPipelineEditor, extractFindParts, classifyPipeline } from "../actions/pipeline"
+import { filterToSimple } from "../query/parser"
 import { formatValue } from "../utils/format"
 
 interface UseKeyboardNavOptions {
@@ -126,6 +127,26 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
 
     // Don't handle keys when command palette is open
     if (state.commandPaletteVisible) return
+
+    // Confirmation dialog key handling
+    if (state.confirmPending === "pipeline-to-simple") {
+      if (key.name === "s") {
+        dispatch({ type: "CONFIRM_PIPELINE_TO_SIMPLE" })
+      } else if (key.name === "n") {
+        // Open in new tab with the translated simple query, keep pipeline in current tab
+        const { filter } = extractFindParts(state.pipeline)
+        const { query } = filterToSimple(filter as Record<string, unknown>)
+        dispatch({ type: "DISMISS_CONFIRM" })
+        // Clone tab then set simple query on the new tab
+        dispatch({ type: "CLONE_TAB" })
+        dispatch({ type: "CLEAR_PIPELINE" })
+        dispatch({ type: "SET_QUERY_INPUT", input: query })
+        dispatch({ type: "SUBMIT_QUERY" })
+      } else if (key.name === "escape") {
+        dispatch({ type: "DISMISS_CONFIRM" })
+      }
+      return
+    }
 
     // Quit
     if (key.name === "q") {
@@ -253,7 +274,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           dispatch({ type: "RELOAD_DOCUMENTS" })
           break
         case "f": {
-          // Filter from current cell value
+          // Filter from current cell value — works in both simple and pipeline mode
           const doc = state.documents[state.selectedIndex]
           const visibleCols = state.columns.filter((c) => c.visible)
           const col = visibleCols[state.selectedColumnIndex]
@@ -262,15 +283,46 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           const val = getNestedValue(doc as Record<string, unknown>, col.field)
           if (val === undefined) break
 
-          const raw = typeof val === "string" ? val : String(val)
-          // Quote values containing spaces
-          const formatted = raw.includes(" ") ? `"${raw}"` : raw
-          const token = `${col.field}:${formatted}`
-          const newQuery = state.queryInput
-            ? `${state.queryInput} ${token}`
-            : token
-          dispatch({ type: "SET_QUERY_INPUT", input: newQuery })
-          dispatch({ type: "SUBMIT_QUERY" })
+          if (state.pipeline.length > 0) {
+            // Pipeline mode: try to add to $match
+            const matchStage = state.pipeline.find((s) => "$match" in s) as any
+            if (!matchStage) {
+              dispatch({ type: "SHOW_MESSAGE", message: "Cannot add filter: pipeline has no $match stage" })
+              break
+            }
+            // Skip if this field is already in $match
+            if (col.field in (matchStage.$match ?? {})) {
+              dispatch({ type: "SHOW_MESSAGE", message: `${col.field} is already in $match — edit pipeline with Ctrl+F to change it` })
+              break
+            }
+            // Check for complex value types that can't be merged simply
+            const isSimpleValue = val === null
+              || typeof val === "string"
+              || typeof val === "number"
+              || typeof val === "boolean"
+            if (!isSimpleValue) {
+              dispatch({ type: "SHOW_MESSAGE", message: `Cannot filter by ${col.field}: complex value — edit pipeline with Ctrl+F` })
+              break
+            }
+            dispatch({ type: "ADD_PIPELINE_MATCH_CONDITION", field: col.field, value: val })
+          } else {
+            // Simple mode: append field:value token, skip if already filtering on this field
+            const alreadyFiltered = state.queryInput
+              .split(" ")
+              .some((t) => t.startsWith(`${col.field}:`) || t.startsWith(`${col.field}>`) || t.startsWith(`${col.field}<`) || t.startsWith(`${col.field}!`))
+            if (alreadyFiltered) {
+              dispatch({ type: "SHOW_MESSAGE", message: `${col.field} is already in filter — use / to edit` })
+              break
+            }
+            const raw = typeof val === "string" ? val : String(val)
+            const formatted = raw.includes(" ") ? `"${raw}"` : raw
+            const token = `${col.field}:${formatted}`
+            const newQuery = state.queryInput
+              ? `${state.queryInput} ${token}`
+              : token
+            dispatch({ type: "SET_QUERY_INPUT", input: newQuery })
+            dispatch({ type: "SUBMIT_QUERY" })
+          }
           break
         }
         case "e": {
@@ -314,11 +366,22 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           }
           break
         case "/":
-          // If a pipeline is active, clear it first then open simple filter
           if (state.pipeline.length > 0) {
-            dispatch({ type: "CLEAR_PIPELINE" })
+            // Try to translate pipeline $match back to simple query
+            const { filter } = extractFindParts(state.pipeline)
+            const { query, lossless } = filterToSimple(filter as Record<string, unknown>)
+            const hasComplexStages = classifyPipeline(state.pipeline)
+
+            if (lossless && !hasComplexStages) {
+              // Fully lossless: switch directly, pre-populate simple filter
+              dispatch({ type: "SWITCH_TO_SIMPLE", query })
+            } else {
+              // Lossy or has complex stages: ask user what to do
+              dispatch({ type: "SHOW_CONFIRM", pending: "pipeline-to-simple", simpleQuery: query })
+            }
+          } else {
+            dispatch({ type: "OPEN_QUERY" })
           }
-          dispatch({ type: "OPEN_QUERY" })
           break
       }
     }

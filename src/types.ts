@@ -112,6 +112,12 @@ export interface AppState {
   /** True when pipeline has stages that can't be expressed as find() */
   pipelineIsAggregate: boolean
 
+  // Confirmation dialog
+  /** When set, the confirm dialog is shown */
+  confirmPending: "pipeline-to-simple" | null
+  /** Translated simple query from pipeline $match (used in confirm flow) */
+  confirmSimpleQuery: string
+
   // Collection browser
   collections: CollectionInfo[]
   collectionsLoading: boolean

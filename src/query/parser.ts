@@ -154,6 +154,63 @@ export function parseSimpleQuery(
   return filter
 }
 
+/**
+ * Try to translate a MongoDB filter object back to simple Key:Value syntax.
+ * Returns the query string and whether the translation was lossless.
+ *
+ * Supports:
+ *   { field: "value" }           → field:value
+ *   { field: 42 }                → field:42
+ *   { field: null }              → field:null
+ *   { field: { $ne: "x" } }     → field!="x"   (also $gt > $gte >= $lt < $lte <=)
+ *   { field: { $regex: "x", $options: "i" } } → field:/x/i
+ *
+ * Returns lossless=false for: $and/$or/$elemMatch/$in/$nin/nested objects/etc.
+ */
+export function filterToSimple(filter: Record<string, unknown>): { query: string; lossless: boolean } {
+  const opMap: Record<string, string> = {
+    $gt: ">", $gte: ">=", $lt: "<", $lte: "<=", $ne: "!=",
+  }
+  const tokens: string[] = []
+  let lossless = true
+
+  for (const [key, val] of Object.entries(filter)) {
+    // Skip top-level logical operators — not expressible in simple mode
+    if (key.startsWith("$")) { lossless = false; continue }
+
+    if (val === null) {
+      tokens.push(`${key}:null`)
+    } else if (typeof val === "string") {
+      tokens.push(`${key}:${val.includes(" ") ? `"${val}"` : val}`)
+    } else if (typeof val === "number" || typeof val === "boolean") {
+      tokens.push(`${key}:${val}`)
+    } else if (typeof val === "object" && !Array.isArray(val)) {
+      const ops = val as Record<string, unknown>
+      const entries = Object.entries(ops)
+
+      // Single comparison operator
+      if (entries.length === 1 && opMap[entries[0][0]]) {
+        tokens.push(`${key}${opMap[entries[0][0]]}${entries[0][1]}`)
+      }
+      // $regex (with optional $options)
+      else if ("$regex" in ops) {
+        const pattern = ops.$regex as string
+        const options = ops.$options as string | undefined
+        tokens.push(`${key}:/${pattern}/${options ?? ""}`)
+      }
+      // Anything else is lossy
+      else {
+        lossless = false
+      }
+    } else {
+      // Arrays, nested objects — lossy
+      lossless = false
+    }
+  }
+
+  return { query: tokens.join(" "), lossless }
+}
+
 /** Parse a BSON/JSON query string into a MongoDB filter */
 export function parseBsonQuery(input: string): Filter<Document> {
   const trimmed = input.trim()
