@@ -86,22 +86,27 @@ function buildTemplate(
   }
 
   // Pretty-print with helpful comments injected
-  const topFields = [...schemaMap.entries()]
+  const topLevelFields = [...schemaMap.entries()]
     .filter(([p]) => !p.includes("."))
-    .slice(0, 10)
-    .map(([p, info]) => `${p}: ${info.type}`)
-    .join(", ")
 
   const json = JSON.stringify(doc, null, 2)
 
+  // Schema section: one line per field so AI agents can read the full schema
+  const fieldLines = topLevelFields.length > 0
+    ? topLevelFields.map(([p, info]) => `//   ${p}: ${info.type}`)
+    : [`//   (no schema sampled)`]
+
   // Inject comment header and inline hints via string manipulation
   const header = [
-    `// Mon-Q pipeline — ${collectionName} @ ${dbName}`,
-    `// Edit and save (:wq) to apply. Quit without saving (:q!) to cancel.`,
-    `// Ctrl+F re-opens. F toggles pipeline bar. ⌫ clears.`,
+    `// Mon-Q — MongoDB aggregation pipeline for ${collectionName} @ ${dbName}`,
+    `// Save to apply (:wq). Quit without saving (:q!) to cancel.`,
     `//`,
-    topFields ? `// Fields: ${topFields}` : `//`,
-    `// Operators in $match: $eq $ne $gt $gte $lt $lte $in $nin $regex $exists $elemMatch`,
+    `// Schema (${collectionName}):`,
+    ...fieldLines,
+    `//`,
+    `// Doc structure: { "pipeline": [ { "$match": {} }, { "$sort": {} }, ... ] }`,
+    `// $match operators: $eq $ne $gt $gte $lt $lte $in $nin $regex $exists $elemMatch $and $or`,
+    `// Stages that trigger aggregate(): $group $lookup $unwind $limit $skip $count $addFields`,
     ``,
   ].join("\n")
 
