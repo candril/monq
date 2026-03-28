@@ -31,6 +31,15 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
     if (state.pipelineMode && state.pipeline.length > 0) {
       const isAggregate = classifyPipeline(state.pipeline)
 
+      // Only preserve existing columns when the pipeline is purely filter/sort
+      // ($match and $sort only). Any stage that reshapes documents — $project,
+      // $group, $addFields, $lookup, $unwind, $replaceRoot, etc. — must start
+      // fresh so the column list reflects the actual output shape.
+      const SHAPE_PRESERVING = new Set(["$match", "$sort"])
+      const pipelinePreservesShape = state.pipeline.every(
+        (stage) => SHAPE_PRESERVING.has(Object.keys(stage)[0])
+      )
+
       const fetchPipeline = isAggregate
         ? fetchAggregate(activeTab.collectionName, state.pipeline)
         : (() => {
@@ -43,15 +52,24 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
           if (cancelled) return
           const detectedFields = detectColumns(documents)
           const detectedSet = new Set(detectedFields)
-          const existingByField = new Map(existingColumns.map((c) => [c.field, c]))
-          // New fields detected in this result page
-          const newColumns = detectedFields.map((field) => {
-            const existing = existingByField.get(field)
-            return existing ?? { field, frequency: 1, visible: true, displayMode: "normal" as const }
-          })
-          // Preserve existing columns not in this result so they don't vanish after filtering
-          const preserved = existingColumns.filter((c) => !detectedSet.has(c.field))
-          const columns = [...newColumns, ...preserved]
+
+          let columns
+          if (pipelinePreservesShape) {
+            // Merge: keep existing display modes, preserve columns not in this page
+            const existingByField = new Map(existingColumns.map((c) => [c.field, c]))
+            const newColumns = detectedFields.map((field) => {
+              const existing = existingByField.get(field)
+              return existing ?? { field, frequency: 1, visible: true, displayMode: "normal" as const }
+            })
+            const preserved = existingColumns.filter((c) => !detectedSet.has(c.field))
+            columns = [...newColumns, ...preserved]
+          } else {
+            // Pipeline reshapes documents — detect fresh from results only
+            columns = detectedFields.map((field) => ({
+              field, frequency: 1, visible: true, displayMode: "normal" as const,
+            }))
+          }
+
           dispatch({ type: "SET_DOCUMENTS", documents, count, totalCount: count })
           dispatch({ type: "SET_COLUMNS", columns })
           dispatch({ type: "SET_SCHEMA", schemaMap: buildSchemaMap(documents) })
