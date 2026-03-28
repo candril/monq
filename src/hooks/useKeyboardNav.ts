@@ -185,7 +185,7 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
       } else if (key.name === "l" || key.name === "right") {
         dispatch({ type: "MOVE_PIPELINE_CONFIRM_FOCUS", delta: 1 })
       } else if (key.name === "return") {
-        pipelineOpts[confirm.focusedIndex]?.exec()
+        if (confirm.focusedIndex >= 0) pipelineOpts[confirm.focusedIndex]?.exec()
       } else {
         // Letter keys navigate to matching option
         const match = pipelineOpts.findIndex((o) => o.key === key.name)
@@ -210,8 +210,8 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
       opts.push({ key: "c", exec: () => { dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" }) } })
 
       if (key.name === "return") {
-        // Enter confirms the currently focused option
-        opts[focusedIndex]?.exec()
+        // Enter only confirms if the user has explicitly selected an option
+        if (focusedIndex >= 0) opts[focusedIndex]?.exec()
       }
       else if (key.name === "h" || key.name === "left") { dispatch({ type: "MOVE_BULK_EDIT_FOCUS", delta: -1 }) }
       else if (key.name === "l" || key.name === "right") { dispatch({ type: "MOVE_BULK_EDIT_FOCUS", delta: 1 }) }
@@ -227,12 +227,12 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
     if (state.deleteConfirmation) {
       const { resolve, focusedIndex } = state.deleteConfirmation
       const opts = [
-        { key: "d", exec: () => { dispatch({ type: "CLEAR_DELETE_CONFIRM" }); resolve(true) } },
         { key: "c", exec: () => { dispatch({ type: "CLEAR_DELETE_CONFIRM" }); resolve(false) } },
+        { key: "d", exec: () => { dispatch({ type: "CLEAR_DELETE_CONFIRM" }); resolve(true) } },
       ]
       if (key.name === "return") {
-        // Enter confirms the currently focused option
-        opts[focusedIndex]?.exec()
+        // Enter only confirms if the user has explicitly selected an option
+        if (focusedIndex >= 0) opts[focusedIndex]?.exec()
       }
       else if (key.name === "escape") {
         dispatch({ type: "CLEAR_DELETE_CONFIRM" }); resolve(false)
@@ -525,7 +525,7 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
               const showConfirm = (cr: typeof result, ce: typeof editedDocs) => dispatch({
                 type: "SHOW_BULK_EDIT_CONFIRM",
                 confirmation: {
-                  missing: cr.missing, added: cr.added, focusedIndex: 0,
+                  missing: cr.missing, added: cr.added, focusedIndex: -1,
                   goBack: () => {
                     renderer.suspend()
                     openEditorForMany(activeTab.collectionName, state.dbName, docsToEdit, ce, state.schemaMap)
@@ -591,7 +591,7 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
             dispatch({
               type: "SHOW_DELETE_CONFIRM",
               confirmation: {
-                docs: docsToDelete, focusedIndex: 0,
+                docs: docsToDelete, focusedIndex: -1,
                 resolve: async (confirmed) => {
                   if (!confirmed) return
                   const errors: string[] = []
@@ -635,11 +635,14 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
               stopWatching()
               dispatch({ type: "STOP_PIPELINE_WATCH" })
               dispatch({ type: "ENTER_SIMPLE_MODE", query })
+              if (!state.filterBarVisible) dispatch({ type: "TOGGLE_FILTER_BAR" })
               dispatch({ type: "OPEN_QUERY" })
             } else {
+              if (!state.filterBarVisible) dispatch({ type: "TOGGLE_FILTER_BAR" })
               dispatch({ type: "SHOW_PIPELINE_CONFIRM", simpleQuery: query })
             }
           } else {
+            if (!state.filterBarVisible) dispatch({ type: "TOGGLE_FILTER_BAR" })
             dispatch({ type: "OPEN_QUERY" })
           }
           break

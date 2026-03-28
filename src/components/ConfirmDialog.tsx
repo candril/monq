@@ -41,7 +41,7 @@ export function ConfirmDialog({ title, lines, options, focusedIndex }: ConfirmDi
           ))}
         </box>
         <box paddingX={2} paddingTop={1} paddingBottom={1} backgroundColor={theme.headerBg} flexDirection="column" gap={1}>
-          <box flexDirection="row" gap={2}>
+          <box flexDirection="row" gap={4}>
             {options.map((opt, i) => {
               const selected = i === focusedIndex
               const bg = selected ? (opt.color ?? theme.primary) : undefined

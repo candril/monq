@@ -473,8 +473,8 @@ export function App({ uri }: AppProps) {
           ...docs.map((doc) => ({ text: `  ${docSummary(doc)}`, danger: true })),
         ]
         const options: ConfirmOption[] = [
-          { key: "d", label: `delete ${docs.length}`, color: theme.error },
           { key: "c", label: "cancel", color: theme.textMuted },
+          { key: "d", label: `delete ${docs.length}`, color: theme.error },
         ]
         return <ConfirmDialog title="Delete Documents" lines={lines} options={options} focusedIndex={focusedIndex} />
       })()}

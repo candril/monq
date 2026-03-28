@@ -900,20 +900,22 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     // Tab pipeline→simple but lossy: show confirm dialog
     case "SHOW_PIPELINE_CONFIRM":
-      return { ...state, pipelineConfirm: { simpleQuery: action.simpleQuery, focusedIndex: 0 } }
+      return { ...state, pipelineConfirm: { simpleQuery: action.simpleQuery, focusedIndex: -1 } }
 
     case "DISMISS_PIPELINE_CONFIRM":
       return { ...state, pipelineConfirm: null }
 
-    case "MOVE_PIPELINE_CONFIRM_FOCUS":
+    case "MOVE_PIPELINE_CONFIRM_FOCUS": {
       if (!state.pipelineConfirm) return state
+      const cur = state.pipelineConfirm.focusedIndex
+      const next = cur === -1
+        ? (action.delta > 0 ? 0 : 2)
+        : Math.max(0, Math.min(2, cur + action.delta))
       return {
         ...state,
-        pipelineConfirm: {
-          ...state.pipelineConfirm,
-          focusedIndex: Math.max(0, Math.min(2, state.pipelineConfirm.focusedIndex + action.delta)),
-        },
+        pipelineConfirm: { ...state.pipelineConfirm, focusedIndex: next },
       }
+    }
 
     // Confirm: overwrite simple filter with translated query, reload
     case "CONFIRM_OVERWRITE_SIMPLE":
@@ -1074,7 +1076,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "MOVE_BULK_EDIT_FOCUS": {
       if (!state.bulkEditConfirmation) return state
       const { missing, added } = state.bulkEditConfirmation
-      const count = 2 + (missing.length > 0 ? 1 : 0) + (added.length > 0 ? 1 : 0) + (missing.length > 0 && added.length > 0 ? 1 : 0)
+      const count = 3 + (missing.length > 0 ? 1 : 0) + (added.length > 0 ? 1 : 0) + (missing.length > 0 && added.length > 0 ? 1 : 0)
       const current = state.bulkEditConfirmation.focusedIndex
       // From -1 (unselected): j goes to 0, k goes to last
       const next = current === -1
