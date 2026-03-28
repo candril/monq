@@ -249,10 +249,9 @@ export function App({ uri }: AppProps) {
           const filtered = state.documentCount
           const total = state.totalDocumentCount
           const hasFilter = !!(state.queryInput || state.pipelineMode)
-          const rangeEnd = Math.min(loaded, filtered)
-          // "1..50 of 2,034 | Total: 2,100" or "1..50 of 2,034" or "2,034 docs"
+          // "340 of 2,034 | Total: 2,100" or "340 of 2,034" or "2,034 docs"
           if (loaded < filtered) {
-            const range = `1..${rangeEnd.toLocaleString()} of ${filtered.toLocaleString()}`
+            const range = `${loaded.toLocaleString()} of ${filtered.toLocaleString()}`
             return hasFilter ? `${range} | Total: ${total.toLocaleString()}` : range
           }
           return hasFilter

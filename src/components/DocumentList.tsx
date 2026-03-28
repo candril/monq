@@ -229,7 +229,18 @@ export function DocumentList({ documents, columns, selectedIndex, selectedColumn
         sortField={sortField}
         sortDirection={sortDirection}
       />
-      <scrollbox ref={scrollRef} flexGrow={1}>
+      <scrollbox
+        ref={scrollRef}
+        flexGrow={1}
+        style={{
+          scrollbarOptions: {
+            trackOptions: {
+              backgroundColor: theme.bg,
+              foregroundColor: theme.bg,
+            },
+          },
+        }}
+      >
         {documents.map((doc, i) => (
           <DocumentRow
             key={String(doc._id ?? i)}
