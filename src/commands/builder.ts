@@ -73,7 +73,7 @@ export function buildCommands(state: AppState): Command[] {
       id: "query:open-filter",
       label: "Filter Documents",
       category: "query",
-      shortcut: "/",
+      shortcut: "/ Ctrl+F",
     })
     if (state.queryInput) {
       commands.push({
@@ -81,6 +81,13 @@ export function buildCommands(state: AppState): Command[] {
         label: "Clear Filter",
         category: "query",
         shortcut: "⌫",
+      })
+    }
+    if (state.queryMode === "bson") {
+      commands.push({
+        id: "query:format-bson",
+        label: "Format BSON (pretty-print)",
+        category: "query",
       })
     }
     if (hasDoc) {

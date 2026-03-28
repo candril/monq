@@ -127,6 +127,11 @@ export function App({ uri }: AppProps) {
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
         dispatch({ type: "CLEAR_QUERY" })
         break
+      case "query:format-bson":
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        dispatch({ type: "FORMAT_BSON_SECTION" })
+        dispatch({ type: "OPEN_QUERY" })
+        break
       case "query:sort": {
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
         const visCols = state.columns.filter((c) => c.visible)

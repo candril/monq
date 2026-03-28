@@ -5,16 +5,15 @@
  *   [Simple] <input placeholder="field:value ...">
  *
  * BSON mode (expanding panel):
- *   [BSON]  Tab cycle · Ctrl+F format · Ctrl+O sort · Ctrl+J project · ↵ submit
- *   filter ▸
+ *   [BSON]  filter ▸  [sort Ctrl+O]  [projection Ctrl+K]
+ *   <textarea 4 rows, filter>
+ *   sort ▸            (if bsonSortVisible)
  *   <textarea 4 rows>
- *   sort              (if bsonSortVisible)
- *   <textarea 4 rows>
- *   projection        (if bsonProjectionVisible)
+ *   projection ▸      (if bsonProjectionVisible)
  *   <textarea 4 rows>
  *
- * Textarea is imperative: seeded via initialValue, updated via ref.setText(),
- * changes read via ref.onContentChange.
+ * Textarea is imperative: seeded via initialValue, updated via ref.replaceText(),
+ * changes read via ref.onContentChange. Enter submits, Ctrl+J/Shift+Enter = newline.
  */
 
 import { useRef, useEffect } from "react"
@@ -176,16 +175,33 @@ export function FilterBar({
 
         {editing ? (
           queryMode === "bson" ? (
-            <text>
-              <span fg={theme.textMuted}>
-                Tab→simple · Ctrl+↵/Shift+↵ newline · Ctrl+F format · Ctrl+O sort · Ctrl+K project · ↵ submit
-              </span>
-            </text>
+            <>
+              {/* "filter" active indicator */}
+              <text>
+                <span fg={bsonFocusedSection === "filter" ? theme.primary : theme.textMuted}>
+                  filter{bsonFocusedSection === "filter" ? " ▸" : ""}
+                </span>
+              </text>
+              {/* Sort pill */}
+              <text>
+                {bsonSortVisible
+                  ? <span fg={bsonFocusedSection === "sort" ? theme.primary : theme.warning}>[sort Ctrl+O]</span>
+                  : <span fg={theme.textMuted}>[+sort Ctrl+O]</span>
+                }
+              </text>
+              {/* Projection pill */}
+              <text>
+                {bsonProjectionVisible
+                  ? <span fg={bsonFocusedSection === "projection" ? theme.primary : theme.warning}>[projection Ctrl+K]</span>
+                  : <span fg={theme.textMuted}>[+projection Ctrl+K]</span>
+                }
+              </text>
+            </>
           ) : (
             <input
               value={query}
               onInput={onQueryChange}
-              onChange={onSubmit}
+              onSubmit={onSubmit}
               placeholder="field:value ..."
               focused={true}
               flexGrow={1}

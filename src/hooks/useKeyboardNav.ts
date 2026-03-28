@@ -38,6 +38,12 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       return
     }
 
+    // Ctrl+F: open/focus the filter bar from anywhere
+    if (key.ctrl && key.name === "f") {
+      dispatch({ type: "OPEN_QUERY" })
+      return
+    }
+
     // Filter bar key handling
     if (state.queryVisible) {
       if (key.name === "escape") {
@@ -67,11 +73,6 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         // Ctrl+K: toggle projection section
         if (key.ctrl && key.name === "k") {
           dispatch({ type: "TOGGLE_BSON_PROJECTION" })
-          return
-        }
-        // Ctrl+F: format (pretty-print) focused section
-        if (key.ctrl && key.name === "f") {
-          dispatch({ type: "FORMAT_BSON_SECTION" })
           return
         }
         // Cycle focus between sections when more than one is open
