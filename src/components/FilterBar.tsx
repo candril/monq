@@ -242,7 +242,7 @@ export function FilterBar({
                 value={query}
                 onInput={onQueryChange}
                 onSubmit={onSubmit}
-                placeholder="field:value ... | col1 col2"
+                placeholder="field:value field:[a,b] ... | col1 col2"
                 focused={true}
                 flexGrow={1}
                 backgroundColor={theme.headerBg}

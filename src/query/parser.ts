@@ -148,6 +148,11 @@ export function parseSimpleQuery(
         setFilterValue(filter, field, { $exists: !negated }, schemaMap)
       } else if (rawValue === "!exists") {
         setFilterValue(filter, field, { $exists: negated }, schemaMap)
+      } else if (rawValue.startsWith("[") && rawValue.endsWith("]")) {
+        // Bracket syntax: field:[a,b,c] -> $in / $nin
+        const inner = rawValue.slice(1, -1)
+        const values = inner.split(",").map((v) => coerceValue(v.trim()))
+        setFilterValue(filter, field, negated ? { $nin: values } : { $in: values }, schemaMap)
       } else {
         const val = coerceValue(rawValue)
         setFilterValue(filter, field, negated ? { $ne: val } : val, schemaMap)
@@ -166,13 +171,15 @@ export function parseSimpleQuery(
  * Returns the query string and whether the translation was lossless.
  *
  * Supports:
- *   { field: "value" }           → field:value
- *   { field: 42 }                → field:42
- *   { field: null }              → field:null
- *   { field: { $ne: "x" } }     → field!="x"   (also $gt > $gte >= $lt < $lte <=)
+ *   { field: "value" }                        → field:value
+ *   { field: 42 }                             → field:42
+ *   { field: null }                           → field:null
+ *   { field: { $ne: "x" } }                  → field!="x"   (also $gt > $gte >= $lt < $lte <=)
  *   { field: { $regex: "x", $options: "i" } } → field:/x/i
+ *   { field: { $in: ["a", "b"] } }            → field:[a,b]
+ *   { field: { $nin: ["a", "b"] } }           → -field:[a,b]
  *
- * Returns lossless=false for: $and/$or/$elemMatch/$in/$nin/nested objects/etc.
+ * Returns lossless=false for: $and/$or/$elemMatch/nested objects/etc.
  */
 export function filterToSimple(filter: Record<string, unknown>): { query: string; lossless: boolean } {
   const opMap: Record<string, string> = {
@@ -200,6 +207,14 @@ export function filterToSimple(filter: Record<string, unknown>): { query: string
       // Single comparison operator
       if (entries.length === 1 && opMap[entries[0][0]]) {
         tokens.push(`${key}${opMap[entries[0][0]]}${entries[0][1]}`)
+      }
+      // $in → field:[a,b,c]
+      else if (entries.length === 1 && entries[0][0] === "$in" && Array.isArray(entries[0][1])) {
+        tokens.push(`${key}:[${(entries[0][1] as unknown[]).join(",")}]`)
+      }
+      // $nin → -field:[a,b,c]
+      else if (entries.length === 1 && entries[0][0] === "$nin" && Array.isArray(entries[0][1])) {
+        tokens.push(`-${key}:[${(entries[0][1] as unknown[]).join(",")}]`)
       }
       // $regex (with optional $options)
       else if ("$regex" in ops) {
@@ -257,6 +272,9 @@ export function splitProjection(input: string): { filter: string; projection: st
   }
 }
 
+/** Valid projection field name: word chars and dots only (no colons, commas, etc.) */
+const VALID_PROJ_FIELD = /^[\w.]+$/
+
 /**
  * Parse a projection string into a MongoDB projection object.
  *
@@ -265,7 +283,10 @@ export function splitProjection(input: string): { filter: string; projection: st
  *   dot.path    -> { "dot.path": 1 }
  *   -field      -> { field: 0 }  (exclude)
  *
- * Returns undefined when projection string is empty.
+ * Tokens that are not valid field names (e.g. contain `:` or `,`) are silently
+ * ignored — they are likely filter tokens that leaked into the projection side.
+ *
+ * Returns undefined when projection string is empty or no valid tokens found.
  */
 export function parseProjection(projection: string): Record<string, 0 | 1> | undefined {
   const trimmed = projection.trim()
@@ -275,9 +296,9 @@ export function parseProjection(projection: string): Record<string, 0 | 1> | und
     if (!token) continue
     if (token.startsWith("-")) {
       const field = token.slice(1)
-      if (field) result[field] = 0
+      if (field && VALID_PROJ_FIELD.test(field)) result[field] = 0
     } else {
-      result[token] = 1
+      if (VALID_PROJ_FIELD.test(token)) result[token] = 1
     }
   }
   return Object.keys(result).length > 0 ? result : undefined
@@ -299,11 +320,15 @@ export function getLastProjectionToken(input: string): { projPrefix: string; las
   const pipeIdx = input.indexOf("|")
   if (pipeIdx === -1) return null
   const projPart = input.slice(pipeIdx + 1)
-  const trimmed = projPart.trimEnd()
-  const lastSpace = trimmed.lastIndexOf(" ")
-  const lastToken = lastSpace === -1 ? trimmed.trim() : trimmed.slice(lastSpace + 1)
-  // projPrefix is everything up to and including the pipe + space + tokens before the last one
+
+  // If projPart ends with whitespace the user just pressed space — new token starting
+  if (projPart.length === 0 || projPart[projPart.length - 1] === " ") {
+    return { projPrefix: input, lastToken: "" }
+  }
+
+  const lastSpace = projPart.lastIndexOf(" ")
+  const lastToken = lastSpace === -1 ? projPart.trim() : projPart.slice(lastSpace + 1)
+  // projPrefix: everything up to and including the last space in the projection part
   const projPrefix = input.slice(0, pipeIdx + 1) + (lastSpace === -1 ? " " : projPart.slice(0, lastSpace + 1))
-  // Strip leading negation for search, preserve it for output
   return { projPrefix, lastToken }
 }

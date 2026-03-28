@@ -45,6 +45,7 @@ full aggregation pipeline support in the future.
   - `Author:Peter` → `{ "Author": "Peter" }`
   - `Author:Peter State:Closed` → `{ "Author": "Peter", "State": "Closed" }`
   - Comparison operators: `age>25`, `age>=25`, `age<25`, `count!=0`
+  - Bracket list: `field:[a,b,c]` → `{ "field": { "$in": [a, b, c] } }` / `-field:[a,b]` → `$nin`
   - Regex: `name:/^john/i` → `{ "name": { "$regex": "^john", "$options": "i" } }`
   - Negation: `-Field:Value` → `{ "Field": { "$ne": "Value" } }`
   - Dot-notation: `address.city:London` → `{ "address.city": "London" }`
