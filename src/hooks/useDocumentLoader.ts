@@ -15,12 +15,14 @@ import { classifyPipeline, extractFindParts } from "../actions/pipeline"
 interface UseDocumentLoaderOptions {
   state: AppState
   dispatch: Dispatch<AppAction>
+  pageSize: number
 }
 
-export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions) {
+export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoaderOptions) {
   const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
   const { documentsLoading, reloadCounter, queryInput, queryMode } = state
 
+  // Effect 1: initial load / reload (triggered by documentsLoading + reloadCounter)
   useEffect(() => {
     if (!activeTab || !documentsLoading) return
 
@@ -41,10 +43,10 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
       )
 
       const fetchPipeline = isAggregate
-        ? fetchAggregate(activeTab.collectionName, state.pipeline)
+        ? fetchAggregate(activeTab.collectionName, state.pipeline, { limit: pageSize })
         : (() => {
             const { filter, sort, projection } = extractFindParts(state.pipeline)
-            return fetchDocuments(activeTab.collectionName, filter, { sort, projection })
+            return fetchDocuments(activeTab.collectionName, filter, { sort, projection, limit: pageSize })
           })()
 
       fetchPipeline
@@ -107,7 +109,7 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
       try { projection = JSON.parse(state.bsonProjection) } catch { /* skip */ }
     }
 
-    fetchDocuments(activeTab.collectionName, filter, { sort, projection })
+    fetchDocuments(activeTab.collectionName, filter, { sort, projection, limit: pageSize })
       .then(({ documents, count, totalCount }) => {
         if (cancelled) return
         const detectedFields = detectColumns(documents)
@@ -133,4 +135,49 @@ export function useDocumentLoader({ state, dispatch }: UseDocumentLoaderOptions)
 
     return () => { cancelled = true }
   }, [activeTab?.id, documentsLoading, reloadCounter])
+
+  // Effect 2: load next page when LOAD_MORE is triggered
+  useEffect(() => {
+    if (!activeTab || !state.loadingMore) return
+
+    let cancelled = false
+
+    // Reconstruct filter/sort from current state (same as Effect 1)
+    let filter = {}
+    try {
+      if (queryInput.trim()) {
+        filter = queryMode === "bson"
+          ? parseBsonQuery(queryInput)
+          : parseSimpleQuery(queryInput, state.schemaMap)
+      }
+    } catch { /* invalid query — fetch unfiltered */ }
+
+    let sort: Record<string, 1 | -1> | undefined
+    if (queryMode === "bson" && state.bsonSort.trim()) {
+      try { sort = JSON.parse(state.bsonSort) } catch { /* skip */ }
+    } else if (state.sortField) {
+      sort = { [state.sortField]: state.sortDirection as 1 | -1 }
+    }
+
+    let projection: Record<string, 0 | 1> | undefined
+    if (queryMode === "bson" && state.bsonProjection.trim()) {
+      try { projection = JSON.parse(state.bsonProjection) } catch { /* skip */ }
+    }
+
+    fetchDocuments(activeTab.collectionName, filter, {
+      sort,
+      projection,
+      skip: state.loadedCount,
+      limit: pageSize,
+    })
+      .then(({ documents }) => {
+        if (cancelled || documents.length === 0) return
+        dispatch({ type: "APPEND_DOCUMENTS", documents })
+      })
+      .catch(() => {
+        if (!cancelled) dispatch({ type: "APPEND_DOCUMENTS", documents: [] })
+      })
+
+    return () => { cancelled = true }
+  }, [activeTab?.id, state.loadingMore])
 }

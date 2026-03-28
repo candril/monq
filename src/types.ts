@@ -142,6 +142,10 @@ export interface AppState {
   pipelineWatching: boolean
   /** Whether the filter/pipeline bar is visible at the bottom */
   filterBarVisible: boolean
+  /** How many documents are currently loaded (for paging) */
+  loadedCount: number
+  /** True while a background page-append fetch is in flight */
+  loadingMore: boolean
 
   // Collection browser
   collections: CollectionInfo[]

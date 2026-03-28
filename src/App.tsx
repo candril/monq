@@ -4,7 +4,7 @@
  */
 
 import { useReducer, useMemo, useCallback, useState } from "react"
-import { useRenderer } from "@opentui/react"
+import { useRenderer, useTerminalDimensions } from "@opentui/react"
 import { Shell } from "./components/Shell"
 import { Header } from "./components/Header"
 import { FilterBar } from "./components/FilterBar"
@@ -56,10 +56,13 @@ export function App({ uri }: AppProps) {
   const [state, dispatch] = useReducer(appReducer, null, createInitialState)
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("commands")
   const renderer = useRenderer()
+  const { height: terminalHeight } = useTerminalDimensions()
+
+  const pageSize = terminalHeight + 10
 
   useMongoConnection({ uri, dispatch })
   useKeyboardNav({ state, dispatch })
-  useDocumentLoader({ state, dispatch })
+  useDocumentLoader({ state, dispatch, pageSize })
 
   // Build palette commands based on mode
   const mainCommands = useMemo(() => buildCommands(state), [state])
@@ -239,12 +242,21 @@ export function App({ uri }: AppProps) {
         host={state.host}
         collectionName={state.tabs.length === 1 ? activeTab?.collectionName : undefined}
         loading={state.collectionsLoading || state.documentsLoading}
-        right={activeTab
-          ? state.queryInput
-            ? `${state.documentCount.toLocaleString()} / ${state.totalDocumentCount.toLocaleString()} docs`
-            : `${state.documentCount.toLocaleString()} docs`
-          : ""
-        }
+        right={activeTab ? (() => {
+          const loaded = state.loadedCount
+          const filtered = state.documentCount
+          const total = state.totalDocumentCount
+          const hasFilter = !!(state.queryInput || state.pipelineMode)
+          const rangeEnd = Math.min(loaded, filtered)
+          // "1..50 of 2,034 | Total: 2,100" or "1..50 of 2,034" or "2,034 docs"
+          if (loaded < filtered) {
+            const range = `1..${rangeEnd.toLocaleString()} of ${filtered.toLocaleString()}`
+            return hasFilter ? `${range} | Total: ${total.toLocaleString()}` : range
+          }
+          return hasFilter
+            ? `${filtered.toLocaleString()} of ${total.toLocaleString()}`
+            : `${filtered.toLocaleString()} docs`
+        })() : ""}
         selectionMode={state.selectionMode}
         selectionCount={state.selectedIds.size}
       />

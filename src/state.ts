@@ -42,6 +42,7 @@ export type AppAction =
   // Documents
   | { type: "SET_DOCUMENTS"; documents: Document[]; count: number; totalCount?: number }
   | { type: "APPEND_DOCUMENTS"; documents: Document[] }
+  | { type: "LOAD_MORE" }
   | { type: "SET_DOCUMENTS_LOADING"; loading: boolean }
   | { type: "RELOAD_DOCUMENTS" }
   | { type: "SELECT_DOCUMENT"; index: number }
@@ -154,6 +155,8 @@ export function createInitialState(): AppState {
     pipelineConfirm: null,
     pipelineWatching: false,
     filterBarVisible: true,
+    loadedCount: 0,
+    loadingMore: false,
     previewPosition: null,
     previewScrollOffset: 0,
     commandPaletteVisible: false,
@@ -478,6 +481,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         documentCount: action.count,
         totalDocumentCount: action.totalCount ?? state.totalDocumentCount,
         documentsLoading: false,
+        loadedCount: action.documents.length,
+        loadingMore: false,
         selectedIndex: Math.min(state.selectedIndex, Math.max(0, action.documents.length - 1)),
         selectedRows,
       }
@@ -487,14 +492,20 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         documents: [...state.documents, ...action.documents],
-        documentsLoading: false,
+        loadedCount: state.loadedCount + action.documents.length,
+        loadingMore: false,
       }
+
+    case "LOAD_MORE":
+      // Only trigger if not already loading and more docs exist
+      if (state.loadingMore || state.loadedCount >= state.documentCount) return state
+      return { ...state, loadingMore: true }
 
     case "SET_DOCUMENTS_LOADING":
       return { ...state, documentsLoading: action.loading }
 
     case "RELOAD_DOCUMENTS":
-      return { ...state, documentsLoading: true, reloadCounter: state.reloadCounter + 1 }
+      return { ...state, documentsLoading: true, reloadCounter: state.reloadCounter + 1, loadedCount: 0, loadingMore: false }
 
     case "SELECT_DOCUMENT":
       return { ...state, selectedIndex: Math.max(0, action.index) }

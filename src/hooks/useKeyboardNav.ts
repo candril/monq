@@ -329,10 +329,20 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
 
       switch (key.name) {
         case "j":
-        case "down":
+        case "down": {
           if (state.selectionMode === "selecting") dispatch({ type: "MOVE_SELECTION", delta: 1 })
           else dispatch({ type: "MOVE_DOCUMENT", delta: 1 })
+          // Trigger next-page load when within 10 rows of the loaded end
+          const LOAD_THRESHOLD = 10
+          if (
+            !state.loadingMore &&
+            state.loadedCount < state.documentCount &&
+            state.selectedIndex >= state.documents.length - LOAD_THRESHOLD
+          ) {
+            dispatch({ type: "LOAD_MORE" })
+          }
           break
+        }
         case "k":
         case "up":
           if (state.selectionMode === "selecting") dispatch({ type: "MOVE_SELECTION", delta: -1 })
