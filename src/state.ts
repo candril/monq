@@ -900,7 +900,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     // Tab pipeline→simple but lossy: show confirm dialog
     case "SHOW_PIPELINE_CONFIRM":
-      return { ...state, pipelineConfirm: { simpleQuery: action.simpleQuery, focusedIndex: -1 } }
+      return { ...state, pipelineConfirm: { simpleQuery: action.simpleQuery, focusedIndex: 0 } }
 
     case "DISMISS_PIPELINE_CONFIRM":
       return { ...state, pipelineConfirm: null }

@@ -162,30 +162,34 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
     // Pipeline→simple confirmation dialog
     if (state.pipelineConfirm) {
       const confirm = state.pipelineConfirm
-      if (key.name === "escape") {
-        dispatch({ type: "DISMISS_PIPELINE_CONFIRM" })
-      } else if (key.name === "j" || key.name === "down") {
-        dispatch({ type: "MOVE_PIPELINE_CONFIRM_FOCUS", delta: 1 })
-      } else if (key.name === "k" || key.name === "up") {
-        dispatch({ type: "MOVE_PIPELINE_CONFIRM_FOCUS", delta: -1 })
-      } else if (key.name === "return" && confirm.focusedIndex >= 0) {
-        if (confirm.focusedIndex === 0) {
-          // New tab with clean filter
+      const pipelineOpts = [
+        { key: "n", exec: () => {
           stopWatching()
           dispatch({ type: "STOP_PIPELINE_WATCH" })
           dispatch({ type: "CONFIRM_NEW_TAB_SIMPLE", query: confirm.simpleQuery })
           dispatch({ type: "CLONE_TAB" })
           dispatch({ type: "CLEAR_PIPELINE" })
           dispatch({ type: "OPEN_QUERY" })
-        } else if (confirm.focusedIndex === 1) {
-          // Overwrite: use translated query
+        }},
+        { key: "o", exec: () => {
           stopWatching()
           dispatch({ type: "STOP_PIPELINE_WATCH" })
           dispatch({ type: "CONFIRM_OVERWRITE_SIMPLE", query: confirm.simpleQuery })
-        } else {
-          // Cancel
-          dispatch({ type: "DISMISS_PIPELINE_CONFIRM" })
-        }
+        }},
+        { key: "escape", exec: () => dispatch({ type: "DISMISS_PIPELINE_CONFIRM" }) },
+      ]
+      if (key.name === "escape") {
+        dispatch({ type: "DISMISS_PIPELINE_CONFIRM" })
+      } else if (key.name === "h" || key.name === "left") {
+        dispatch({ type: "MOVE_PIPELINE_CONFIRM_FOCUS", delta: -1 })
+      } else if (key.name === "l" || key.name === "right") {
+        dispatch({ type: "MOVE_PIPELINE_CONFIRM_FOCUS", delta: 1 })
+      } else if (key.name === "return") {
+        pipelineOpts[confirm.focusedIndex]?.exec()
+      } else {
+        // Letter keys navigate to matching option
+        const match = pipelineOpts.findIndex((o) => o.key === key.name)
+        if (match !== -1) dispatch({ type: "MOVE_PIPELINE_CONFIRM_FOCUS", delta: match - confirm.focusedIndex })
       }
       return
     }
@@ -209,8 +213,8 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
         // Enter confirms the currently focused option
         opts[focusedIndex]?.exec()
       }
-      else if (key.name === "j" || key.name === "down") { dispatch({ type: "MOVE_BULK_EDIT_FOCUS", delta: 1 }) }
-      else if (key.name === "k" || key.name === "up") { dispatch({ type: "MOVE_BULK_EDIT_FOCUS", delta: -1 }) }
+      else if (key.name === "h" || key.name === "left") { dispatch({ type: "MOVE_BULK_EDIT_FOCUS", delta: -1 }) }
+      else if (key.name === "l" || key.name === "right") { dispatch({ type: "MOVE_BULK_EDIT_FOCUS", delta: 1 }) }
       else {
         // Letter keys only move focus — Enter is required to confirm
         const match = opts.findIndex((o) => o.key === key.name)
@@ -233,8 +237,8 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
       else if (key.name === "escape") {
         dispatch({ type: "CLEAR_DELETE_CONFIRM" }); resolve(false)
       }
-      else if (key.name === "j" || key.name === "down") { dispatch({ type: "MOVE_DELETE_FOCUS", delta: 1 }) }
-      else if (key.name === "k" || key.name === "up") { dispatch({ type: "MOVE_DELETE_FOCUS", delta: -1 }) }
+      else if (key.name === "h" || key.name === "left") { dispatch({ type: "MOVE_DELETE_FOCUS", delta: -1 }) }
+      else if (key.name === "l" || key.name === "right") { dispatch({ type: "MOVE_DELETE_FOCUS", delta: 1 }) }
       else {
         // Letter keys only move focus — Enter is required to confirm
         const match = opts.findIndex((o) => o.key === key.name)

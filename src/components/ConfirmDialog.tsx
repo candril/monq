@@ -54,11 +54,8 @@ export function ConfirmDialog({ title, lines, options, focusedIndex }: ConfirmDi
             })}
           </box>
           <text>
-            <span fg={theme.textMuted}>j/k navigate · </span>
-            {focusedIndex >= 0
-              ? <span fg={theme.text}>Enter confirm</span>
-              : <span fg={theme.textMuted}>choose an option first</span>
-            }
+            <span fg={theme.textMuted}>h/l navigate · </span>
+            <span fg={theme.text}>Enter confirm</span>
           </text>
         </box>
       </box>
