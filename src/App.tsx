@@ -7,7 +7,7 @@ import { useReducer, useMemo, useCallback, useState } from "react"
 import { useRenderer } from "@opentui/react"
 import { Shell } from "./components/Shell"
 import { Header } from "./components/Header"
-import { FilterBar, BsonSuggestions } from "./components/FilterBar"
+import { FilterBar } from "./components/FilterBar"
 import { Loading } from "./components/Loading"
 import { ErrorView } from "./components/ErrorView"
 import { DocumentList } from "./components/DocumentList"
@@ -233,13 +233,6 @@ export function App({ uri }: AppProps) {
         columns={state.columns}
         schemaMap={state.schemaMap}
         onChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
-      />
-
-      {/* BSON mode: field name hints above the panel */}
-      <BsonSuggestions
-        visible={state.queryVisible && state.queryMode === "bson"}
-        columns={state.columns}
-        schemaMap={state.schemaMap}
       />
 
       <FilterBar

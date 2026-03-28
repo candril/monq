@@ -67,48 +67,10 @@ interface FilterBarProps {
 
 function buildBsonSuggestions(columns: DetectedColumn[], schemaMap: SchemaMap): string[] {
   const fields = new Set(columns.map((c) => c.field))
-  // Add schema paths with children for dot-notation
   for (const [path, info] of schemaMap) {
     if (!path.includes(".") && info.children.length > 0) fields.add(path)
   }
   return [...fields]
-}
-
-function BsonFieldSuggestions({
-  visible,
-  columns,
-  schemaMap,
-  onSelect,
-}: {
-  visible: boolean
-  columns: DetectedColumn[]
-  schemaMap: SchemaMap
-  onSelect: (field: string) => void
-}) {
-  const suggestions = buildBsonSuggestions(columns, schemaMap)
-
-  if (!visible || suggestions.length === 0) return null
-
-  return (
-    <box
-      flexDirection="row"
-      flexWrap="wrap"
-      backgroundColor={theme.headerBg}
-      paddingX={1}
-      paddingY={0}
-      gap={1}
-    >
-      {suggestions.slice(0, 12).map((field) => {
-        const info = schemaMap.get(field)
-        return (
-          <text key={field}>
-            <span fg={theme.textMuted}>{field}</span>
-            {info?.type ? <span fg={theme.textMuted}>:{info.type} </span> : <span fg={theme.textMuted}> </span>}
-          </text>
-        )
-      })}
-    </box>
-  )
 }
 
 // ── BsonTextarea ────────────────────────────────────────────────────────────
@@ -235,15 +197,19 @@ export function FilterBar({
   const badgeLabel = queryMode === "simple" ? "[Simple]" : "[BSON]"
   const badgeFg = queryMode === "simple" ? BADGE_SIMPLE_FG : BADGE_BSON_FG
 
+  const suggestions = editing && queryMode === "bson"
+    ? buildBsonSuggestions(columns, schemaMap)
+    : []
+  const hasSuggestions = suggestions.length > 0
+
   const sectionCount =
     1 + (bsonSortVisible ? 1 : 0) + (bsonProjectionVisible ? 1 : 0)
-  const bsonHeight = sectionCount * (TEXTAREA_HEIGHT + 1) // textarea + label row
-
-  const showBsonSuggestions = editing && queryMode === "bson"
+  // header row + optional suggestions row + sections (textarea + label each)
+  const bsonHeight = 1 + (hasSuggestions ? 1 : 0) + sectionCount * (TEXTAREA_HEIGHT + 1)
 
   return (
     <box
-      height={editing && queryMode === "bson" ? bsonHeight + 1 : 1}
+      height={editing && queryMode === "bson" ? bsonHeight : 1}
       backgroundColor={theme.headerBg}
       paddingX={1}
       flexDirection="column"
@@ -295,6 +261,22 @@ export function FilterBar({
         )}
       </box>
 
+      {/* Field name suggestions row — in-flow, just above the textareas */}
+      {editing && queryMode === "bson" && hasSuggestions && (
+        <box height={1} flexDirection="row" gap={1} paddingLeft={1}>
+          {suggestions.slice(0, 20).map((field) => {
+            const info = schemaMap.get(field)
+            const typeHint = info?.type ? `:${info.type}` : ""
+            return (
+              <text key={field}>
+                <span fg={theme.textDim}>{field}</span>
+                <span fg={theme.textMuted}>{typeHint}</span>
+              </text>
+            )
+          })}
+        </box>
+      )}
+
       {/* BSON sections — only when editing in bson mode */}
       {editing && queryMode === "bson" && (
         <>
@@ -335,42 +317,4 @@ export function FilterBar({
   )
 }
 
-// ── BsonSuggestions (rendered above the panel in Shell/App) ─────────────────
 
-export function BsonSuggestions({
-  visible,
-  columns,
-  schemaMap,
-}: {
-  visible: boolean
-  columns: DetectedColumn[]
-  schemaMap: SchemaMap
-}) {
-  const suggestions = buildBsonSuggestions(columns, schemaMap)
-  if (!visible || suggestions.length === 0) return null
-
-  return (
-    <box
-      position="absolute"
-      bottom={1}
-      left={0}
-      width="100%"
-      backgroundColor={theme.headerBg}
-      flexDirection="row"
-      flexWrap="wrap"
-      paddingX={2}
-      paddingY={0}
-    >
-      {suggestions.slice(0, 20).map((field) => {
-        const info = schemaMap.get(field)
-        const typeHint = info?.type ? `:${info.type}` : ""
-        return (
-          <text key={field}>
-            <span fg={theme.textDim}>{field}</span>
-            <span fg={theme.textMuted}>{typeHint}  </span>
-          </text>
-        )
-      })}
-    </box>
-  )
-}
