@@ -88,11 +88,11 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         dispatch({ type: "CLOSE_QUERY" })
         return
       }
+      // Tab from simple filter bar → close bar; if pipeline is active show it expanded
       if (key.name === "tab") {
-        if (state.queryMode === "simple") {
-          dispatch({ type: "TOGGLE_QUERY_MODE" })
-        } else {
-          dispatch({ type: "TOGGLE_QUERY_MODE" })
+        dispatch({ type: "CLOSE_QUERY" })
+        if (state.pipeline.length > 0) {
+          dispatch({ type: "SHOW_PIPELINE_BAR" })
         }
         return
       }
@@ -167,8 +167,8 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       }
     }
 
-    // F: toggle pipeline bar expanded/collapsed (only when pipeline is active)
-    if (key.name === "F" && state.view === "documents" && state.pipeline.length > 0) {
+    // F (Shift+f): toggle pipeline bar expanded/collapsed
+    if (key.name === "f" && key.shift && state.view === "documents") {
       dispatch({ type: "TOGGLE_PIPELINE_BAR" })
       return
     }
@@ -274,6 +274,8 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           dispatch({ type: "RELOAD_DOCUMENTS" })
           break
         case "f": {
+          // Shift+f is handled above as pipeline bar toggle — skip here
+          if (key.shift) break
           // Filter from current cell value — works in both simple and pipeline mode
           const doc = state.documents[state.selectedIndex]
           const visibleCols = state.columns.filter((c) => c.visible)

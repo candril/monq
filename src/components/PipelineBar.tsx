@@ -32,7 +32,17 @@ function stagePreview(value: unknown): string {
 }
 
 export function PipelineBar({ pipeline, visible, isAggregate }: PipelineBarProps) {
-  if (pipeline.length === 0) return null
+  // No pipeline — show a minimal hint bar when visible (toggled by F)
+  if (pipeline.length === 0) {
+    if (!visible) return null
+    return (
+      <box height={1} backgroundColor={theme.headerBg} paddingX={1} flexDirection="row" gap={1}>
+        <text><span fg={theme.textMuted}>[no filter]</span></text>
+        <box flexGrow={1} />
+        <text><span fg={theme.textMuted}>Ctrl+F open pipeline editor  F hide</span></text>
+      </box>
+    )
+  }
 
   const badge = isAggregate ? "[aggregate]" : "[pipeline]"
   const badgeFg = isAggregate ? theme.warning : theme.queryBson

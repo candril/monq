@@ -68,6 +68,7 @@ export type AppAction =
   | { type: "SET_PIPELINE"; pipeline: import("mongodb").Document[]; source: string; isAggregate: boolean }
   | { type: "CLEAR_PIPELINE" }
   | { type: "TOGGLE_PIPELINE_BAR" }
+  | { type: "SHOW_PIPELINE_BAR" }
   // Confirm dialog
   | { type: "SHOW_CONFIRM"; pending: "pipeline-to-simple"; simpleQuery: string }
   | { type: "DISMISS_CONFIRM" }
@@ -728,6 +729,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "TOGGLE_PIPELINE_BAR":
       return { ...state, pipelineVisible: !state.pipelineVisible }
+
+    case "SHOW_PIPELINE_BAR":
+      return { ...state, pipelineVisible: true }
 
     case "SHOW_CONFIRM":
       return { ...state, confirmPending: action.pending, confirmSimpleQuery: action.simpleQuery }
