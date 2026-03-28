@@ -1,42 +1,75 @@
 /**
  * Edit a document in $EDITOR.
  * Uses the original _id in the temp filename to look up the document for update.
+ * File is written as .jsonc so editors activate JSON with comments support.
  */
 
 import { tmpdir } from "os"
 import { join } from "path"
-import { unlink } from "fs/promises"
+import { mkdir, unlink } from "fs/promises"
 import type { Document } from "mongodb"
+import JSON5 from "json5"
+import type { SchemaMap } from "../query/schema"
 import {
   serializeDocument,
   deserializeDocument,
   replaceDocument,
 } from "../providers/mongodb"
 
-const ERROR_COMMENT_RE = /^(\/\/ ERROR:.*\n(\/\/.*\n)*)/m
+const ERROR_COMMENT_RE = /^(\/\/ !! .*\n(\/\/.*\n)*\n?)/m
+
+function buildHeader(
+  collectionName: string,
+  dbName: string,
+  doc: Document,
+  schemaMap?: SchemaMap,
+): string {
+  const idStr = String(doc._id)
+
+  const fieldLines = schemaMap && schemaMap.size > 0
+    ? [...schemaMap.entries()]
+        .filter(([p]) => !p.includes("."))
+        .map(([p, info]) => `//   ${p}: ${info.type}`)
+    : [`//   (no schema sampled)`]
+
+  return [
+    `// Mon-Q — editing document in ${collectionName} @ ${dbName}`,
+    `// _id: ${idStr} (read-only — changes to _id are ignored)`,
+    `// Save to apply (:wq). Quit without saving (:q!) to cancel.`,
+    `//`,
+    `// Schema (${collectionName}):`,
+    ...fieldLines,
+    ``,
+  ].join("\n")
+}
 
 function injectErrorComment(content: string, errorMsg: string): string {
   const stripped = content.replace(ERROR_COMMENT_RE, "")
-  return `// ERROR: ${errorMsg}\n// Fix the JSON below and save, or delete all content to cancel.\n` + stripped
+  return `// !! PARSE ERROR: ${errorMsg}\n// Fix the JSON below and save, or delete all content to cancel.\n\n` + stripped
 }
 
 /** Open a document in $EDITOR, save updates to DB on close. */
 export async function editDocument(
   collectionName: string,
+  dbName: string,
   doc: Document,
+  schemaMap?: SchemaMap,
 ): Promise<{ updated: boolean; error?: string }> {
   const originalId = doc._id
   const idStr = String(originalId)
-  const tmpFile = join(tmpdir(), `monq-${collectionName}-${idStr}.json`)
+  const dir = join(tmpdir(), "monq", collectionName)
+  await mkdir(dir, { recursive: true })
+  const tmpFile = join(dir, `${idStr}.jsonc`)
 
-  // Write EJSON to temp file
   const ejson = serializeDocument(doc)
-  await Bun.write(tmpFile, ejson)
+  const header = buildHeader(collectionName, dbName, doc, schemaMap)
+  const initialContent = header + ejson
+
+  await Bun.write(tmpFile, initialContent)
 
   const editor = process.env.EDITOR || process.env.VISUAL || "vi"
 
   // Editor retry loop: re-open with inline error comment on parse failure
-  let editedContent: string
   while (true) {
     const proc = Bun.spawn([editor, tmpFile], {
       stdin: "inherit",
@@ -45,6 +78,7 @@ export async function editDocument(
     })
     await proc.exited
 
+    let editedContent: string
     try {
       editedContent = await Bun.file(tmpFile).text()
     } catch {
@@ -52,39 +86,41 @@ export async function editDocument(
       return { updated: false, error: "Could not read edited file" }
     }
 
-    // Empty or unchanged (possibly with error comment stripped) → cancelled / no-op
-    const stripped = editedContent.replace(ERROR_COMMENT_RE, "")
-    if (stripped.trim() === "" || stripped.trim() === ejson.trim()) {
+    // Strip header + error comments to get the bare JSON
+    const stripped = editedContent
+      .replace(ERROR_COMMENT_RE, "")
+      .replace(/^\/\/.*\n/gm, "")
+      .trim()
+
+    // Empty → cancelled
+    if (stripped === "") {
+      await unlink(tmpFile).catch(() => {})
+      return { updated: false }
+    }
+
+    // Unchanged → no-op
+    if (stripped === ejson.trim()) {
       await unlink(tmpFile).catch(() => {})
       return { updated: false }
     }
 
     try {
-      // Attempt parse — if it succeeds, break out of retry loop
       deserializeDocument(stripped)
-      editedContent = stripped
-      break
+      // Parse succeeded — proceed
+      await unlink(tmpFile).catch(() => {})
+
+      const editedDoc = deserializeDocument(stripped)
+      const { _id: _, ...docWithoutId } = editedDoc
+
+      try {
+        await replaceDocument(collectionName, originalId, docWithoutId)
+        return { updated: true }
+      } catch (err) {
+        return { updated: false, error: `Update failed: ${(err as Error).message}` }
+      }
     } catch (err) {
       // Inject error comment and loop back to re-open editor
       await Bun.write(tmpFile, injectErrorComment(editedContent, (err as Error).message))
     }
-  }
-
-  // Clean up temp file
-  await unlink(tmpFile).catch(() => {})
-
-  // Parse the final clean content (error comment already stripped above)
-  const editedDoc = deserializeDocument(editedContent)
-
-  // Remove _id from the replacement doc (MongoDB doesn't allow changing _id via replaceOne)
-  // But we use the original _id to find the document
-  const { _id: _, ...docWithoutId } = editedDoc
-
-  // Save to DB using original _id
-  try {
-    await replaceDocument(collectionName, originalId, docWithoutId)
-    return { updated: true }
-  } catch (err) {
-    return { updated: false, error: `Update failed: ${(err as Error).message}` }
   }
 }

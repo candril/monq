@@ -89,7 +89,7 @@ export function App({ uri }: AppProps) {
         const tab = state.tabs.find((t) => t.id === state.activeTabId)
         if (doc && tab) {
           renderer.suspend()
-          editDocument(tab.collectionName, doc)
+          editDocument(tab.collectionName, state.dbName, doc, state.schemaMap)
             .finally(() => {
               renderer.resume()
               dispatch({ type: "RELOAD_DOCUMENTS" })

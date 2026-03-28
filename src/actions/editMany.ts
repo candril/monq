@@ -2,6 +2,7 @@ import { tmpdir } from "os"
 import { join } from "path"
 import { mkdir } from "fs/promises"
 import { EJSON } from "bson"
+import JSON5 from "json5"
 import type { Document } from "mongodb"
 import { replaceDocument, insertDocument, deleteDocument } from "../providers/mongodb"
 import type { SchemaMap, FieldType } from "../query/schema"
@@ -29,20 +30,7 @@ async function getTempDir(collectionName: string): Promise<string> {
   return dir
 }
 
-function serializeArray(docs: Document[], schemaPath?: string): string {
-  const serialized = EJSON.stringify(docs, undefined, 2, { relaxed: true })
-  if (!schemaPath) return serialized
-  const parsed = JSON.parse(serialized)
-  const wrapped = { $schema: schemaPath, documents: parsed }
-  return JSON.stringify(wrapped, null, 2)
-}
-
-function parseArray(json: string): Document[] {
-  const raw = JSON.parse(json)
-  const arr = Array.isArray(raw) ? raw : raw.documents
-  if (!Array.isArray(arr)) throw new Error("Expected a JSON array or { documents: [...] }")
-  return arr.map((item: unknown) => EJSON.deserialize(item as Parameters<typeof EJSON.deserialize>[0]) as Document)
-}
+// ── Schema sidecar ───────────────────────────────────────────────────────────
 
 const FIELD_TYPE_TO_JSON_SCHEMA: Record<FieldType, object> = {
   string: { type: "string" }, number: { type: "number" }, boolean: { type: "boolean" },
@@ -64,16 +52,94 @@ function generateSchema(collectionName: string, schemaMap: SchemaMap): object {
   }
 }
 
-const ERROR_COMMENT_RE = /^(\/\/ ERROR:.*\n(\/\/.*\n)*)/m
+// ── Header builders ───────────────────────────────────────────────────────────
+
+function buildSchemaLines(collectionName: string, schemaMap?: SchemaMap): string[] {
+  const fieldLines = schemaMap && schemaMap.size > 0
+    ? [...schemaMap.entries()]
+        .filter(([p]) => !p.includes("."))
+        .map(([p, info]) => `//   ${p}: ${info.type}`)
+    : [`//   (no schema sampled)`]
+  return [
+    `// Schema (${collectionName}):`,
+    ...fieldLines,
+    `//`,
+  ]
+}
+
+function buildEditHeader(
+  collectionName: string,
+  dbName: string,
+  docCount: number,
+  schemaMap?: SchemaMap,
+): string {
+  return [
+    `// Mon-Q — bulk editing ${docCount} document${docCount === 1 ? "" : "s"} in ${collectionName} @ ${dbName}`,
+    `// Save to apply (:wq). Quit without saving (:q!) to cancel.`,
+    `//`,
+    `// Rules:`,
+    `//   • Edit field values freely — changes are saved on quit`,
+    `//   • Removing a document from the array marks it as "missing" (triggers confirm)`,
+    `//   • Adding a new object (without an existing _id) marks it as "added" (triggers confirm)`,
+    `//   • _id values are used to match documents — do not change them`,
+    `//`,
+    ...buildSchemaLines(collectionName, schemaMap),
+    ``,
+  ].join("\n")
+}
+
+function buildInsertHeader(
+  collectionName: string,
+  dbName: string,
+  schemaMap?: SchemaMap,
+): string {
+  return [
+    `// Mon-Q — inserting into ${collectionName} @ ${dbName}`,
+    `// Save to apply (:wq). Quit without saving (:q!) to cancel.`,
+    `//`,
+    `// Rules:`,
+    `//   • Each object in the array will be inserted as a new document`,
+    `//   • Omit _id — MongoDB will auto-generate one`,
+    `//   • Add more objects to insert multiple documents at once`,
+    `//`,
+    ...buildSchemaLines(collectionName, schemaMap),
+    ``,
+  ].join("\n")
+}
+
+// ── Serialization ─────────────────────────────────────────────────────────────
+
+function serializeArray(docs: Document[], schemaPath?: string): string {
+  const serialized = EJSON.stringify(docs, undefined, 2, { relaxed: true })
+  if (!schemaPath) return serialized
+  const parsed = JSON.parse(serialized)
+  const wrapped = { $schema: schemaPath, documents: parsed }
+  return JSON.stringify(wrapped, null, 2)
+}
+
+function stripComments(content: string): string {
+  // Remove full-line comments (// ...) only — preserve inline strings
+  return content.replace(/^\/\/.*$/gm, "").trim()
+}
+
+function parseArray(json: string): Document[] {
+  const clean = stripComments(json)
+  const raw = JSON5.parse(clean)
+  const arr = Array.isArray(raw) ? raw : raw.documents
+  if (!Array.isArray(arr)) throw new Error("Expected a JSON array or { documents: [...] }")
+  return arr.map((item: unknown) => EJSON.deserialize(item as Parameters<typeof EJSON.deserialize>[0]) as Document)
+}
+
+// ── Error handling ────────────────────────────────────────────────────────────
+
+const ERROR_COMMENT_RE = /^(\/\/ !! .*\n(\/\/.*\n)*\n?)/m
 
 function stripErrorComment(content: string): string {
   return content.replace(ERROR_COMMENT_RE, "")
 }
 
-/** Inject an error comment at the top of the file and re-open the editor.
- *  Returns the new content after the user saves, or null if cancelled. */
 async function openEditorWithError(tmpFile: string, content: string, errorMsg: string): Promise<string | null> {
-  const errorComment = `// ERROR: ${errorMsg}\n// Fix the JSON below and save, or delete all content to cancel.\n`
+  const errorComment = `// !! PARSE ERROR: ${errorMsg}\n// Fix the JSON below and save, or delete all content to cancel.\n\n`
   await Bun.write(tmpFile, errorComment + stripErrorComment(content))
   const editor = process.env.EDITOR || process.env.VISUAL || "vi"
   const proc = Bun.spawn([editor, tmpFile], { stdin: "inherit", stdout: "inherit", stderr: "inherit" })
@@ -81,14 +147,17 @@ async function openEditorWithError(tmpFile: string, content: string, errorMsg: s
   try { return await Bun.file(tmpFile).text() } catch { return null }
 }
 
+// ── Main entry points ─────────────────────────────────────────────────────────
+
 export async function openEditorForMany(
   collectionName: string,
+  dbName: string,
   originalDocs: Document[],
   editorDocs?: Document[],
   schemaMap?: SchemaMap,
 ): Promise<{ cancelled: true } | { cancelled: false; result: EditManyResult; editedDocs: Document[]; applyEdits: () => Promise<void> }> {
   const dir = await getTempDir(collectionName)
-  const tmpFile = join(dir, "edit.json")
+  const tmpFile = join(dir, "edit.jsonc")
   const schemaFile = join(dir, ".monq-docs-schema.json")
 
   if (schemaMap && schemaMap.size > 0) {
@@ -96,10 +165,12 @@ export async function openEditorForMany(
   }
 
   const schemaRelPath = schemaMap && schemaMap.size > 0 ? "./.monq-docs-schema.json" : undefined
-  const editorSeed = serializeArray(editorDocs ?? originalDocs, schemaRelPath)
+  const docsToEdit = editorDocs ?? originalDocs
+  const bodyContent = serializeArray(docsToEdit, schemaRelPath)
   const originalSerialized = serializeArray(originalDocs, schemaRelPath)
 
-  await Bun.write(tmpFile, editorSeed)
+  const header = buildEditHeader(collectionName, dbName, docsToEdit.length, schemaMap)
+  await Bun.write(tmpFile, header + bodyContent)
 
   const editor = process.env.EDITOR || process.env.VISUAL || "vi"
   const proc = Bun.spawn([editor, tmpFile], { stdin: "inherit", stdout: "inherit", stderr: "inherit" })
@@ -108,21 +179,23 @@ export async function openEditorForMany(
   let edited: string
   try { edited = await Bun.file(tmpFile).text() } catch { return { cancelled: true } }
 
-  if (stripErrorComment(edited).trim() === originalSerialized.trim()) {
+  // Strip header comments to get just the JSON body for comparison
+  const editedBody = stripComments(stripErrorComment(edited))
+  if (editedBody === stripComments(originalSerialized)) {
     return { cancelled: false, result: { updated: 0, unchanged: originalDocs.length, missing: [], added: [], errors: [] }, editedDocs: originalDocs, applyEdits: async () => {} }
   }
 
   let editedDocs: Document[]
   // Retry loop: re-open editor on parse error with an inline error comment
   while (true) {
-    const clean = stripErrorComment(edited)
-    if (clean.trim() === "") return { cancelled: true }
+    const clean = stripComments(stripErrorComment(edited))
+    if (clean === "") return { cancelled: true }
     try {
       editedDocs = parseArray(clean)
       break
     } catch (err) {
       const next = await openEditorWithError(tmpFile, edited, (err as Error).message)
-      if (!next || stripErrorComment(next).trim() === "" || next.trim() === edited.trim()) return { cancelled: true }
+      if (!next || stripComments(stripErrorComment(next)) === "" || next.trim() === edited.trim()) return { cancelled: true }
       edited = next
     }
   }
@@ -171,11 +244,12 @@ export async function openEditorForMany(
 
 export async function openEditorForInsert(
   collectionName: string,
+  dbName: string,
   templateDoc?: Document,
   schemaMap?: SchemaMap,
 ): Promise<{ cancelled: true } | { cancelled: false; inserted: number; errors: string[] }> {
   const dir = await getTempDir(collectionName)
-  const tmpFile = join(dir, "insert.json")
+  const tmpFile = join(dir, "insert.jsonc")
   const schemaFile = join(dir, ".monq-docs-schema.json")
 
   if (schemaMap && schemaMap.size > 0) {
@@ -184,8 +258,11 @@ export async function openEditorForInsert(
 
   const template = templateDoc ? buildTemplate(templateDoc) : {}
   const schemaRelPath = schemaMap && schemaMap.size > 0 ? "./.monq-docs-schema.json" : undefined
-  const content = serializeArray([template], schemaRelPath)
-  await Bun.write(tmpFile, content)
+  const bodyContent = serializeArray([template], schemaRelPath)
+  const header = buildInsertHeader(collectionName, dbName, schemaMap)
+
+  const initialContent = header + bodyContent
+  await Bun.write(tmpFile, initialContent)
 
   const editor = process.env.EDITOR || process.env.VISUAL || "vi"
   const proc = Bun.spawn([editor, tmpFile], { stdin: "inherit", stdout: "inherit", stderr: "inherit" })
@@ -193,17 +270,19 @@ export async function openEditorForInsert(
 
   let edited: string
   try { edited = await Bun.file(tmpFile).text() } catch { return { cancelled: true } }
-  if (stripErrorComment(edited).trim() === content.trim()) return { cancelled: false, inserted: 0, errors: [] }
+
+  const editedBody = stripComments(stripErrorComment(edited))
+  if (editedBody === stripComments(bodyContent)) return { cancelled: false, inserted: 0, errors: [] }
 
   let newDocs: Document[]
   // Retry loop: re-open editor on parse error with an inline error comment
   while (true) {
-    const clean = stripErrorComment(edited)
-    if (clean.trim() === "") return { cancelled: true }
+    const clean = stripComments(stripErrorComment(edited))
+    if (clean === "") return { cancelled: true }
     try { newDocs = parseArray(clean); break }
     catch (err) {
       const next = await openEditorWithError(tmpFile, edited, (err as Error).message)
-      if (!next || stripErrorComment(next).trim() === "" || next.trim() === edited.trim()) return { cancelled: true }
+      if (!next || stripComments(stripErrorComment(next)) === "" || next.trim() === edited.trim()) return { cancelled: true }
       edited = next
     }
   }

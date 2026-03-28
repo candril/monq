@@ -408,7 +408,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           if (docsToEdit.length === 0) break
 
           renderer.suspend()
-          openEditorForMany(activeTab.collectionName, docsToEdit, undefined, state.schemaMap)
+          openEditorForMany(activeTab.collectionName, state.dbName, docsToEdit, undefined, state.schemaMap)
             .then(async (outcome) => {
               renderer.resume()
               if (outcome.cancelled) return
@@ -429,7 +429,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
                   missing: cr.missing, added: cr.added, focusedIndex: -1,
                   goBack: () => {
                     renderer.suspend()
-                    openEditorForMany(activeTab.collectionName, docsToEdit, ce, state.schemaMap)
+                    openEditorForMany(activeTab.collectionName, state.dbName, docsToEdit, ce, state.schemaMap)
                       .then(async (o2) => {
                         renderer.resume()
                         if (o2.cancelled) return
@@ -468,7 +468,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           if (!activeTab) break
           const templateDoc = state.documents[state.selectedIndex]
           renderer.suspend()
-          openEditorForInsert(activeTab.collectionName, templateDoc, state.schemaMap)
+          openEditorForInsert(activeTab.collectionName, state.dbName, templateDoc, state.schemaMap)
             .then((outcome) => {
               renderer.resume()
               if (outcome.cancelled) return
