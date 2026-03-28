@@ -200,9 +200,13 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       if (state.pipeline.length > 0) {
         // Real pipeline: toggle expand/collapse
         dispatch({ type: "TOGGLE_PIPELINE_BAR" })
-      } else if (state.queryInput) {
-        // Simple filter active: show it translated as a read-only pipeline preview
-        dispatch({ type: "SHOW_SIMPLE_AS_PIPELINE" })
+      } else if (state.queryInput || state.sortField) {
+        // Simple filter and/or sort: toggle preview on/off
+        if (state.pipelineVisible) {
+          dispatch({ type: "TOGGLE_PIPELINE_BAR" })
+        } else {
+          dispatch({ type: "SHOW_SIMPLE_AS_PIPELINE" })
+        }
       } else {
         // Nothing active: toast
         dispatch({ type: "SHOW_MESSAGE", message: "No filter active — use / for simple filter or Ctrl+F for pipeline editor" })
@@ -293,6 +297,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
             const json = serializeDocument(doc)
             const b64 = btoa(json)
             process.stdout.write(`\x1b]52;c;${b64}\x07`)
+            dispatch({ type: "SHOW_MESSAGE", message: "Document copied to clipboard" })
           } else {
             // y: yank current cell value
             const visCols = state.columns.filter((c) => c.visible)
@@ -304,6 +309,7 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
               : String(val)
             const b64 = btoa(text)
             process.stdout.write(`\x1b]52;c;${b64}\x07`)
+            dispatch({ type: "SHOW_MESSAGE", message: `Copied ${col.field} to clipboard` })
           }
           break
         }

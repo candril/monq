@@ -88,6 +88,27 @@ export type AppAction =
   | { type: "CLEAR_MESSAGE" }
 
 // ============================================================================
+// Helpers
+// ============================================================================
+
+/** Rebuild previewPipeline from current simple filter + sort. Used whenever
+ *  sort or filter changes while the preview is showing. */
+function rebuildPreview(
+  queryInput: string,
+  schemaMap: AppState["schemaMap"],
+  sortField: string | null,
+  sortDirection: 1 | -1,
+): import("mongodb").Document[] {
+  const stages: import("mongodb").Document[] = []
+  try {
+    const filter = parseSimpleQuery(queryInput, schemaMap)
+    if (Object.keys(filter).length > 0) stages.push({ $match: filter })
+  } catch { /* skip */ }
+  if (sortField) stages.push({ $sort: { [sortField]: sortDirection } })
+  return stages
+}
+
+// ============================================================================
 // Initial State
 // ============================================================================
 
@@ -472,6 +493,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         documentsLoading: true,
         reloadCounter: state.reloadCounter + 1,
         selectedIndex: 0,
+        // Keep preview pipeline in sync if it's currently showing
+        previewPipeline: state.previewPipeline.length > 0
+          ? rebuildPreview(state.queryInput, state.schemaMap, sortField, sortDirection)
+          : state.previewPipeline,
       }
     }
 
@@ -683,6 +708,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             ? { ...t, query: state.queryInput, queryMode: state.queryMode }
             : t
         ),
+        // Refresh preview if showing
+        previewPipeline: state.previewPipeline.length > 0
+          ? rebuildPreview(state.queryInput, state.schemaMap, state.sortField, state.sortDirection)
+          : state.previewPipeline,
       }
 
     case "CLEAR_QUERY":
@@ -732,20 +761,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       }
 
     case "TOGGLE_PIPELINE_BAR":
-      return { ...state, pipelineVisible: !state.pipelineVisible, previewPipeline: [] }
+      return { ...state, pipelineVisible: !state.pipelineVisible }
 
     case "SHOW_PIPELINE_BAR":
       return { ...state, pipelineVisible: true }
 
     case "SHOW_SIMPLE_AS_PIPELINE": {
-      const stages: import("mongodb").Document[] = []
-      try {
-        const filter = parseSimpleQuery(state.queryInput, state.schemaMap)
-        if (Object.keys(filter).length > 0) stages.push({ $match: filter })
-      } catch { /* skip */ }
-      if (state.sortField) {
-        stages.push({ $sort: { [state.sortField]: state.sortDirection } })
-      }
+      const stages = rebuildPreview(state.queryInput, state.schemaMap, state.sortField, state.sortDirection)
       return { ...state, previewPipeline: stages, pipelineVisible: true }
     }
 
