@@ -77,7 +77,15 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
           dispatch({ type: "SET_SCHEMA", schemaMap: buildSchemaMap(documents) })
         })
         .catch((err: Error) => {
-          if (!cancelled) dispatch({ type: "SET_ERROR", error: err.message })
+          if (cancelled) return
+          // In watch mode, pipeline errors are non-fatal — show a toast so the
+          // user can fix the file and the watcher will retry. Outside watch mode
+          // use the full error screen.
+          if (state.pipelineWatching) {
+            dispatch({ type: "SHOW_MESSAGE", message: `Pipeline error: ${err.message}`, kind: "error" })
+          } else {
+            dispatch({ type: "SET_ERROR", error: err.message })
+          }
         })
 
       return () => { cancelled = true }
