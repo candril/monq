@@ -2,6 +2,26 @@
 
 **Status**: In Progress
 
+## What's Done
+
+- Simple mode `<input>` with all P1 parsing (Key:Value, comparison ops, regex, negation, dot-notation, null/exists, `$elemMatch`)
+- BSON mode expanding multi-section panel (filter + sort + projection textareas)
+- Mode badge `[Simple]` / `[BSON]` in filter bar
+- Mode migration: simple → BSON (pre-populate filter + sort); BSON → simple (carry back filter)
+- `Tab` key cycles BSON sections; `Ctrl+F` formats; `Enter` submits; `Escape` closes
+- `filterToSimple()` reverse-translation for pipeline-to-simple conversion
+- `OPEN_QUERY_BSON` action opens bar directly in BSON mode with migration from current state
+- Filter-from-value (`f` key) appends `field:value` to simple query — **done** (see spec 016)
+- Field suggestions popup (`FilterSuggestions.tsx`) — **done** (see spec 015)
+
+## What's Missing
+
+- Syntax highlighting in BSON textareas (P2)
+- Inline BSON parse error display (P2) — errors currently silently fall back to unfiltered fetch
+- Query history with up/down arrows (P3)
+- Projection field validation against schema (P3)
+- Visual diff of active vs. previous filter (P3)
+
 ## Description
 
 A dual-mode query bar for filtering documents. Simple mode uses human-readable `Key:Value`
