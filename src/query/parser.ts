@@ -205,6 +205,10 @@ export function parseSimpleQueryFull(
         setFilterValue(filter, field, { $exists: !negated }, schemaMap)
       } else if (rawValue === "!exists") {
         setFilterValue(filter, field, { $exists: negated }, schemaMap)
+      } else if (rawValue.startsWith("size:")) {
+        // field:size:N -> { field: { $size: N } }
+        const n = Number(rawValue.slice(5))
+        if (!isNaN(n)) setFilterValue(filter, field, { $size: n }, schemaMap)
       } else if (rawValue.startsWith("[") && rawValue.endsWith("]")) {
         // Bracket syntax: field:[a,b,c] -> $in / $nin
         const inner = rawValue.slice(1, -1)
@@ -254,6 +258,8 @@ export function filterToSimple(filter: Record<string, unknown>): { query: string
 
       if (entries.length === 1 && opMap[entries[0][0]]) {
         tokens.push(`${key}${opMap[entries[0][0]]}${entries[0][1]}`)
+      } else if (entries.length === 1 && entries[0][0] === "$size") {
+        tokens.push(`${key}:size:${entries[0][1]}`)
       } else if (entries.length === 1 && entries[0][0] === "$in" && Array.isArray(entries[0][1])) {
         tokens.push(`${key}:[${(entries[0][1] as unknown[]).join(",")}]`)
       } else if (entries.length === 1 && entries[0][0] === "$nin" && Array.isArray(entries[0][1])) {

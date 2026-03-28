@@ -9,12 +9,13 @@ monq --uri mongodb://localhost:27017/mydb
 ## Features
 
 - **Two query modes** — simple human-readable `Key:Value` syntax or raw BSON JSON
+- **Inline projection** — `+field` to include, `-field` to exclude columns directly in the query bar
 - **Pipeline editor** — write full aggregation pipelines in `$EDITOR` with JSON Schema autocompletion
 - **Live pipeline reload** — watch `pipeline.jsonc` for external changes; open a tmux split with `Ctrl+E`
 - **Collection tabs** — open multiple collections side by side, switch with `1-9` or `[`/`]`
 - **Document editing** — edit single docs or bulk-select and edit in `$EDITOR` as a JSON array
-- **Schema-aware suggestions** — field name autocomplete with dot-notation drill-down
-- **Smart columns** — auto-detects document fields, supports horizontal scroll, sort, and column sizing
+- **Schema-aware suggestions** — field name autocomplete with dot-notation drill-down, projection-aware
+- **Smart columns** — auto-detects document fields, horizontal scroll, sort, column sizing, hide via `-`
 - **Database switcher** — picks database on startup if none in URI; switch anytime via `Ctrl+P`
 
 ## Install
@@ -69,12 +70,14 @@ monq --uri mongodb://localhost:27017        # picks database interactively
 | Key | Action |
 |-----|--------|
 | `/` | Open query bar (simple mode) |
-| `Tab` | Toggle simple ↔ BSON mode in query bar |
+| `Tab` | Toggle simple ↔ BSON mode / switch to pipeline mode |
 | `f` | Filter by value under cursor |
+| `s` | Cycle sort on current column |
+| `-` | Hide current column (adds `-field` projection token) |
+| `w` | Cycle column width mode |
 | `Ctrl+F` | Open pipeline editor in `$EDITOR` |
 | `Ctrl+E` | Open pipeline file in tmux split (or copy path) |
 | `Backspace` | Clear query / pipeline |
-| `s` | Cycle sort on current column |
 
 ### Documents
 
@@ -83,7 +86,7 @@ monq --uri mongodb://localhost:27017        # picks database interactively
 | `p` / `P` | Toggle / cycle preview pane |
 | `e` | Edit document in `$EDITOR` |
 | `i` | Insert new document |
-| `v` | Enter selection mode |
+| `v` | Enter / freeze selection mode |
 | `Space` | Toggle row selection |
 | `Ctrl+A` | Select all |
 | `Shift+D` | Delete selected (with confirmation) |
@@ -91,6 +94,8 @@ monq --uri mongodb://localhost:27017        # picks database interactively
 | `r` | Reload |
 
 ### Simple Query Syntax
+
+Filter and projection live in the same query string — no separator needed.
 
 ```
 Author:Peter                    → { "Author": "Peter" }
@@ -102,9 +107,22 @@ name:/^john/i                   → { "name": { "$regex": "^john", "$options": "
 email:null                      → { "email": null }
 email:exists                    → { "email": { "$exists": true } }
 tags:[admin,user]               → { "tags": { "$in": ["admin", "user"] } }
+-tags:[spam,bot]                → { "tags": { "$nin": ["spam", "bot"] } }
+comments:size:0                 → { "comments": { "$size": 0 } }
 address.city:London             → { "address.city": "London" }
-+name -email                    → projection: include name, exclude email
 ```
+
+**Projection tokens** (inline, no separator):
+
+```
+Author:Peter +name +email       → filter by Author, return only name and email
+Author:Peter -_id -tags         → filter by Author, exclude _id and tags
++name +score -_id               → projection only, no filter
+```
+
+`+field` = include, bare `-field` = exclude. `-field:value` is still a `$ne` filter.
+
+Projection tokens carry through to the pipeline editor and BSON mode automatically.
 
 ## Tech Stack
 
