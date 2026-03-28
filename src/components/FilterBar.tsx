@@ -186,8 +186,8 @@ export function FilterBar({
 }: FilterBarProps) {
   if (!query && !editing) return null
 
-  const badgeLabel = queryMode === "simple" ? "[Simple]" : "[BSON]"
-  const badgeFg = queryMode === "simple" ? BADGE_SIMPLE_FG : BADGE_BSON_FG
+  const badgeLabel = queryMode === "simple" ? "simple" : "BSON"
+  const badgeBg = queryMode === "simple" ? BADGE_SIMPLE_FG : BADGE_BSON_FG
 
   const sectionCount =
     1 + (bsonSortVisible ? 1 : 0) + (bsonProjectionVisible ? 1 : 0)
@@ -203,9 +203,9 @@ export function FilterBar({
     >
       {/* Header row: badge + input or BSON pills */}
       <box height={1} flexDirection="row" gap={1}>
-        <text>
-          <span fg={badgeFg}>{badgeLabel}</span>
-        </text>
+        <box backgroundColor={badgeBg} paddingX={1}>
+          <text><span fg={theme.bg}><strong>{badgeLabel}</strong></span></text>
+        </box>
 
         {editing ? (
           queryMode === "bson" ? (

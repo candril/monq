@@ -580,19 +580,21 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
           break
         case "/":
           if (state.pipeline.length > 0) {
-            // Try to translate pipeline $match back to simple query
+            // Real pipeline — try lossless translation, otherwise confirm
             const { filter } = extractFindParts(state.pipeline)
             const { query, lossless } = filterToSimple(filter as Record<string, unknown>)
             const hasComplexStages = classifyPipeline(state.pipeline)
-
             if (lossless && !hasComplexStages) {
-              // Fully lossless: switch directly, pre-populate simple filter
               dispatch({ type: "SWITCH_TO_SIMPLE", query })
+              dispatch({ type: "OPEN_QUERY" })
             } else {
-              // Lossy or has complex stages: ask user what to do
               dispatch({ type: "SHOW_CONFIRM", pending: "pipeline-to-simple", simpleQuery: query })
             }
           } else {
+            // Clear any preview pipeline before opening simple filter
+            if (state.previewPipeline.length > 0) {
+              dispatch({ type: "TOGGLE_PIPELINE_BAR" })
+            }
             dispatch({ type: "OPEN_QUERY" })
           }
           break

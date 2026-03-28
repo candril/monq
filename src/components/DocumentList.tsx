@@ -265,9 +265,16 @@ function HeaderRow({
     const isSelectedCol = i === selectedColumnIndex
     const isSorted = sortField === col.field
     const sortIndicator = isSorted ? (sortDirection === 1 ? " ▲" : " ▼") : ""
-    const label = col.displayMode === "minimized"
-      ? truncate(col.field, MINIMIZED_COL_WIDTH)
-      : col.field + sortIndicator
+    const colW = colWidthArray[i]
+    let label: string
+    if (col.displayMode === "minimized") {
+      label = truncate(col.field, MINIMIZED_COL_WIDTH)
+    } else if (isSorted) {
+      // Truncate field name to ensure indicator always fits within column width
+      label = truncate(col.field, colW - sortIndicator.length) + sortIndicator
+    } else {
+      label = col.field
+    }
     const color = isSelectedCol
       ? theme.primary
       : isSorted

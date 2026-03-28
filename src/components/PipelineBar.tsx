@@ -27,8 +27,8 @@ export function PipelineBar({ pipeline, previewPipeline, visible, isAggregate }:
   const stages = pipeline.length > 0 ? pipeline : previewPipeline
   if (stages.length === 0) return null
 
-  const badge = isAggregate ? "[aggregate]" : "[pipeline]"
-  const badgeFg = isAggregate ? theme.warning : theme.queryBson
+  const badge = isAggregate ? "aggregate" : "pipeline"
+  const badgeBg = isAggregate ? theme.warning : theme.queryBson
 
   if (!visible) {
     const summary = stages
@@ -42,7 +42,9 @@ export function PipelineBar({ pipeline, previewPipeline, visible, isAggregate }:
 
     return (
       <box height={1} backgroundColor={theme.headerBg} paddingX={1} flexDirection="row" gap={1}>
-        <text><span fg={badgeFg}>{badge}</span></text>
+        <box backgroundColor={badgeBg} paddingX={1}>
+          <text><span fg={theme.bg}><strong>{badge}</strong></span></text>
+        </box>
         <text><span fg={theme.text}>{summary}{more}</span></text>
         <box flexGrow={1} />
         <text><span fg={theme.textMuted}>F expand  Ctrl+F edit</span></text>
@@ -67,7 +69,9 @@ export function PipelineBar({ pipeline, previewPipeline, visible, isAggregate }:
   return (
     <box height={1 + stages.length} backgroundColor={theme.headerBg} flexDirection="column">
       <box height={1} paddingX={1} flexDirection="row" gap={1}>
-        <text><span fg={badgeFg}>{badge}</span></text>
+        <box backgroundColor={badgeBg} paddingX={1}>
+          <text><span fg={theme.bg}><strong>{badge}</strong></span></text>
+        </box>
         <text><span fg={theme.textMuted}>{stages.length} stage{stages.length !== 1 ? "s" : ""}</span></text>
         <box flexGrow={1} />
         <text><span fg={theme.textMuted}>Tab→simple  F hide  Ctrl+F edit</span></text>

@@ -776,18 +776,20 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           : state.previewPipeline,
       }
 
-    case "CLEAR_QUERY":
-      return {
-        ...state,
-        queryInput: "",
-        queryVisible: false,
-        documentsLoading: true,
-        reloadCounter: state.reloadCounter + 1,
-        selectedIndex: 0,
-        tabs: state.tabs.map((t) =>
-          t.id === state.activeTabId ? { ...t, query: "" } : t
-        ),
-      }
+     case "CLEAR_QUERY":
+       return {
+         ...state,
+         queryInput: "",
+         queryVisible: false,
+         previewPipeline: [],
+         pipelineVisible: false,
+         documentsLoading: true,
+         reloadCounter: state.reloadCounter + 1,
+         selectedIndex: 0,
+         tabs: state.tabs.map((t) =>
+           t.id === state.activeTabId ? { ...t, query: "" } : t
+         ),
+       }
 
     // Pipeline
     case "SET_PIPELINE":
