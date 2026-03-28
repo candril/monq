@@ -1,15 +1,7 @@
 /**
- * PipelineBar — readonly display of the active aggregation pipeline.
- *
- * Collapsed (1 row):
- *   [pipeline] $match:{…}  $sort:{…}  $project:{…}   Ctrl+F edit  F hide
- *
- * Expanded (one row per stage):
- *   [pipeline]  Ctrl+F edit  F collapse  ⌫ clear
- *   $match    { FamilyName: "stefan" }
- *   $sort     { FamilyName: 1 }
- *
- * Shown only when pipeline is non-empty.
+ * PipelineBar — readonly display of the active pipeline or simple filter preview.
+ * badge: [pipeline] or [aggregate]
+ * Tab to switch back to simple, Ctrl+F to edit.
  */
 
 import type { Document } from "mongodb"
@@ -22,7 +14,6 @@ interface PipelineBarProps {
   isAggregate: boolean
 }
 
-/** Compact single-line summary of a stage value */
 function stagePreview(value: unknown): string {
   try {
     const s = JSON.stringify(value)
@@ -33,50 +24,36 @@ function stagePreview(value: unknown): string {
 }
 
 export function PipelineBar({ pipeline, previewPipeline, visible, isAggregate }: PipelineBarProps) {
-  // If no real pipeline but preview (from simple filter), use that for display
-  const isPreview = pipeline.length === 0 && previewPipeline.length > 0
-  const displayPipeline = pipeline.length > 0 ? pipeline : previewPipeline
-
-  if (displayPipeline.length === 0) return null
-  if (!visible) {
-    // Collapsed 1-row summary
-    const badge = isPreview ? "[simple]" : (isAggregate ? "[aggregate]" : "[pipeline]")
-    const badgeFg = isPreview ? theme.querySimple : (isAggregate ? theme.warning : theme.queryBson)
+  const stages = pipeline.length > 0 ? pipeline : previewPipeline
+  if (stages.length === 0) return null
 
   const badge = isAggregate ? "[aggregate]" : "[pipeline]"
   const badgeFg = isAggregate ? theme.warning : theme.queryBson
 
   if (!visible) {
-    // Collapsed: single row with stage summaries
-    const summary = pipeline
+    const summary = stages
       .slice(0, 3)
       .map((stage) => {
         const [name, val] = Object.entries(stage)[0]
         return `${name}:${stagePreview(val)}`
       })
       .join("  ")
-    const more = pipeline.length > 3 ? `  +${pipeline.length - 3} more` : ""
+    const more = stages.length > 3 ? `  +${stages.length - 3} more` : ""
 
     return (
       <box height={1} backgroundColor={theme.headerBg} paddingX={1} flexDirection="row" gap={1}>
         <text><span fg={badgeFg}>{badge}</span></text>
         <text><span fg={theme.text}>{summary}{more}</span></text>
         <box flexGrow={1} />
-        <text><span fg={theme.textMuted}>Ctrl+F edit  F expand  / simple  ⌫ clear</span></text>
+        <text><span fg={theme.textMuted}>F expand  Ctrl+F edit</span></text>
       </box>
     )
   }
 
-  // Expanded: header + one row per stage
-  const stageRows = pipeline.map((stage, i) => {
+  const stageRows = stages.map((stage, i) => {
     const [name, val] = Object.entries(stage)[0]
     let valueStr: string
-    try {
-      valueStr = JSON.stringify(val, null, 0)
-    } catch {
-      valueStr = "{}"
-    }
-    // Truncate long values to terminal width approximation
+    try { valueStr = JSON.stringify(val, null, 0) } catch { valueStr = "{}" }
     const truncated = valueStr.length > 80 ? valueStr.slice(0, 78) + "…}" : valueStr
 
     return (
@@ -88,17 +65,12 @@ export function PipelineBar({ pipeline, previewPipeline, visible, isAggregate }:
   })
 
   return (
-    <box
-      height={1 + pipeline.length}
-      backgroundColor={theme.headerBg}
-      flexDirection="column"
-    >
-      {/* Header */}
+    <box height={1 + stages.length} backgroundColor={theme.headerBg} flexDirection="column">
       <box height={1} paddingX={1} flexDirection="row" gap={1}>
         <text><span fg={badgeFg}>{badge}</span></text>
-        <text><span fg={theme.textMuted}>{pipeline.length} stage{pipeline.length !== 1 ? "s" : ""}</span></text>
+        <text><span fg={theme.textMuted}>{stages.length} stage{stages.length !== 1 ? "s" : ""}</span></text>
         <box flexGrow={1} />
-        <text><span fg={theme.textMuted}>Ctrl+F edit  F collapse  ⌫ clear</span></text>
+        <text><span fg={theme.textMuted}>Tab→simple  F hide  Ctrl+F edit</span></text>
       </box>
       {stageRows}
     </box>

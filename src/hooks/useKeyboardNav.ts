@@ -83,17 +83,40 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
         dispatch({ type: "CLOSE_QUERY" })
         return
       }
-      // If pipeline is active, the filter bar isn't shown — close and ignore
-      if (state.pipeline.length > 0) {
-        dispatch({ type: "CLOSE_QUERY" })
-        return
-      }
-      // Tab from simple filter bar → close bar; if pipeline is active show it expanded
+      // Tab from simple filter bar: switch to pipeline mode
       if (key.name === "tab") {
         dispatch({ type: "CLOSE_QUERY" })
         if (state.pipeline.length > 0) {
+          // Real pipeline already active — just show it
           dispatch({ type: "SHOW_PIPELINE_BAR" })
+        } else {
+          // No pipeline — open $EDITOR with current filter migrated into $match
+          const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+          if (!activeTab) return
+          renderer.suspend()
+          openPipelineEditor({
+            collectionName: activeTab.collectionName,
+            dbName: state.dbName,
+            pipelineSource: state.pipelineSource,
+            simpleQuery: state.queryInput,
+            schemaMap: state.schemaMap,
+            sortField: state.sortField,
+            sortDirection: state.sortDirection,
+          })
+            .then((result) => {
+              if (!result) return
+              dispatch({ type: "SET_PIPELINE", pipeline: result.pipeline, source: result.source, isAggregate: result.isAggregate })
+            })
+            .catch((err: Error) => {
+              dispatch({ type: "SET_ERROR", error: `Pipeline error: ${err.message}` })
+            })
+            .finally(() => renderer.resume())
         }
+        return
+      }
+      // If pipeline is active and filter bar somehow visible — close it
+      if (state.pipeline.length > 0) {
+        dispatch({ type: "CLOSE_QUERY" })
         return
       }
       // Enter submits in BSON mode (textarea keybinding fires submit() but
@@ -153,6 +176,27 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       disconnect().catch(() => {})
       renderer.destroy()
       process.exit(0)
+    }
+
+    // Tab from pipeline bar → switch back to simple mode
+    if (key.name === "tab" && state.view === "documents" && state.pipelineVisible && !state.queryVisible) {
+      if (state.pipeline.length > 0) {
+        // Try to translate $match back to simple
+        const { filter } = extractFindParts(state.pipeline)
+        const { query, lossless } = filterToSimple(filter as Record<string, unknown>)
+        const hasComplexStages = classifyPipeline(state.pipeline)
+        if (lossless && !hasComplexStages) {
+          dispatch({ type: "SWITCH_TO_SIMPLE", query })
+          dispatch({ type: "OPEN_QUERY" })
+        } else {
+          dispatch({ type: "SHOW_CONFIRM", pending: "pipeline-to-simple", simpleQuery: query })
+        }
+      } else if (state.previewPipeline.length > 0) {
+        // Preview from simple filter — clear preview, reopen simple bar
+        dispatch({ type: "TOGGLE_PIPELINE_BAR" })
+        dispatch({ type: "OPEN_QUERY" })
+      }
+      return
     }
 
     // Backspace clears filter or pipeline when bar is closed

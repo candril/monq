@@ -10,6 +10,7 @@ import { Header } from "./components/Header"
 import { FilterBar } from "./components/FilterBar"
 import { PipelineBar } from "./components/PipelineBar"
 import { ConfirmDialog } from "./components/ConfirmDialog"
+import { Toast } from "./components/Toast"
 import { Loading } from "./components/Loading"
 import { ErrorView } from "./components/ErrorView"
 import { DocumentList } from "./components/DocumentList"
@@ -274,12 +275,13 @@ export function App({ uri }: AppProps) {
 
       <PipelineBar
         pipeline={state.pipeline}
+        previewPipeline={state.previewPipeline}
         visible={state.pipelineVisible}
         isAggregate={state.pipelineIsAggregate}
       />
 
-      {/* Filter bar only when no pipeline active */}
-      {state.pipeline.length === 0 && (
+      {/* Filter bar only when no pipeline and no preview active */}
+      {state.pipeline.length === 0 && state.previewPipeline.length === 0 && (
         <FilterBar
           query={state.queryInput}
           queryMode={state.queryMode}
@@ -321,6 +323,11 @@ export function App({ uri }: AppProps) {
           { key: "n", label: "Open simple filter in new tab", color: "#7aa2f7" },
           { key: "Esc", label: "Cancel", color: "#565f89" },
         ]}
+      />
+
+      <Toast
+        message={state.message}
+        onDismiss={() => dispatch({ type: "CLEAR_MESSAGE" })}
       />
     </Shell>
   )
