@@ -64,6 +64,23 @@ function generateSchema(collectionName: string, schemaMap: SchemaMap): object {
   }
 }
 
+const ERROR_COMMENT_RE = /^(\/\/ ERROR:.*\n(\/\/.*\n)*)/m
+
+function stripErrorComment(content: string): string {
+  return content.replace(ERROR_COMMENT_RE, "")
+}
+
+/** Inject an error comment at the top of the file and re-open the editor.
+ *  Returns the new content after the user saves, or null if cancelled. */
+async function openEditorWithError(tmpFile: string, content: string, errorMsg: string): Promise<string | null> {
+  const errorComment = `// ERROR: ${errorMsg}\n// Fix the JSON below and save, or delete all content to cancel.\n`
+  await Bun.write(tmpFile, errorComment + stripErrorComment(content))
+  const editor = process.env.EDITOR || process.env.VISUAL || "vi"
+  const proc = Bun.spawn([editor, tmpFile], { stdin: "inherit", stdout: "inherit", stderr: "inherit" })
+  await proc.exited
+  try { return await Bun.file(tmpFile).text() } catch { return null }
+}
+
 export async function openEditorForMany(
   collectionName: string,
   originalDocs: Document[],
@@ -91,15 +108,23 @@ export async function openEditorForMany(
   let edited: string
   try { edited = await Bun.file(tmpFile).text() } catch { return { cancelled: true } }
 
-  if (edited.trim() === originalSerialized.trim()) {
+  if (stripErrorComment(edited).trim() === originalSerialized.trim()) {
     return { cancelled: false, result: { updated: 0, unchanged: originalDocs.length, missing: [], added: [], errors: [] }, editedDocs: originalDocs, applyEdits: async () => {} }
   }
 
   let editedDocs: Document[]
-  try {
-    editedDocs = parseArray(edited)
-  } catch (err) {
-    return { cancelled: false, result: { updated: 0, unchanged: 0, missing: [], added: [], errors: [`Parse error: ${(err as Error).message}`] }, editedDocs: originalDocs, applyEdits: async () => {} }
+  // Retry loop: re-open editor on parse error with an inline error comment
+  while (true) {
+    const clean = stripErrorComment(edited)
+    if (clean.trim() === "") return { cancelled: true }
+    try {
+      editedDocs = parseArray(clean)
+      break
+    } catch (err) {
+      const next = await openEditorWithError(tmpFile, edited, (err as Error).message)
+      if (!next || stripErrorComment(next).trim() === "" || next.trim() === edited.trim()) return { cancelled: true }
+      edited = next
+    }
   }
 
   const originalById = new Map<string, Document>()
@@ -168,11 +193,20 @@ export async function openEditorForInsert(
 
   let edited: string
   try { edited = await Bun.file(tmpFile).text() } catch { return { cancelled: true } }
-  if (edited.trim() === content.trim()) return { cancelled: false, inserted: 0, errors: [] }
+  if (stripErrorComment(edited).trim() === content.trim()) return { cancelled: false, inserted: 0, errors: [] }
 
   let newDocs: Document[]
-  try { newDocs = parseArray(edited) }
-  catch (err) { return { cancelled: false, inserted: 0, errors: [`Parse error: ${(err as Error).message}`] } }
+  // Retry loop: re-open editor on parse error with an inline error comment
+  while (true) {
+    const clean = stripErrorComment(edited)
+    if (clean.trim() === "") return { cancelled: true }
+    try { newDocs = parseArray(clean); break }
+    catch (err) {
+      const next = await openEditorWithError(tmpFile, edited, (err as Error).message)
+      if (!next || stripErrorComment(next).trim() === "" || next.trim() === edited.trim()) return { cancelled: true }
+      edited = next
+    }
+  }
 
   const errors: string[] = []
   let inserted = 0
