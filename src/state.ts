@@ -26,6 +26,11 @@ export type AppAction =
   // Connection
   | { type: "SET_CONNECTION_INFO"; dbName: string; host: string }
   | { type: "SET_ERROR"; error: string | null }
+  // Database picker
+  | { type: "SET_DATABASES"; databases: string[] }
+  | { type: "OPEN_DB_PICKER" }
+  | { type: "CLOSE_DB_PICKER" }
+  | { type: "SELECT_DATABASE"; dbName: string }
   // Collections
   | { type: "SET_COLLECTIONS"; collections: CollectionInfo[] }
   | { type: "SET_COLLECTIONS_LOADING"; loading: boolean }
@@ -122,6 +127,8 @@ export function createInitialState(): AppState {
     view: "collections",
     dbName: "",
     host: "",
+    databases: [],
+    dbPickerOpen: false,
     collections: [],
     collectionsLoading: true,
     collectionSelectedIndex: 0,
@@ -266,6 +273,49 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "SET_ERROR":
       return { ...state, error: action.error, collectionsLoading: false, documentsLoading: false }
+
+    // Database picker
+    case "SET_DATABASES":
+      return { ...state, databases: action.databases }
+
+    case "OPEN_DB_PICKER":
+      return { ...state, dbPickerOpen: true }
+
+    case "CLOSE_DB_PICKER":
+      return { ...state, dbPickerOpen: false }
+
+    case "SELECT_DATABASE":
+      return {
+        ...state,
+        dbName: action.dbName,
+        dbPickerOpen: false,
+        // Reset all tabs and collections for the new database
+        tabs: [],
+        activeTabId: null,
+        closedTabs: [],
+        collections: [],
+        collectionsLoading: true,
+        collectionSelectedIndex: 0,
+        // Reset document state
+        documents: [],
+        documentCount: 0,
+        totalDocumentCount: 0,
+        columns: [],
+        schemaMap: new Map(),
+        sortField: null,
+        sortDirection: -1,
+        queryInput: "",
+        queryMode: "simple",
+        bsonSort: "",
+        bsonProjection: "",
+        pipelineMode: false,
+        pipeline: [],
+        pipelineSource: "",
+        selectionMode: "none",
+        selectedIds: new Set(),
+        frozenIds: new Set(),
+        selectedRows: new Set(),
+      }
 
     // Collections
     case "SET_COLLECTIONS":

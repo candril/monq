@@ -17,6 +17,11 @@ export function buildCommands(state: AppState): Command[] {
     category: "navigation",
     shortcut: "",
   })
+  commands.push({
+    id: "nav:switch-database",
+    label: "Switch Database",
+    category: "navigation",
+  })
 
   // Document actions (only when viewing documents)
   if (hasDoc) {

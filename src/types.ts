@@ -126,6 +126,10 @@ export interface AppState {
   // Connection info
   dbName: string
   host: string
+  /** Available databases (populated when no db in URI, or after listDatabases) */
+  databases: string[]
+  /** When true, the palette should open in databases mode */
+  dbPickerOpen: boolean
 
   // Filter mode: simple (field:value) or pipeline ($EDITOR)
   /** True = pipeline mode active, False = simple filter mode */

@@ -7,6 +7,7 @@ import { EJSON } from "bson"
 import type { CollectionInfo } from "../types"
 
 let client: MongoClient | null = null
+let activeDb: string | null = null
 
 /** Parse connection info from URI without connecting */
 export function parseUri(uri: string): { host: string; dbName: string } {
@@ -24,17 +25,30 @@ export function parseUri(uri: string): { host: string; dbName: string } {
 }
 
 /** Initialize the client (lazy — actual connection happens on first operation) */
-export function init(uri: string): void {
+export function init(uri: string, dbName?: string): void {
   client = new MongoClient(uri, {
     serverSelectionTimeoutMS: 5000,
     connectTimeoutMS: 5000,
   })
+  activeDb = dbName ?? null
+}
+
+/** Set the active database without reconnecting */
+export function switchDatabase(dbName: string): void {
+  activeDb = dbName
+}
+
+/** List all databases on the server */
+export async function listDatabases(): Promise<string[]> {
+  if (!client) throw new Error("Not connected")
+  const result = await client.db().admin().listDatabases()
+  return result.databases.map((d) => d.name).sort()
 }
 
 /** Get the database instance */
 function getDb(): Db {
   if (!client) throw new Error("Not connected")
-  return client.db()
+  return client.db(activeDb ?? undefined)
 }
 
 /** Close the connection */

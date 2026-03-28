@@ -3,7 +3,7 @@
  * Thin composition — logic in hooks, display in components.
  */
 
-import { useReducer, useMemo, useCallback, useState, useRef } from "react"
+import { useReducer, useMemo, useCallback, useState, useRef, useEffect } from "react"
 import { useRenderer, useTerminalDimensions } from "@opentui/react"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { Shell } from "./components/Shell"
@@ -26,10 +26,11 @@ import { useKeyboardNav } from "./hooks/useKeyboardNav"
 import { useDocumentLoader } from "./hooks/useDocumentLoader"
 import { buildCommands } from "./commands/builder"
 import { buildCollectionCommands } from "./commands/collections"
+import { buildDatabaseCommands } from "./commands/databases"
 import { editDocument } from "./actions/edit"
 import { openPipelineEditor, pipelineFilePaths } from "./actions/pipeline"
 import { startWatching, reloadFromFile } from "./actions/pipelineWatch"
-import { disconnect, serializeDocument } from "./providers/mongodb"
+import { disconnect, serializeDocument, listDatabases, switchDatabase } from "./providers/mongodb"
 import { theme } from "./theme"
 import type { Command } from "./commands/types"
 import type { Document } from "mongodb"
@@ -51,7 +52,7 @@ interface AppProps {
   uri: string
 }
 
-type PaletteMode = "commands" | "collections"
+type PaletteMode = "commands" | "collections" | "databases"
 
 export function App({ uri }: AppProps) {
   const [state, dispatch] = useReducer(appReducer, null, createInitialState)
@@ -62,7 +63,7 @@ export function App({ uri }: AppProps) {
 
   const pageSize = terminalHeight + 10
 
-  useMongoConnection({ uri, dispatch })
+  useMongoConnection({ uri, dispatch, dbName: state.dbName })
   useKeyboardNav({ state, dispatch, docListScrollRef })
   useDocumentLoader({ state, dispatch, pageSize })
 
@@ -72,11 +73,29 @@ export function App({ uri }: AppProps) {
     () => buildCollectionCommands(state.collections),
     [state.collections],
   )
+  const databaseCommands = useMemo(
+    () => buildDatabaseCommands(state.databases, state.dbName || undefined),
+    [state.databases, state.dbName],
+  )
 
-  const paletteCommands = paletteMode === "collections" ? collectionCommands : mainCommands
-  const palettePlaceholder = paletteMode === "collections" ? "Open collection..." : "Search commands..."
+  // Open the db picker palette when state requests it
+  useEffect(() => {
+    if (state.dbPickerOpen) {
+      setPaletteMode("databases")
+      dispatch({ type: "CLOSE_DB_PICKER" }) // consumed — palette visibility is controlled separately
+    }
+  }, [state.dbPickerOpen])
 
   const handlePaletteSelect = useCallback((cmd: Command) => {
+    // Database selection
+    if (cmd.id.startsWith("db:")) {
+      const selectedDb = cmd.id.slice(3)
+      switchDatabase(selectedDb)
+      dispatch({ type: "SELECT_DATABASE", dbName: selectedDb })
+      setPaletteMode("commands")
+      return
+    }
+
     // Collection selection
     if (cmd.id.startsWith("open:")) {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
@@ -86,6 +105,19 @@ export function App({ uri }: AppProps) {
     }
 
     switch (cmd.id) {
+      case "nav:switch-database": {
+        // Fetch fresh database list then switch palette to databases mode
+        listDatabases()
+          .then((databases) => {
+            dispatch({ type: "SET_DATABASES", databases })
+            setPaletteMode("databases")
+          })
+          .catch((err: Error) => {
+            dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+            dispatch({ type: "SET_ERROR", error: `Failed to list databases: ${err.message}` })
+          })
+        break
+      }
       case "nav:switch-collection":
         setPaletteMode("collections")
         break
@@ -216,23 +248,41 @@ export function App({ uri }: AppProps) {
   }, [state, renderer])
 
   const handlePaletteClose = useCallback(() => {
-    if (paletteMode === "collections" && state.activeTabId) {
-      // Go back to main commands
+    // Can't escape the db picker if no db has been selected yet
+    if (paletteMode === "databases" && !state.dbName) {
+      return
+    }
+    if (paletteMode === "collections" || paletteMode === "databases") {
+      // Go back to main commands (or close palette if triggered explicitly)
       setPaletteMode("commands")
+      if (paletteMode === "databases") {
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+      }
     } else {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       setPaletteMode("commands")
     }
-  }, [paletteMode, state.activeTabId])
+  }, [paletteMode, state.dbName])
 
-  // Show palette automatically when no tab is open
+  // Show palette automatically when no db is selected, or when no tab is open, or explicitly opened
   const paletteVisible = state.commandPaletteVisible ||
-    (state.view === "collections" && !state.collectionsLoading && !state.error)
+    paletteMode === "databases" ||
+    (state.view === "collections" && !state.collectionsLoading && !state.error && !!state.dbName)
 
-  // Auto-show collection picker when no tab is open
-  const effectivePaletteMode = !state.activeTabId && paletteVisible ? "collections" : paletteMode
-  const effectiveCommands = effectivePaletteMode === "collections" ? collectionCommands : mainCommands
-  const effectivePlaceholder = effectivePaletteMode === "collections" ? "Open collection..." : "Search commands..."
+  // Determine the effective palette mode
+  const effectivePaletteMode: PaletteMode =
+    paletteMode === "databases"
+      ? "databases"
+      : (!state.activeTabId && paletteVisible ? "collections" : paletteMode)
+
+  const effectiveCommands =
+    effectivePaletteMode === "databases" ? databaseCommands :
+    effectivePaletteMode === "collections" ? collectionCommands :
+    mainCommands
+  const effectivePlaceholder =
+    effectivePaletteMode === "databases" ? "Switch database..." :
+    effectivePaletteMode === "collections" ? "Open collection..." :
+    "Search commands..."
 
   const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
   const selectedDoc = state.documents[state.selectedIndex] ?? null

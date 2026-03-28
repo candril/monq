@@ -16,5 +16,6 @@ export const CATEGORY_ORDER = [
   "document",
   "view",
   "query",
+  "database",
   "collection",
 ] as const
