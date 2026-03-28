@@ -60,6 +60,12 @@ export function buildCommands(state: AppState): Command[] {
       shortcut: "P",
     })
     commands.push({
+      id: "view:toggle-filter-bar",
+      label: state.filterBarVisible ? "Hide Filter Bar" : "Show Filter Bar",
+      category: "view",
+      shortcut: "Shift+F",
+    })
+    commands.push({
       id: "view:reload",
       label: "Reload Documents",
       category: "view",

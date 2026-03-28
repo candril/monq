@@ -148,12 +148,16 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       } else if (key.name === "return" && confirm.focusedIndex >= 0) {
         if (confirm.focusedIndex === 0) {
           // New tab with clean filter
+          stopWatching()
+          dispatch({ type: "STOP_PIPELINE_WATCH" })
           dispatch({ type: "CONFIRM_NEW_TAB_SIMPLE", query: confirm.simpleQuery })
           dispatch({ type: "CLONE_TAB" })
           dispatch({ type: "CLEAR_PIPELINE" })
           dispatch({ type: "OPEN_QUERY" })
         } else if (confirm.focusedIndex === 1) {
           // Overwrite: use translated query
+          stopWatching()
+          dispatch({ type: "STOP_PIPELINE_WATCH" })
           dispatch({ type: "CONFIRM_OVERWRITE_SIMPLE", query: confirm.simpleQuery })
         } else {
           // Cancel
@@ -241,6 +245,8 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       const { query, lossless } = filterToSimple(filter as Record<string, unknown>)
       const hasComplexStages = classifyPipeline(state.pipeline)
       if (lossless && !hasComplexStages) {
+        stopWatching()
+        dispatch({ type: "STOP_PIPELINE_WATCH" })
         dispatch({ type: "ENTER_SIMPLE_MODE", query })
         dispatch({ type: "OPEN_QUERY" })
       } else {
@@ -252,6 +258,8 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
     // Backspace clears filter or pipeline
     if (key.name === "backspace" && state.view === "documents") {
       if (state.pipelineMode) {
+        stopWatching()
+        dispatch({ type: "STOP_PIPELINE_WATCH" })
         dispatch({ type: "CLEAR_PIPELINE" })
         return
       }
@@ -313,6 +321,12 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
 
     // Document view
     if (state.view === "documents") {
+      // Shift+F: toggle filter/pipeline bar visibility
+      if (key.name === "f" && key.shift) {
+        dispatch({ type: "TOGGLE_FILTER_BAR" })
+        return
+      }
+
       switch (key.name) {
         case "j":
         case "down":
@@ -580,6 +594,8 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
             const { query, lossless } = filterToSimple(filter as Record<string, unknown>)
             const hasComplexStages = classifyPipeline(state.pipeline)
             if (lossless && !hasComplexStages) {
+              stopWatching()
+              dispatch({ type: "STOP_PIPELINE_WATCH" })
               dispatch({ type: "ENTER_SIMPLE_MODE", query })
               dispatch({ type: "OPEN_QUERY" })
             } else {

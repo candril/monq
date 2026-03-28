@@ -136,6 +136,10 @@ export function App({ uri }: AppProps) {
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
         dispatch({ type: "CYCLE_PREVIEW_POSITION" })
         break
+      case "view:toggle-filter-bar":
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        dispatch({ type: "TOGGLE_FILTER_BAR" })
+        break
       case "view:reload":
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
         dispatch({ type: "RELOAD_DOCUMENTS" })
@@ -296,7 +300,7 @@ export function App({ uri }: AppProps) {
       />
 
       {/* Pipeline bar — shown in pipeline mode */}
-      {state.pipelineMode && (
+      {state.pipelineMode && state.filterBarVisible && (
         <PipelineBar
           pipeline={state.pipeline}
           isAggregate={state.pipelineIsAggregate}
@@ -305,7 +309,7 @@ export function App({ uri }: AppProps) {
       )}
 
       {/* Filter bar — shown in simple mode */}
-      {!state.pipelineMode && (
+      {!state.pipelineMode && state.filterBarVisible && (
         <FilterBar
           query={state.queryInput}
           queryMode={state.queryMode}

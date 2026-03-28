@@ -140,6 +140,8 @@ export interface AppState {
   pipelineConfirm: { simpleQuery: string; focusedIndex: number } | null
   /** True while fs.watch is active on the pipeline file */
   pipelineWatching: boolean
+  /** Whether the filter/pipeline bar is visible at the bottom */
+  filterBarVisible: boolean
 
   // Collection browser
   collections: CollectionInfo[]

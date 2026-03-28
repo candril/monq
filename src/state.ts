@@ -80,6 +80,7 @@ export type AppAction =
   | { type: "ADD_PIPELINE_MATCH_CONDITION"; field: string; value: unknown }
   | { type: "START_PIPELINE_WATCH" }
   | { type: "STOP_PIPELINE_WATCH" }
+  | { type: "TOGGLE_FILTER_BAR" }
   // Preview
   | { type: "TOGGLE_PREVIEW" }
   | { type: "CYCLE_PREVIEW_POSITION" }
@@ -152,6 +153,7 @@ export function createInitialState(): AppState {
     pipelineIsAggregate: false,
     pipelineConfirm: null,
     pipelineWatching: false,
+    filterBarVisible: true,
     previewPosition: null,
     previewScrollOffset: 0,
     commandPaletteVisible: false,
@@ -788,7 +790,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         pipelineSource: "",
         pipelineIsAggregate: false,
         pipelineConfirm: null,
-        pipelineWatching: false,
+    pipelineWatching: false,
         queryMode: "simple",
         queryInput: "",
         documentsLoading: true,
@@ -1050,6 +1052,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "STOP_PIPELINE_WATCH":
       return { ...state, pipelineWatching: false }
+
+    case "TOGGLE_FILTER_BAR":
+      return { ...state, filterBarVisible: !state.filterBarVisible }
 
     default:
       return state
