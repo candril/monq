@@ -123,6 +123,10 @@ export function App({ uri }: AppProps) {
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
         dispatch({ type: "OPEN_QUERY" })
         break
+      case "query:open-filter-bson":
+        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+        dispatch({ type: "OPEN_QUERY_BSON" })
+        break
       case "query:clear-filter":
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
         dispatch({ type: "CLEAR_QUERY" })
@@ -130,7 +134,7 @@ export function App({ uri }: AppProps) {
       case "query:format-bson":
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
         dispatch({ type: "FORMAT_BSON_SECTION" })
-        dispatch({ type: "OPEN_QUERY" })
+        dispatch({ type: "OPEN_QUERY_BSON" })
         break
       case "query:sort": {
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })

@@ -71,9 +71,15 @@ export function buildCommands(state: AppState): Command[] {
   if (hasTab) {
     commands.push({
       id: "query:open-filter",
-      label: "Filter Documents",
+      label: "Filter (simple)",
       category: "query",
-      shortcut: "/ Ctrl+F",
+      shortcut: "/",
+    })
+    commands.push({
+      id: "query:open-filter-bson",
+      label: "Filter (BSON)",
+      category: "query",
+      shortcut: "Ctrl+F",
     })
     if (state.queryInput) {
       commands.push({

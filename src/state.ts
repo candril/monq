@@ -50,6 +50,7 @@ export type AppAction =
   | { type: "CYCLE_SORT"; field: string }
   // Query
   | { type: "OPEN_QUERY" }
+  | { type: "OPEN_QUERY_BSON" }
   | { type: "CLOSE_QUERY" }
   | { type: "SET_QUERY_INPUT"; input: string }
   | { type: "SET_QUERY_MODE"; mode: QueryMode }
@@ -479,11 +480,44 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     // Query
     case "OPEN_QUERY": {
-      // Append space if query exists (so suggestions show new tokens, not completions)
-      const queryWithSpace = state.queryInput && !state.queryInput.endsWith(" ")
+      // In simple mode: append space so suggestions show new tokens, not completions.
+      // In BSON mode: just show the bar as-is.
+      const queryWithSpace = state.queryMode === "simple" && state.queryInput && !state.queryInput.endsWith(" ")
         ? state.queryInput + " "
         : state.queryInput
       return { ...state, queryVisible: true, queryInput: queryWithSpace }
+    }
+
+    case "OPEN_QUERY_BSON": {
+      // Open the query bar in BSON mode directly.
+      // If currently in simple mode, migrate filter + sort first (same as TOGGLE_QUERY_MODE simple→bson).
+      // If already in BSON mode, just ensure it's visible.
+      if (state.queryMode === "bson") {
+        return { ...state, queryVisible: true }
+      }
+      let bsonFilter = ""
+      try {
+        const filter = parseSimpleQuery(state.queryInput, state.schemaMap)
+        bsonFilter = Object.keys(filter).length > 0
+          ? JSON.stringify(filter, null, 2)
+          : ""
+      } catch {
+        bsonFilter = state.queryInput
+      }
+      const bsonSort = state.sortField
+        ? JSON.stringify({ [state.sortField]: state.sortDirection }, null, 2)
+        : state.bsonSort
+      return {
+        ...state,
+        queryVisible: true,
+        queryMode: "bson",
+        queryInput: bsonFilter,
+        bsonSort,
+        bsonSortVisible: bsonSort !== "",
+        bsonFocusedSection: "filter",
+        sortField: null,
+        sortDirection: -1,
+      }
     }
 
     case "CLOSE_QUERY":

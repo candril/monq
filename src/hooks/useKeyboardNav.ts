@@ -38,9 +38,9 @@ export function useKeyboardNav({ state, dispatch }: UseKeyboardNavOptions) {
       return
     }
 
-    // Ctrl+F: open/focus the filter bar from anywhere
+    // Ctrl+F: open filter bar in BSON mode directly (migrates simple filter if needed)
     if (key.ctrl && key.name === "f") {
-      dispatch({ type: "OPEN_QUERY" })
+      dispatch({ type: "OPEN_QUERY_BSON" })
       return
     }
 
