@@ -22,7 +22,7 @@ Additional tab-level utilities beyond basic navigation: clone tab, pipeline-to-s
 
 ### P2 - Should Have
 
-- **Preview pipeline** (`Shift+F` in simple mode): visualizes the current simple filter + sort as pipeline stages in the pipeline bar — without actually running as an aggregate. Shows `[preview]` badge. Pressing `Shift+F` again clears the preview.
+- **Preview pipeline** (`Shift+F` in simple mode): visualizes the current simple filter + sort as pipeline stages in the pipeline bar — without actually running as an aggregate. Shows `[preview]` badge. Pressing `Shift+F` again clears the preview. — **dropped**: `Shift+F` was repurposed to `TOGGLE_FILTER_BAR` (show/hide the filter bar). The `SHOW_SIMPLE_AS_PIPELINE` / `CLEAR_PREVIEW_PIPELINE` / `previewPipeline` state fields were never implemented.
 
 ## Implementation Notes
 
@@ -53,10 +53,9 @@ The `lossless` flag from `filterToSimple()` in `src/query/parser.ts` determines 
 
 ## Key Files
 
-- `src/state.ts` — `CLONE_TAB`, `CONFIRM_PIPELINE_TO_SIMPLE`, `SWITCH_TO_SIMPLE`, `SHOW_SIMPLE_AS_PIPELINE`, `CLEAR_PREVIEW_PIPELINE`, `rebuildPreview()`
-- `src/hooks/useKeyboardNav.ts` — `t`, `Shift+F` key handlers; confirm dialog key handlers
-- `src/components/ConfirmDialog.tsx` — `ConfirmChoiceDialog` used for pipeline-to-simple prompt
-- `src/components/PipelineBar.tsx` — renders `previewPipeline` with `[preview]` badge
+- `src/state.ts` — `CLONE_TAB`, `CONFIRM_PIPELINE_TO_SIMPLE`, `SWITCH_TO_SIMPLE`, `TOGGLE_FILTER_BAR`
+- `src/hooks/useKeyboardNav.ts` — `t`, `Shift+F` (toggle filter bar) key handlers; confirm dialog key handlers
+- `src/components/ConfirmDialog.tsx` — `ConfirmDialog` used for pipeline-to-simple prompt
 - `src/query/parser.ts` — `filterToSimple()` with `lossless` flag
 
 ## Keyboard
@@ -64,6 +63,5 @@ The `lossless` flag from `filterToSimple()` in `src/query/parser.ts` determines 
 | Key | Context | Action |
 |-----|---------|--------|
 | `t` | Document list | Clone current tab |
-| `Shift+F` | Simple filter active | Preview filter as pipeline stages |
-| `Shift+F` | Preview active | Clear pipeline preview |
+| `Shift+F` | Anywhere | Toggle filter bar visibility (show/hide) |
 | `Tab` | Pipeline active | Trigger pipeline-to-simple dialog |

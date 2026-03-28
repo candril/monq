@@ -1,6 +1,6 @@
 # Selection and Deletion
 
-**Status**: In Progress
+**Status**: Done
 
 ## Description
 
@@ -20,8 +20,7 @@ Visual selection mode for bulk operations on documents. Supports selecting indiv
 
 ## What's Missing
 
-- `y` to duplicate selected documents (insert copies with new `_id`) — currently `y` is clipboard yank (see spec 014)
-- `APPEND_DOCUMENTS` state action exists but is unused — no incremental loading
+Nothing — all P1 and P2 capabilities are complete.
 
 ## Capabilities
 
@@ -39,7 +38,6 @@ Visual selection mode for bulk operations on documents. Supports selecting indiv
 
 ### P2 - Should Have
 
-- `y` duplicates selected documents (insert with new `_id`) — **not yet implemented**
 - Visual indicator showing selected rows (different background color) — **done**
 - Selection count in header — **done**
 

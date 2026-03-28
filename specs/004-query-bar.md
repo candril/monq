@@ -38,9 +38,9 @@ full aggregation pipeline support in the future.
 
 ## Capabilities
 
-### P1 - Must Have
+### P1 - Must Have (all done)
 
-- **Simple mode** (default): single-line `<input>` at the bottom of the screen
+- **Simple mode** (default): single-line `<input>` at the bottom of the screen — **done**
   - Parse `Key:Value` pairs into MongoDB filters
   - `Author:Peter` → `{ "Author": "Peter" }`
   - `Author:Peter State:Closed` → `{ "Author": "Peter", "State": "Closed" }`
@@ -53,7 +53,7 @@ full aggregation pipeline support in the future.
   - Field name suggestions with dot-notation drill-down (schema-aware)
   - Execute on Enter, clear with Backspace (outside bar), open with `/`
 
-- **BSON mode**: expanding multi-section panel, toggled with `Tab` from the filter bar
+- **BSON mode**: expanding multi-section panel, toggled with `Tab` from the filter bar — **done**
   - **Filter section** (always visible): raw MongoDB filter JSON textarea
   - **Sort section** (toggle with `Ctrl+O`): raw MongoDB sort JSON textarea
   - **Projection section** (toggle with `Ctrl+J`): raw MongoDB projection JSON textarea
@@ -63,7 +63,7 @@ full aggregation pipeline support in the future.
   - `Escape` closes the BSON panel (returns to simple mode display)
   - Mode badge: `[Simple]` in green / `[BSON]` in orange — always visible when bar is open
 
-- **Mode migration on Tab switch**:
+- **Mode migration on Tab switch** — **done**:
   - Simple → BSON: current simple query is parsed and pre-populated as pretty-printed JSON
     in the filter textarea; active sort state is pre-populated in the sort textarea
   - BSON → Simple: filter textarea content is carried back into the simple input as-is
@@ -71,18 +71,18 @@ full aggregation pipeline support in the future.
 
 ### P2 - Should Have
 
-- Filter-from-value: press `f` on a cell to append `field:value` to the simple query
+- Filter-from-value: press `f` on a cell to append `field:value` to the simple query — **done** (see spec 016)
 - Show current mode indicator in the filter bar at all times (even when closed, if a
-  query is active)
-- Syntax highlighting in BSON textareas (JSON language)
+  query is active) — **done** (mode badge always visible in filter bar)
+- Syntax highlighting in BSON textareas (JSON language) — **not done**
 - BSON parse error shown inline (red message below the offending textarea) rather than
-  silently falling back to unfiltered
+  silently falling back to unfiltered — **not done**
 
 ### P3 - Nice to Have
 
-- Query history with up/down arrows (simple mode)
-- Validate projection fields against known schema
-- Visual diff of active filter vs. previous filter
+- Query history with up/down arrows (simple mode) — **not done**
+- Validate projection fields against known schema — **not done**
+- Visual diff of active filter vs. previous filter — **not done**
 
 ## Technical Notes
 
