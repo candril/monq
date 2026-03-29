@@ -152,8 +152,8 @@ export function usePipelineKeys({ state, dispatch, renderer, keymap }: UsePipeli
       return true
     }
 
-    // Ctrl-Y: open history picker while simple query bar is open (not remappable — internal shortcut)
-    if (key.ctrl && key.name === "y" && state.queryVisible && state.queryMode === "simple") {
+    // Ctrl-R: open history picker while simple query bar is open (not remappable — internal shortcut)
+    if (key.ctrl && key.name === "r" && state.queryVisible && state.queryMode === "simple") {
       dispatch({ type: "OPEN_HISTORY_PICKER" })
       return true
     }

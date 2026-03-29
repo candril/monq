@@ -1,6 +1,6 @@
 /**
  * History picker — suggestion-style overlay above the filter bar.
- * Triggered by Ctrl-Y while the simple query bar is open.
+ * Triggered by Ctrl-R while the simple query bar is open.
  * Ctrl-P / Ctrl-N to navigate, Enter to pick, Escape to dismiss.
  */
 
@@ -42,8 +42,8 @@ export function HistoryPicker({ entries, onPick, onClose }: HistoryPickerProps) 
       if (entry) onPick(entry)
       return
     }
-    // Ctrl-Y again toggles closed
-    if (key.ctrl && key.name === "y") {
+    // Ctrl-R again toggles closed
+    if (key.ctrl && key.name === "r") {
       onClose()
       return
     }

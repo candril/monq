@@ -344,7 +344,7 @@ export function App({
         )}
       </box>
 
-      {/* History picker — Ctrl-Y while simple bar is open */}
+      {/* History picker — Ctrl-R while simple bar is open */}
       {state.historyPickerOpen && state.queryVisible && (
         <HistoryPicker
           entries={state.historyEntries}
