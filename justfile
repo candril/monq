@@ -42,6 +42,12 @@ test-watch:
 typecheck:
     bun x tsc --noEmit
 
+# Run all checks: typecheck + lint + fmt
+check:
+    just typecheck
+    just lint
+    just fmt-check
+
 # Lint source files
 lint:
     bun run lint
