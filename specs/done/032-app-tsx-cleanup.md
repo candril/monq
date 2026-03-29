@@ -1,6 +1,6 @@
 # App.tsx Cleanup
 
-**Status**: Draft
+**Status**: Done
 
 ## Description
 Extract remaining inline logic from App.tsx into dedicated components or utility functions. App.tsx should be a thin composition layer only.

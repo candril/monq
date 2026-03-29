@@ -1,11 +1,15 @@
 /**
  * UriScreen — shown at startup when no --uri flag was provided.
  * Lets the user paste or type a MongoDB connection URI.
+ *
+ * Empty input + Enter connects to mongodb://localhost:27017.
  */
 
 import { useState } from "react"
 import { useKeyboard, useRenderer } from "@opentui/react"
 import { theme } from "../theme"
+
+const DEFAULT_URI = "mongodb://localhost:27017"
 
 interface UriScreenProps {
   onConnect: (uri: string) => void
@@ -18,16 +22,12 @@ export function UriScreen({ onConnect }: UriScreenProps) {
 
   useKeyboard((key) => {
     if (key.name === "return") {
-      const trimmed = value.trim()
-      if (!trimmed) {
-        setError("Please enter a MongoDB connection URI")
-        return
-      }
-      if (!trimmed.startsWith("mongodb://") && !trimmed.startsWith("mongodb+srv://")) {
+      const uri = value.trim() || DEFAULT_URI
+      if (!uri.startsWith("mongodb://") && !uri.startsWith("mongodb+srv://")) {
         setError("URI must start with mongodb:// or mongodb+srv://")
         return
       }
-      onConnect(trimmed)
+      onConnect(uri)
       return
     }
 
@@ -35,7 +35,6 @@ export function UriScreen({ onConnect }: UriScreenProps) {
       renderer.destroy()
       return
     }
-
   })
 
   return (
@@ -68,7 +67,7 @@ export function UriScreen({ onConnect }: UriScreenProps) {
           <input
             value={value}
             onInput={(v) => { setValue(v); setError(null) }}
-            placeholder="mongodb://localhost:27017"
+            placeholder={DEFAULT_URI}
             focused
             backgroundColor={theme.bg}
             textColor={theme.text}
@@ -85,9 +84,7 @@ export function UriScreen({ onConnect }: UriScreenProps) {
       {/* Error */}
       <box marginTop={1} minHeight={1}>
         {error && (
-          <text>
-            <span fg={theme.error}>{error}</span>
-          </text>
+          <text><span fg={theme.error}>{error}</span></text>
         )}
       </box>
 

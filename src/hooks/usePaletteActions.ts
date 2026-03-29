@@ -38,12 +38,12 @@ export function usePaletteActions({
 }: UsePaletteActionsOptions) {
   const handleSelect = useCallback(
     (cmd: Command) => {
-      // Database selection
+      // Database selection — switch to collection picker after selecting
       if (cmd.id.startsWith("db:")) {
         const selectedDb = cmd.id.slice(3)
         switchDatabase(selectedDb)
         dispatch({ type: "SELECT_DATABASE", dbName: selectedDb })
-        setPaletteMode("commands")
+        setPaletteMode("collections")
         return
       }
 

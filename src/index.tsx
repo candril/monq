@@ -56,7 +56,7 @@ function Root() {
     )
   }
 
-  return <App uri={uri} />
+  return <App uri={uri} onBackToUri={() => setUri(null)} />
 }
 
 createRoot(renderer).render(<Root />)

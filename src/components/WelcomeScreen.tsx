@@ -35,8 +35,10 @@ interface WelcomeScreenProps {
   onSelectDatabase: (name: string) => void
   /** Called when a collection is picked */
   onSelectCollection: (name: string) => void
-  /** Called when the user presses Backspace on empty input in step 2 */
+  /** Called when Backspace on empty input in step 2 → back to DB picker */
   onBack: () => void
+  /** Called when Backspace on empty input in step 1 → back to URI screen (optional) */
+  onBackToUri?: () => void
 }
 
 export function WelcomeScreen({
@@ -48,6 +50,7 @@ export function WelcomeScreen({
   onSelectDatabase,
   onSelectCollection,
   onBack,
+  onBackToUri,
 }: WelcomeScreenProps) {
   const renderer = useRenderer()
   const [query, setQuery] = useState("")
@@ -86,9 +89,10 @@ export function WelcomeScreen({
       if (item) { setQuery(""); setCursor(0); onSelect(item) }
       return
     }
-    // Backspace on empty → go back (step 2 only)
-    if (key.name === "backspace" && !query && step === 2) {
-      onBack()
+    // Backspace on empty → go back one level
+    if (key.name === "backspace" && !query) {
+      if (step === 2) { onBack(); return }
+      if (step === 1 && onBackToUri) { onBackToUri(); return }
       return
     }
     // Quit
@@ -103,7 +107,9 @@ export function WelcomeScreen({
   const hint =
     step === 2
       ? "↑↓ navigate  ·  Enter select  ·  Backspace back  ·  q quit"
-      : "↑↓ navigate  ·  Enter select  ·  q quit"
+      : onBackToUri
+        ? "↑↓ navigate  ·  Enter select  ·  Backspace back  ·  q quit"
+        : "↑↓ navigate  ·  Enter select  ·  q quit"
 
   const loading = items.length === 0
 

@@ -1,6 +1,6 @@
 # Backspace Returns to DB Picker from Collection Picker
 
-**Status**: In Progress — implemented as part of spec 029 (WelcomeScreen)
+**Status**: Done — implemented as part of spec 029 (WelcomeScreen)
 
 ## Description
 When the user is on the collection picker (step 2 of startup flow), pressing Backspace should return them to the DB picker so they can change their mind without restarting.

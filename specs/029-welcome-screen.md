@@ -1,6 +1,6 @@
 # Welcome Screen — DB and Collection Picker
 
-**Status**: In Progress
+**Status**: Done
 
 ## Description
 

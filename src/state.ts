@@ -280,8 +280,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     // Database picker
     case "SET_DATABASES":
-      // Receiving the database list means the no-DB startup fetch is done
-      return { ...state, databases: action.databases, collectionsLoading: false }
+      // Only clear collectionsLoading if no DB is selected (startup no-URI case).
+      // During in-app DB switching, collectionsLoading is managed by SET_COLLECTIONS.
+      return {
+        ...state,
+        databases: action.databases,
+        collectionsLoading: state.dbName ? state.collectionsLoading : false,
+      }
 
     case "OPEN_DB_PICKER":
       return { ...state, dbPickerOpen: true }

@@ -36,9 +36,10 @@ type PaletteMode = "commands" | "collections" | "databases"
 
 interface AppProps {
   uri: string
+  onBackToUri?: () => void
 }
 
-export function App({ uri }: AppProps) {
+export function App({ uri, onBackToUri }: AppProps) {
   const [state, dispatch] = useReducer(appReducer, null, createInitialState)
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("commands")
   const renderer = useRenderer()
@@ -94,7 +95,7 @@ export function App({ uri }: AppProps) {
     effectivePaletteMode === "databases"
       ? "Switch database..."
       : effectivePaletteMode === "collections"
-        ? "Open collection..."
+        ? state.collectionsLoading ? "Loading collections..." : "Open collection..."
         : "Search commands..."
 
   // Welcome screen: shown when db is loaded but no tab is open yet
@@ -167,6 +168,7 @@ export function App({ uri }: AppProps) {
             onSelectDatabase={handleSelectDatabase}
             onSelectCollection={handleSelectCollection}
             onBack={handleWelcomeBack}
+            onBackToUri={onBackToUri}
           />
         ) : activeTab ? (
           <box
