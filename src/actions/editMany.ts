@@ -161,6 +161,65 @@ async function openEditorWithError(
   }
 }
 
+// ── Diff logic ───────────────────────────────────────────────────────────────
+
+export interface DiffResult {
+  result: EditManyResult
+  toReplace: Array<{ originalId: unknown; newDoc: Document }>
+}
+
+/**
+ * Pure diff: compare originalDocs against editedDocs by _id.
+ * Returns which docs to update, which are missing, and which are new (added).
+ * No DB calls — purely structural comparison.
+ */
+export function diffDocs(originalDocs: Document[], editedDocs: Document[]): DiffResult {
+  const originalById = new Map<string, Document>()
+  for (const doc of originalDocs) {
+    const key = docIdKey(doc)
+    if (key) originalById.set(key, doc)
+  }
+
+  const toReplace: Array<{ originalId: unknown; newDoc: Document }> = []
+  const added: Document[] = []
+  const unchanged: Document[] = []
+  const errors: string[] = []
+  const seenKeys = new Set<string>()
+
+  for (const editedDoc of editedDocs) {
+    const key = docIdKey(editedDoc)
+    if (!key) {
+      added.push(editedDoc)
+      continue
+    }
+    seenKeys.add(key)
+    const orig = originalById.get(key)
+    if (!orig) {
+      added.push(editedDoc)
+      continue
+    }
+    const { _id: _a, ...origFields } = orig
+    const { _id: _b, ...editedFields } = editedDoc
+    const origJson = EJSON.stringify(origFields, undefined, 0, { relaxed: true })
+    const editedJson = EJSON.stringify(editedFields, undefined, 0, { relaxed: true })
+    if (origJson === editedJson) {
+      unchanged.push(editedDoc)
+    } else {
+      toReplace.push({ originalId: orig._id, newDoc: editedFields })
+    }
+  }
+
+  const missing: Document[] = []
+  for (const [key, doc] of originalById) {
+    if (!seenKeys.has(key)) missing.push(doc)
+  }
+
+  return {
+    result: { updated: toReplace.length, unchanged: unchanged.length, missing, added, errors },
+    toReplace,
+  }
+}
+
 // ── Main entry points ─────────────────────────────────────────────────────────
 
 export async function openEditorForMany(
@@ -238,53 +297,7 @@ export async function openEditorForMany(
     }
   }
 
-  const originalById = new Map<string, Document>()
-  for (const doc of originalDocs) {
-    const key = docIdKey(doc)
-    if (key) originalById.set(key, doc)
-  }
-
-  const toReplace: Array<{ originalId: unknown; newDoc: Document }> = []
-  const added: Document[] = []
-  const unchanged: Document[] = []
-  const errors: string[] = []
-  const seenKeys = new Set<string>()
-
-  for (const editedDoc of editedDocs) {
-    const key = docIdKey(editedDoc)
-    if (!key) {
-      added.push(editedDoc)
-      continue
-    }
-    seenKeys.add(key)
-    const orig = originalById.get(key)
-    if (!orig) {
-      added.push(editedDoc)
-      continue
-    }
-    const { _id: _a, ...origFields } = orig
-    const { _id: _b, ...editedFields } = editedDoc
-    const origJson = EJSON.stringify(origFields, undefined, 0, { relaxed: true })
-    const editedJson = EJSON.stringify(editedFields, undefined, 0, { relaxed: true })
-    if (origJson === editedJson) {
-      unchanged.push(editedDoc)
-    } else {
-      toReplace.push({ originalId: orig._id, newDoc: editedFields })
-    }
-  }
-
-  const missing: Document[] = []
-  for (const [key, doc] of originalById) {
-    if (!seenKeys.has(key)) missing.push(doc)
-  }
-
-  const result: EditManyResult = {
-    updated: toReplace.length,
-    unchanged: unchanged.length,
-    missing,
-    added,
-    errors,
-  }
+  const { result, toReplace } = diffDocs(originalDocs, editedDocs)
 
   const applyEdits = async () => {
     for (const { originalId, newDoc } of toReplace) {
