@@ -26,6 +26,31 @@ export interface PipelineResult {
 
 // ── Template generation ─────────────────────────────────────────────────────
 
+/** Regex matching the Mon-Q comment header block at the top of a pipeline file */
+const PIPELINE_HEADER_RE = /^(\/\/[^\n]*\n)*\n/
+
+/** Build the comment header prepended to every pipeline file on open */
+function buildHeader(collectionName: string, dbName: string, schemaMap: SchemaMap): string {
+  const topLevelFields = [...schemaMap.entries()].filter(([p]) => !p.includes("."))
+  const fieldLines =
+    topLevelFields.length > 0
+      ? topLevelFields.map(([p, info]) => `//   ${p}: ${info.type}`)
+      : [`//   (no schema sampled)`]
+
+  return [
+    `// Mon-Q — MongoDB aggregation pipeline for ${collectionName} @ ${dbName}`,
+    `// Save to apply (:wq). Quit without saving (:q!) to cancel.`,
+    `//`,
+    `// Schema (${collectionName}):`,
+    ...fieldLines,
+    `//`,
+    `// Doc structure: { "pipeline": [ { "$match": {} }, { "$sort": {} }, ... ] }`,
+    `// $match operators: $eq $ne $gt $gte $lt $lte $in $nin $regex $exists $elemMatch $and $or`,
+    `// Stages that trigger aggregate(): $group $lookup $unwind $limit $skip $count $addFields`,
+    ``,
+  ].join("\n")
+}
+
 function buildTemplate(
   collectionName: string,
   dbName: string,
@@ -36,16 +61,19 @@ function buildTemplate(
   sortField: string | null,
   sortDirection: 1 | -1,
 ): string {
-  // Re-open existing pipeline as-is
+  const header = buildHeader(collectionName, dbName, schemaMap)
+
+  // Re-open existing pipeline — strip any previous header and re-prepend a fresh one
   if (currentPipelineSource.trim()) {
-    return currentPipelineSource
+    const body = currentPipelineSource.replace(PIPELINE_HEADER_RE, "")
+    return header + body
   }
 
   // Pipeline is active but was entered programmatically (no source string) —
   // serialize the live pipeline stages so the user can edit what's actually running
   if (currentPipeline.length > 0) {
     const doc = { $schema: "./.monq-pipeline-schema.json", pipeline: currentPipeline }
-    return JSON.stringify(doc, null, 2) + "\n"
+    return header + JSON.stringify(doc, null, 2) + "\n"
   }
 
   // Parse filter + projection from simple query string
@@ -68,39 +96,12 @@ function buildTemplate(
   const pipelineStages: Document[] = [{ $match: matchObj }, { $sort: sortObj }]
   if (projObj) pipelineStages.push({ $project: projObj })
 
-  // Compose as proper JSON (JSONC — supports // comments)
-  // The $schema key must be first for jsonls to pick it up
   const doc = {
     $schema: "./.monq-pipeline-schema.json",
     pipeline: pipelineStages,
   }
 
-  // Pretty-print with helpful comments injected
-  const topLevelFields = [...schemaMap.entries()].filter(([p]) => !p.includes("."))
-
-  const json = JSON.stringify(doc, null, 2)
-
-  // Schema section: one line per field so AI agents can read the full schema
-  const fieldLines =
-    topLevelFields.length > 0
-      ? topLevelFields.map(([p, info]) => `//   ${p}: ${info.type}`)
-      : [`//   (no schema sampled)`]
-
-  // Inject comment header and inline hints via string manipulation
-  const header = [
-    `// Mon-Q — MongoDB aggregation pipeline for ${collectionName} @ ${dbName}`,
-    `// Save to apply (:wq). Quit without saving (:q!) to cancel.`,
-    `//`,
-    `// Schema (${collectionName}):`,
-    ...fieldLines,
-    `//`,
-    `// Doc structure: { "pipeline": [ { "$match": {} }, { "$sort": {} }, ... ] }`,
-    `// $match operators: $eq $ne $gt $gte $lt $lte $in $nin $regex $exists $elemMatch $and $or`,
-    `// Stages that trigger aggregate(): $group $lookup $unwind $limit $skip $count $addFields`,
-    ``,
-  ].join("\n")
-
-  return header + json + "\n"
+  return header + JSON.stringify(doc, null, 2) + "\n"
 }
 
 // ── JSON Schema sidecar ─────────────────────────────────────────────────────
