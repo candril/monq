@@ -143,7 +143,11 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
       return
     }
     if (key.name === "d" && !key.ctrl && !key.shift) {
-      if (state.activeTabId) dispatch({ type: "CLOSE_TAB", tabId: state.activeTabId })
+      if (state.tabs.length <= 1) {
+        dispatch({ type: "SHOW_MESSAGE", message: "Cannot close the last tab", kind: "warning" })
+      } else if (state.activeTabId) {
+        dispatch({ type: "CLOSE_TAB", tabId: state.activeTabId })
+      }
       return
     }
     if (key.name === "u" && !key.ctrl) {

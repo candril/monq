@@ -592,21 +592,68 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, schemaMap: action.schemaMap }
 
     case "CYCLE_SORT": {
+      // Determine next sort field/direction by cycling: none → asc → desc → none
+      const currentField = state.pipelineMode
+        ? (() => {
+            const sortStage = state.pipeline.find((s) => "$sort" in s) as any
+            if (!sortStage) return null
+            const entries = Object.entries(sortStage.$sort ?? {})
+            return entries.length === 1 && entries[0][0] === action.field ? action.field : null
+          })()
+        : state.sortField
+      const currentDir = state.pipelineMode
+        ? (() => {
+            const sortStage = state.pipeline.find((s) => "$sort" in s) as any
+            const entries = Object.entries(sortStage?.$sort ?? {})
+            return entries.length === 1 && entries[0][0] === action.field
+              ? (entries[0][1] as 1 | -1)
+              : -1
+          })()
+        : state.sortDirection
+
       let sortField: string | null
       let sortDirection: 1 | -1
-      if (state.sortField !== action.field) {
-        // New field: start ascending
+      if (currentField !== action.field) {
         sortField = action.field
         sortDirection = 1
-      } else if (state.sortDirection === 1) {
-        // Was asc: switch to desc
+      } else if (currentDir === 1) {
         sortField = action.field
         sortDirection = -1
       } else {
-        // Was desc: clear sort
         sortField = null
         sortDirection = -1
       }
+
+      // In pipeline mode: update the $sort stage in the pipeline directly
+      if (state.pipelineMode) {
+        const sortStageIdx = state.pipeline.findIndex((s) => "$sort" in s)
+        let newPipeline: import("mongodb").Document[]
+        if (sortField === null) {
+          // Clear sort — remove $sort stage entirely
+          newPipeline =
+            sortStageIdx !== -1 ? state.pipeline.filter((_, i) => i !== sortStageIdx) : state.pipeline
+        } else {
+          const newSortStage = { $sort: { [sortField]: sortDirection } }
+          if (sortStageIdx !== -1) {
+            newPipeline = state.pipeline.map((s, i) => (i === sortStageIdx ? newSortStage : s))
+          } else {
+            // Insert $sort after $match if present, otherwise prepend
+            const matchIdx = state.pipeline.findIndex((s) => "$match" in s)
+            newPipeline = [...state.pipeline]
+            newPipeline.splice(matchIdx !== -1 ? matchIdx + 1 : 0, 0, newSortStage)
+          }
+        }
+        const newSource = JSON.stringify({ pipeline: newPipeline }, null, 2)
+        return {
+          ...state,
+          pipeline: newPipeline,
+          pipelineSource: newSource,
+          documentsLoading: true,
+          reloadCounter: state.reloadCounter + 1,
+          selectedIndex: 0,
+        }
+      }
+
       return {
         ...state,
         sortField,
@@ -844,7 +891,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         state.schemaMap,
       )
       try {
-        if (Object.keys(enterFilter).length > 0) stages.push({ $match: enterFilter })
+        // Always include $match — even empty — so the f key can add conditions later
+        stages.push({ $match: enterFilter })
       } catch {
         /* skip */
       }

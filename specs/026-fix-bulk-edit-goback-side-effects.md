@@ -1,6 +1,6 @@
 # Fix Bulk Edit "Go Back" Side Effect Detection
 
-**Status**: Draft
+**Status**: Done
 
 ## Description
 When editing multiple documents and a doc is deleted in the editor, the side-effect confirm dialog appears. Choosing "go back" re-opens the editor without the deleted doc (correct). But saving and closing the editor shows "No changes" instead of re-showing the side-effect dialog.

@@ -326,7 +326,7 @@ function HeaderRow({
   const values = columns.map((col, i) => {
     const isSelectedCol = i === selectedColumnIndex
     const isSorted = sortField === col.field
-    const sortIndicator = isSorted ? (sortDirection === 1 ? " ▲" : " ▼") : ""
+    const sortIndicator = isSorted ? (sortDirection === 1 ? " ▴" : " ▾") : ""
     const colW = colWidthArray[i]
     let label: string
     if (col.displayMode === "minimized") {

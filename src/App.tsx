@@ -197,8 +197,18 @@ export function App({ uri }: AppProps) {
               columns={state.columns}
               selectedIndex={state.selectedIndex}
               selectedColumnIndex={state.selectedColumnIndex}
-              sortField={state.sortField}
-              sortDirection={state.sortDirection}
+              sortField={(() => {
+                if (!state.pipelineMode) return state.sortField
+                const sortStage = state.pipeline.find((s) => "$sort" in s) as any
+                const entries = Object.entries(sortStage?.$sort ?? {})
+                return entries.length === 1 ? (entries[0][0] as string) : null
+              })()}
+              sortDirection={(() => {
+                if (!state.pipelineMode) return state.sortDirection
+                const sortStage = state.pipeline.find((s) => "$sort" in s) as any
+                const entries = Object.entries(sortStage?.$sort ?? {})
+                return entries.length === 1 ? (entries[0][1] as 1 | -1) : -1
+              })()}
               selectionMode={state.selectionMode}
               selectedRows={state.selectedRows}
               loading={state.documentsLoading}

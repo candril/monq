@@ -1,6 +1,6 @@
 # Fix Column Sort After Pipeline Editor
 
-**Status**: Draft
+**Status**: Done
 
 ## Description
 After opening and closing the pipeline editor (Ctrl+F), sorting by column (`s` key) stops working.

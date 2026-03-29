@@ -1,6 +1,6 @@
 # Prevent Closing Last Tab
 
-**Status**: Draft
+**Status**: Done
 
 ## Description
 Pressing `d` when only one tab is open should show a toast instead of closing it. The last tab cannot be closed.

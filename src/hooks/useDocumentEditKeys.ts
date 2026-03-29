@@ -60,7 +60,7 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
             dispatch({ type: "RELOAD_DOCUMENTS" })
             return
           }
-          showBulkConfirm(result, editedDocs)
+          showBulkConfirm(result, docsToEdit, editedDocs)
         })
         .catch((err: Error) => {
           renderer.resume()
@@ -147,11 +147,16 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
     return false
   }
 
-  // Helper: show bulk-edit side-effect confirmation — kept local to this hook
-  function showBulkConfirm(result: any, editedDocs: import("mongodb").Document[]): void {
+  // Helper: show bulk-edit side-effect confirmation — kept local to this hook.
+  // originalDocs: the true source of truth from the first editor open (never changes).
+  // editedDocs: what the user last saved (shown in the editor on goBack).
+  function showBulkConfirm(
+    result: any,
+    originalDocs: import("mongodb").Document[],
+    editedDocs: import("mongodb").Document[],
+  ): void {
     const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
     if (!activeTab) return
-    const docsToEdit = editedDocs // captured from closure
     dispatch({
       type: "SHOW_BULK_EDIT_CONFIRM",
       confirmation: {
@@ -162,8 +167,8 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
           openEditorForMany(
             activeTab.collectionName,
             state.dbName,
-            docsToEdit,
-            editedDocs,
+            originalDocs, // always diff against the original set
+            editedDocs,   // show what the user last saved
             state.schemaMap,
           )
             .then(async (o2) => {
@@ -180,16 +185,12 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
                 dispatch({ type: "FREEZE_SELECTION" })
                 dispatch({ type: "RELOAD_DOCUMENTS" })
               } else {
-                showBulkConfirm(o2.result, o2.editedDocs)
+                showBulkConfirm(o2.result, originalDocs, o2.editedDocs)
               }
             })
             .catch((err: Error) => {
               renderer.resume()
-              dispatch({
-                type: "SHOW_MESSAGE",
-                message: `Edit failed: ${err.message}`,
-                kind: "error",
-              })
+              dispatch({ type: "SHOW_MESSAGE", message: `Edit failed: ${err.message}`, kind: "error" })
             })
         },
         resolve: async (missingAction, addedAction) => {
