@@ -1,0 +1,64 @@
+---
+title: monq
+description: Terminal-based MongoDB browser and query tool. Keyboard-first, zero config.
+template: splash
+hero:
+  image:
+    file: ../../assets/logo.png
+    alt: monq logo
+  tagline: Terminal-based MongoDB browser. Keyboard-first, zero config — pass `--uri` and explore.
+  actions:
+    - text: Get Started
+      link: /monq/guide/installation/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/candril/monq
+      icon: external
+      variant: minimal
+---
+
+import { CardGrid, Card } from '@astrojs/starlight/components'
+
+## Features
+
+<CardGrid>
+  <Card title="Two query modes" icon="pencil">
+    Simple human-readable `Key:Value` syntax or raw BSON JSON — switch with `Tab`.
+  </Card>
+  <Card title="Inline projection" icon="setting">
+    Use `+field` to include and `-field` to exclude columns directly in the query bar.
+  </Card>
+  <Card title="Pipeline editor" icon="open-book">
+    Write full aggregation pipelines in `$EDITOR` with JSON Schema autocompletion.
+  </Card>
+  <Card title="Live pipeline reload" icon="rocket">
+    Watch `pipeline.jsonc` for external changes and open a tmux split with `Ctrl+E`.
+  </Card>
+  <Card title="Collection tabs" icon="list-format">
+    Open multiple collections side by side, switch with `1–9` or `[`/`]`.
+  </Card>
+  <Card title="Document editing" icon="pencil">
+    Edit single docs or bulk-select and edit in `$EDITOR` as a JSON array.
+  </Card>
+  <Card title="Schema-aware suggestions" icon="magnifier">
+    Field name autocomplete with dot-notation drill-down, projection-aware.
+  </Card>
+  <Card title="Smart columns" icon="bars">
+    Auto-detects document fields, horizontal scroll, sort, column sizing, hide via `-`.
+  </Card>
+  <Card title="Database switcher" icon="laptop">
+    Picks database on startup if none in URI; switch anytime via `Ctrl+P`.
+  </Card>
+</CardGrid>
+
+## Quick install
+
+```sh
+git clone https://github.com/candril/monq
+cd monq
+bun install
+just build
+```
+
+Then put `dist/monq` on your `$PATH`. See the [installation guide](/monq/guide/installation/) for full details.
