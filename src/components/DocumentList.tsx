@@ -4,7 +4,7 @@
  * h/l moves column cursor, j/k moves row cursor, w cycles column width mode.
  */
 
-import { useRef, useEffect, useMemo } from "react"
+import { useRef, useEffect, useMemo, useState } from "react"
 import type React from "react"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/react"
@@ -20,6 +20,7 @@ import {
   getNestedValue,
 } from "../utils/format"
 import { Loading } from "./Loading"
+import { randomDocumentMessage } from "../utils/loadingMessages"
 
 const SCROLL_MARGIN = 3
 const MIN_COL_WIDTH = 6
@@ -221,6 +222,12 @@ export function DocumentList({
 }: DocumentListProps) {
   const scrollRef = externalScrollRef ?? useRef<ScrollBoxRenderable>(null)
   const { width: terminalWidth } = useTerminalDimensions()
+  const [loadingMessage, setLoadingMessage] = useState(randomDocumentMessage)
+  useEffect(() => {
+    if (!loading) return
+    const timer = setInterval(() => setLoadingMessage(randomDocumentMessage()), 5000)
+    return () => clearInterval(timer)
+  }, [loading])
 
   useEffect(() => {
     const scrollbox = scrollRef.current
@@ -255,7 +262,7 @@ export function DocumentList({
 
   if (documents.length === 0) {
     return loading ? (
-      <Loading message="Loading documents..." />
+      <Loading message={loadingMessage} />
     ) : (
       <box flexGrow={1} justifyContent="center" alignItems="center">
         <text>

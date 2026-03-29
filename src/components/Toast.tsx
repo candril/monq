@@ -44,7 +44,7 @@ export function Toast({ message, onDismiss }: ToastProps) {
     if (!message) return
     const t = setTimeout(onDismiss, DURATION[message.kind])
     return () => clearTimeout(t)
-  }, [message])
+  }, [message, onDismiss])
 
   if (!message) return null
 

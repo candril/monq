@@ -6,7 +6,7 @@ import JSON5 from "json5"
 import type { Document } from "mongodb"
 import { replaceDocument, insertDocument, deleteDocument } from "../providers/mongodb"
 import { getEditor, ERROR_COMMENT_RE } from "../utils/editor"
-import type { SchemaMap, FieldType } from "../query/schema"
+import type { SchemaMap } from "../query/schema"
 
 export interface EditManyResult {
   updated: number

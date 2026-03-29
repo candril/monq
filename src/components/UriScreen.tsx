@@ -39,11 +39,12 @@ export function UriScreen({ onConnect }: UriScreenProps) {
 
   return (
     <box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
-
       {/* Brand */}
       <box marginBottom={1} flexDirection="column" alignItems="center">
         <text>
-          <span fg={theme.primary}><strong>Monq</strong></span>
+          <span fg={theme.primary}>
+            <strong>Monq</strong>
+          </span>
         </text>
         <text>
           <span fg={theme.textDim}>MongoDB browser</span>
@@ -60,13 +61,20 @@ export function UriScreen({ onConnect }: UriScreenProps) {
       {/* Input box */}
       <box flexDirection="column" minWidth={52}>
         <box>
-          <text><span fg={theme.textMuted}>{"─".repeat(52)}</span></text>
+          <text>
+            <span fg={theme.textMuted}>{"─".repeat(52)}</span>
+          </text>
         </box>
         <box flexDirection="row" paddingLeft={1} paddingRight={1}>
-          <text><span fg={theme.textDim}>{"> "}</span></text>
+          <text>
+            <span fg={theme.textDim}>{"> "}</span>
+          </text>
           <input
             value={value}
-            onInput={(v) => { setValue(v); setError(null) }}
+            onInput={(v) => {
+              setValue(v)
+              setError(null)
+            }}
             placeholder={DEFAULT_URI}
             focused
             backgroundColor={theme.bg}
@@ -77,24 +85,27 @@ export function UriScreen({ onConnect }: UriScreenProps) {
           />
         </box>
         <box>
-          <text><span fg={theme.textMuted}>{"─".repeat(52)}</span></text>
+          <text>
+            <span fg={theme.textMuted}>{"─".repeat(52)}</span>
+          </text>
         </box>
       </box>
 
       {/* Error */}
       <box marginTop={1} minHeight={1}>
         {error && (
-          <text><span fg={theme.error}>{error}</span></text>
+          <text>
+            <span fg={theme.error}>{error}</span>
+          </text>
         )}
       </box>
 
       {/* Hint */}
       <box marginTop={1}>
         <text>
-          <span fg={theme.textMuted}>Enter to connect  ·  Esc to quit</span>
+          <span fg={theme.textMuted}>Enter to connect · Esc to quit</span>
         </text>
       </box>
-
     </box>
   )
 }

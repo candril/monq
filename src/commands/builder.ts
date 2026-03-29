@@ -13,6 +13,11 @@ export function buildCommands(state: AppState): Command[] {
 
   // Navigation
   commands.push({
+    id: "nav:switch-connection",
+    label: "Switch Connection",
+    category: "navigation",
+  })
+  commands.push({
     id: "nav:switch-collection",
     label: "Open Collection",
     category: "navigation",

@@ -19,8 +19,10 @@ import {
 } from "../actions/pipelineWatch"
 import { openEditorForInsert } from "../actions/editMany"
 import { disconnect, deleteDocument, listDatabases, switchDatabase } from "../providers/mongodb"
+import { switchConnection } from "../navigation"
 import { serializeDocument } from "../utils/document"
 import { getNestedValue } from "../utils/format"
+import { copyToClipboard } from "../utils/clipboard"
 import { parseSimpleQueryFull, projectionToSimple } from "../query/parser"
 
 interface UsePaletteActionsOptions {
@@ -56,6 +58,11 @@ export function usePaletteActions({
       }
 
       switch (cmd.id) {
+        case "nav:switch-connection":
+          dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+          switchConnection()
+          break
+
         case "nav:switch-database": {
           listDatabases()
             .then((databases) => {
@@ -89,8 +96,7 @@ export function usePaletteActions({
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
           const doc = state.documents[state.selectedIndex]
           if (doc) {
-            const b64 = btoa(serializeDocument(doc))
-            process.stdout.write(`\x1b]52;c;${b64}\x07`)
+            copyToClipboard(serializeDocument(doc)).catch(() => {})
             dispatch({ type: "SHOW_MESSAGE", message: "Copied to clipboard", kind: "info" })
           }
           break
@@ -99,7 +105,7 @@ export function usePaletteActions({
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
           const doc = state.documents[state.selectedIndex]
           if (doc?._id) {
-            process.stdout.write(`\x1b]52;c;${btoa(String(doc._id))}\x07`)
+            copyToClipboard(String(doc._id)).catch(() => {})
             dispatch({ type: "SHOW_MESSAGE", message: "Copied _id", kind: "info" })
           }
           break
@@ -348,12 +354,14 @@ export function usePaletteActions({
           if (!col) break
           const val = getNestedValue(doc as Record<string, unknown>, col.field)
           const text =
-            val === undefined
+            val === undefined || val === null
               ? ""
-              : typeof val === "object" && val !== null
-                ? JSON.stringify(val, null, 2)
-                : String(val)
-          process.stdout.write(`\x1b]52;c;${btoa(text)}\x07`)
+              : typeof val === "object" && "toHexString" in val
+                ? (val as { toHexString(): string }).toHexString()
+                : typeof val === "object"
+                  ? JSON.stringify(val, null, 2)
+                  : String(val)
+          copyToClipboard(text).catch(() => {})
           dispatch({
             type: "SHOW_MESSAGE",
             message: `Copied ${col.field} to clipboard`,

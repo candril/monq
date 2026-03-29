@@ -33,6 +33,7 @@ import { buildCollectionCommands } from "./commands/collections"
 import { buildDatabaseCommands } from "./commands/databases"
 import { usePaletteActions } from "./hooks/usePaletteActions"
 import { formatDocumentCount, resolveSortField, resolveSortDirection } from "./utils/format"
+import { randomConnectionMessage } from "./utils/loadingMessages"
 
 type PaletteMode = "commands" | "collections" | "databases"
 
@@ -44,6 +45,14 @@ interface AppProps {
 export function App({ uri, onBackToUri }: AppProps) {
   const [state, dispatch] = useReducer(appReducer, null, createInitialState)
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("commands")
+  const [loadingMessage, setLoadingMessage] = useState(randomConnectionMessage)
+  // Hold-off: don't show the loading screen until 500ms have passed.
+  // Prevents a jarring flash when the connection is very fast.
+  const [showLoader, setShowLoader] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setShowLoader(true), 500)
+    return () => clearTimeout(t)
+  }, [])
   const renderer = useRenderer()
   const { height: terminalHeight } = useTerminalDimensions()
   const docListScrollRef = useRef<ScrollBoxRenderable>(null)
@@ -116,7 +125,9 @@ export function App({ uri, onBackToUri }: AppProps) {
     effectivePaletteMode === "databases"
       ? "Switch database..."
       : effectivePaletteMode === "collections"
-        ? state.collectionsLoading ? "Loading collections..." : "Open collection..."
+        ? state.collectionsLoading
+          ? "Loading collections..."
+          : "Open collection..."
         : "Search commands..."
 
   // Welcome screen: shown when db is loaded but no tab is open yet
@@ -125,19 +136,13 @@ export function App({ uri, onBackToUri }: AppProps) {
   // Determine welcome step
   const welcomeStep: 1 | 2 = !state.dbName ? 1 : 2
 
-  const handleSelectDatabase = useCallback(
-    (name: string) => {
-      dispatch({ type: "SELECT_DATABASE", dbName: name })
-    },
-    [],
-  )
+  const handleSelectDatabase = useCallback((name: string) => {
+    dispatch({ type: "SELECT_DATABASE", dbName: name })
+  }, [])
 
-  const handleSelectCollection = useCallback(
-    (name: string) => {
-      dispatch({ type: "OPEN_TAB", collectionName: name })
-    },
-    [],
-  )
+  const handleSelectCollection = useCallback((name: string) => {
+    dispatch({ type: "OPEN_TAB", collectionName: name })
+  }, [])
 
   const handleWelcomeBack = useCallback(() => {
     // Return to step 1: clear dbName but keep databases list in state
@@ -146,6 +151,28 @@ export function App({ uri, onBackToUri }: AppProps) {
 
   const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
   const selectedDoc = state.documents[state.selectedIndex] ?? null
+
+  // Show full-screen loading (no chrome) during initial connection — avoids
+  // layout jump when transitioning from ConnectionScreen's Loading state.
+  // Hold-off: only show after 500ms to avoid a flash on fast connections.
+  const isInitialLoading = state.collectionsLoading && !state.activeTabId
+
+  useEffect(() => {
+    if (!isInitialLoading) return
+    const timer = setInterval(() => setLoadingMessage(randomConnectionMessage()), 5000)
+    return () => clearInterval(timer)
+  }, [isInitialLoading])
+
+  if (isInitialLoading && showLoader) {
+    return (
+      <Shell>
+        <Loading message={loadingMessage} />
+      </Shell>
+    )
+  }
+
+  // Still loading but within hold-off window — render nothing yet
+  if (isInitialLoading) return null
 
   return (
     <Shell>
@@ -177,8 +204,6 @@ export function App({ uri, onBackToUri }: AppProps) {
       >
         {state.error ? (
           <ErrorView message={state.error} />
-        ) : state.collectionsLoading ? (
-          <Loading message="Connecting to MongoDB..." />
         ) : showWelcome ? (
           <WelcomeScreen
             step={welcomeStep}
@@ -241,7 +266,12 @@ export function App({ uri, onBackToUri }: AppProps) {
 
       {/* Suggestions only in simple mode, hidden when history picker is open */}
       <FilterSuggestions
-        visible={state.queryVisible && !state.pipelineMode && state.queryMode === "simple" && !state.historyPickerOpen}
+        visible={
+          state.queryVisible &&
+          !state.pipelineMode &&
+          state.queryMode === "simple" &&
+          !state.historyPickerOpen
+        }
         query={state.queryInput}
         queryMode={state.queryMode}
         columns={state.columns}

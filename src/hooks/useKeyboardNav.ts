@@ -18,6 +18,7 @@ import { serializeDocument } from "../utils/document"
 import { getNestedValue } from "../utils/format"
 import { projectionToSimple, parseSimpleQueryFull } from "../query/parser"
 import { classifyPipeline, stageOf } from "../query/pipeline"
+import { copyToClipboard } from "../utils/clipboard"
 import { stopWatching } from "../actions/pipelineWatch"
 import { useDialogKeys } from "./useDialogKeys"
 import { usePipelineKeys } from "./usePipelineKeys"
@@ -42,7 +43,13 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
 
   useKeyboard((key) => {
     // Ctrl+P: open command palette (only when a collection is open and query bar is closed)
-    if (key.ctrl && key.name === "p" && state.activeTabId && !state.queryVisible && !state.historyPickerOpen) {
+    if (
+      key.ctrl &&
+      key.name === "p" &&
+      state.activeTabId &&
+      !state.queryVisible &&
+      !state.historyPickerOpen
+    ) {
       dispatch({ type: "OPEN_COMMAND_PALETTE" })
       return
     }
@@ -255,8 +262,7 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
         const doc = state.documents[state.selectedIndex]
         if (!doc) break
         if (key.shift) {
-          const b64 = btoa(serializeDocument(doc))
-          process.stdout.write(`\x1b]52;c;${b64}\x07`)
+          copyToClipboard(serializeDocument(doc)).catch(() => {})
           dispatch({ type: "SHOW_MESSAGE", message: "Document copied to clipboard", kind: "info" })
         } else {
           const visCols = state.columns.filter((c) => c.visible)
@@ -264,12 +270,14 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
           if (!col) break
           const val = getNestedValue(doc as Record<string, unknown>, col.field)
           const text =
-            val === undefined
+            val === undefined || val === null
               ? ""
-              : typeof val === "object" && val !== null
-                ? JSON.stringify(val, null, 2)
-                : String(val)
-          process.stdout.write(`\x1b]52;c;${btoa(text)}\x07`)
+              : typeof val === "object" && "toHexString" in val
+                ? (val as { toHexString(): string }).toHexString()
+                : typeof val === "object"
+                  ? JSON.stringify(val, null, 2)
+                  : String(val)
+          copyToClipboard(text).catch(() => {})
           dispatch({
             type: "SHOW_MESSAGE",
             message: `Copied ${col.field} to clipboard`,

@@ -101,7 +101,7 @@ export function CommandPalette({
     if (selectedIndex >= commandCount) {
       setSelectedIndex(Math.max(0, commandCount - 1))
     }
-  }, [commandCount])
+  }, [commandCount, selectedIndex])
 
   // Auto-scroll: need to map selectedIndex to visual row
   useEffect(() => {

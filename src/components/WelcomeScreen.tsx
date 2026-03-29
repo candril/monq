@@ -86,40 +86,48 @@ export function WelcomeScreen({
     // Pick
     if (key.name === "return") {
       const item = filtered[safeCursor]
-      if (item) { setQuery(""); setCursor(0); onSelect(item) }
+      if (item) {
+        setQuery("")
+        setCursor(0)
+        onSelect(item)
+      }
       return
     }
     // Backspace on empty → go back one level
     if (key.name === "backspace" && !query) {
-      if (step === 2) { onBack(); return }
-      if (step === 1 && onBackToUri) { onBackToUri(); return }
+      if (step === 2) {
+        onBack()
+        return
+      }
+      if (step === 1 && onBackToUri) {
+        onBackToUri()
+        return
+      }
       return
     }
     // Quit
-    if (key.name === "escape" || (key.name === "q" && !query)) {
+    if (key.name === "escape") {
       renderer.destroy()
     }
   })
 
-  const stepTitle =
-    step === 1 ? "Select a database" : `${dbName}  ›  Select a collection`
+  const stepTitle = step === 1 ? "Select a database" : `${dbName}  ›  Select a collection`
 
   const hint =
-    step === 2
-      ? "↑↓ navigate  ·  Enter select  ·  Backspace back  ·  q quit"
-      : onBackToUri
-        ? "↑↓ navigate  ·  Enter select  ·  Backspace back  ·  q quit"
-        : "↑↓ navigate  ·  Enter select  ·  q quit"
+    step === 2 || onBackToUri
+      ? "↑↓ navigate  ·  Enter select  ·  Backspace back  ·  Esc quit"
+      : "↑↓ navigate  ·  Enter select  ·  Esc quit"
 
   const loading = items.length === 0
 
   return (
     <box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
-
       {/* Brand */}
       <box marginBottom={1} flexDirection="column" alignItems="center">
         <text>
-          <span fg={theme.primary}><strong>Monq</strong></span>
+          <span fg={theme.primary}>
+            <strong>Monq</strong>
+          </span>
         </text>
         <text>
           <span fg={theme.textDim}>{host}</span>
@@ -136,13 +144,20 @@ export function WelcomeScreen({
       {/* Search input — top, to avoid layout shifts */}
       <box minWidth={36} flexDirection="column" marginBottom={1}>
         <box>
-          <text><span fg={theme.textMuted}>{"─".repeat(36)}</span></text>
+          <text>
+            <span fg={theme.textMuted}>{"─".repeat(36)}</span>
+          </text>
         </box>
         <box flexDirection="row" paddingLeft={1} paddingRight={1}>
-          <text><span fg={theme.textDim}>{"> "}</span></text>
+          <text>
+            <span fg={theme.textDim}>{"> "}</span>
+          </text>
           <input
             value={query}
-            onInput={(v) => { setQuery(v); setCursor(0) }}
+            onInput={(v) => {
+              setQuery(v)
+              setCursor(0)
+            }}
             placeholder="type to filter..."
             focused
             backgroundColor={theme.bg}
@@ -153,7 +168,9 @@ export function WelcomeScreen({
           />
         </box>
         <box>
-          <text><span fg={theme.textMuted}>{"─".repeat(36)}</span></text>
+          <text>
+            <span fg={theme.textMuted}>{"─".repeat(36)}</span>
+          </text>
         </box>
       </box>
 
@@ -161,11 +178,15 @@ export function WelcomeScreen({
       <box flexDirection="column" minWidth={36} minHeight={MIN_LIST_HEIGHT}>
         {loading ? (
           <box paddingLeft={2} paddingTop={1}>
-            <text><span fg={theme.textMuted}>Loading...</span></text>
+            <text>
+              <span fg={theme.textMuted}>Loading...</span>
+            </text>
           </box>
         ) : filtered.length === 0 ? (
           <box paddingLeft={2} paddingTop={1}>
-            <text><span fg={theme.textMuted}>No matches</span></text>
+            <text>
+              <span fg={theme.textMuted}>No matches</span>
+            </text>
           </box>
         ) : (
           filtered.map((item, i) => {
@@ -193,7 +214,6 @@ export function WelcomeScreen({
           <span fg={theme.textMuted}>{hint}</span>
         </text>
       </box>
-
     </box>
   )
 }

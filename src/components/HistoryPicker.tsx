@@ -53,7 +53,9 @@ export function HistoryPicker({ entries, onPick, onClose }: HistoryPickerProps) 
     return (
       <box position="absolute" bottom={1} left={0} width="100%">
         <box backgroundColor={theme.headerBg} paddingLeft={2} paddingRight={1} height={1}>
-          <text><span fg={theme.textMuted}>no history yet</span></text>
+          <text>
+            <span fg={theme.textMuted}>no history yet</span>
+          </text>
         </box>
       </box>
     )

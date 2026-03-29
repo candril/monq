@@ -15,6 +15,7 @@ import type { Document } from "mongodb"
 import type { Dispatch } from "react"
 import type { AppAction } from "../state"
 import { classifyPipeline } from "../query/pipeline"
+import { copyToClipboard } from "../utils/clipboard"
 
 // ── Singleton watcher ────────────────────────────────────────────────────────
 
@@ -125,12 +126,7 @@ export function openTmuxSplit(filePath: string): "tmux" | "clipboard" | "none" {
     return "tmux"
   }
 
-  // Not in tmux — copy path to clipboard via OSC 52
-  try {
-    const b64 = Buffer.from(filePath).toString("base64")
-    process.stdout.write(`\x1b]52;c;${b64}\x07`)
-    return "clipboard"
-  } catch {
-    return "none"
-  }
+  // Not in tmux — copy path to clipboard
+  copyToClipboard(filePath).catch(() => {})
+  return "clipboard"
 }

@@ -108,7 +108,9 @@ describe("buildSchemaMap", () => {
 
   test("array-of-objects unions children across all sampled items", () => {
     // arrange — each item has a different key; only first-element sampling would miss "role"
-    const docs = [{ members: [{ name: "Alice" }, { role: "admin" }, { name: "Bob", role: "user" }] }]
+    const docs = [
+      { members: [{ name: "Alice" }, { role: "admin" }, { name: "Bob", role: "user" }] },
+    ]
 
     // act
     const map = buildSchemaMap(docs)
