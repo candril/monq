@@ -20,10 +20,7 @@
 import { useRef, useEffect, useCallback } from "react"
 import type { TextareaRenderable, TextareaOptions } from "@opentui/core"
 import { theme } from "../theme"
-import type { BsonSection, QueryMode, DetectedColumn } from "../types"
-import type { SchemaMap } from "../query/schema"
-import { getSubfieldSuggestions } from "../query/schema"
-import { fuzzyFilter } from "../utils/fuzzy"
+import type { BsonSection, QueryMode } from "../types"
 import { parseSimpleQueryFull } from "../query/parser"
 
 type BsonKeyBinding = NonNullable<TextareaOptions["keyBindings"]>[number]
@@ -56,8 +53,6 @@ interface FilterBarProps {
   /** Incremented by state on external BSON changes (migration, format) */
   bsonExternalVersion: number
   editing?: boolean
-  columns: DetectedColumn[]
-  schemaMap: SchemaMap
 
   onQueryChange?: (value: string) => void
   onBsonSortChange?: (value: string) => void
@@ -142,7 +137,8 @@ function BsonTextarea({
     } catch {
       /* destroyed */
     }
-  }, [externalVersion]) // intentionally NOT currentValue
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only on externalVersion, not currentValue (avoids cursor reset loops)
+  }, [externalVersion])
 
   return (
     <box flexDirection="column">
@@ -181,8 +177,6 @@ export function FilterBar({
   bsonProjectionVisible,
   bsonExternalVersion,
   editing,
-  columns,
-  schemaMap,
   onQueryChange,
   onBsonSortChange,
   onBsonProjectionChange,

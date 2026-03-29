@@ -116,7 +116,7 @@ export async function fetchAggregate(
     collection.aggregate(countPipeline).toArray(),
   ])
 
-  const count = (countResult[0] as any)?.__count ?? documents.length
+  const count = (countResult[0] as Record<string, number>)?.__count ?? documents.length
   return { documents, count }
 }
 
@@ -129,7 +129,7 @@ export async function insertDocument(collectionName: string, doc: Document): Pro
 /** Delete a document by its _id */
 export async function deleteDocument(collectionName: string, id: unknown): Promise<void> {
   const collection = getDb().collection(collectionName)
-  await collection.deleteOne({ _id: id as any })
+  await collection.deleteOne({ _id: id as Document["_id"] })
 }
 
 /** Replace a document by its original _id */

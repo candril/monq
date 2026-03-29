@@ -15,7 +15,6 @@ import type { Document } from "mongodb"
 import type { Dispatch } from "react"
 import type { AppAction } from "../state"
 import { classifyPipeline } from "../query/pipeline"
-import { getEditor } from "../utils/editor"
 
 // ── Singleton watcher ────────────────────────────────────────────────────────
 
@@ -111,12 +110,10 @@ export async function reloadFromFile(filePath: string, dispatch: Dispatch<AppAct
  *   "v" = vertical side-by-side (default, -h in tmux terms)
  */
 export function openTmuxSplit(filePath: string): "tmux" | "clipboard" | "none" {
-  const editor = getEditor()
-  const editorBase = editor.split("/").pop() ?? editor
-
   if (process.env.TMUX) {
     const splitFlag = process.env.MONQ_TMUX_SPLIT === "h" ? "-v" : "-h"
     const pct = "50"
+    const editor = process.env.EDITOR || process.env.VISUAL || "vi"
     // Pass editor and filepath as separate argv elements so tmux exec's the
     // editor directly rather than trying to exec a shell command string.
     // Any extra args from $EDITOR (e.g. "nvim --noplugin") are split here too.

@@ -19,8 +19,8 @@ export function extractFindParts(pipeline: Document[]): {
   sort?: Document
   projection?: Document
 } {
-  const filter = (pipeline.find((s) => "$match" in s) as any)?.$match ?? {}
-  const sort = (pipeline.find((s) => "$sort" in s) as any)?.$sort
-  const projection = (pipeline.find((s) => "$project" in s) as any)?.$project
+  const filter = (pipeline.find((s) => "$match" in s) as Record<string, Document>)?.$match ?? {}
+  const sort = (pipeline.find((s) => "$sort" in s) as Record<string, Document>)?.$sort
+  const projection = (pipeline.find((s) => "$project" in s) as Record<string, Document>)?.$project
   return { filter, sort, projection }
 }

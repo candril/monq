@@ -10,19 +10,12 @@ import type {
   CollectionInfo,
   DeleteConfirmation,
   DetectedColumn,
-  PreviewPosition,
   QueryMode,
   SelectionMode,
   Tab,
   View,
 } from "./types"
-import {
-  parseSimpleQuery,
-  parseSimpleQueryFull,
-  projectionToSimple,
-  simpleToBson,
-  bsonToSimple,
-} from "./query/parser"
+import { parseSimpleQueryFull, simpleToBson, bsonToSimple } from "./query/parser"
 
 // ============================================================================
 // Actions
@@ -220,7 +213,7 @@ function snapshotTab(state: AppState, tabId: string, collectionName: string): Ta
 }
 
 /** Restore view state from a Tab */
-function restoreFromTab(state: AppState, tab: Tab): Partial<AppState> {
+function restoreFromTab(_state: AppState, tab: Tab): Partial<AppState> {
   return {
     queryInput: tab.query,
     queryMode: tab.queryMode,

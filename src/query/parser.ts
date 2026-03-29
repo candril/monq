@@ -103,28 +103,6 @@ function tokenize(input: string): string[] {
 /** Valid bare field name: word chars and dots only */
 const VALID_FIELD = /^[\w.]+$/
 
-/**
- * Classify a token as a filter token or a projection token.
- *
- * Projection tokens are bare +field or -field with no operator or colon.
- *   +field   -> include
- *   -field   -> exclude (only when no :/>/</ != follows)
- *
- * Filter tokens are everything else (field:value, field>n, -field:value, etc.)
- */
-function isProjectionToken(token: string): boolean {
-  if (token.startsWith("+")) {
-    const field = token.slice(1)
-    return VALID_FIELD.test(field)
-  }
-  if (token.startsWith("-")) {
-    const rest = token.slice(1)
-    // Only bare -field (no colon or operator) is projection
-    return VALID_FIELD.test(rest)
-  }
-  return false
-}
-
 export interface ParsedSimpleQuery {
   filter: Filter<Document>
   projection: Record<string, 0 | 1> | undefined

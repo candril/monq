@@ -62,6 +62,7 @@ export function useMongoConnection({ uri, dispatch, dbName }: UseMongoConnection
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dispatch is stable, uri is the only meaningful trigger
   }, [uri])
 
   // Reload collections when the user switches to a different database
@@ -88,5 +89,6 @@ export function useMongoConnection({ uri, dispatch, dbName }: UseMongoConnection
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dispatch is stable, dbName is the only meaningful trigger
   }, [dbName])
 }

@@ -208,6 +208,7 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: full state read inside effect, only these trigger a reload
   }, [activeTab?.id, documentsLoading, reloadCounter])
 
   // Effect 2: load next page when LOAD_MORE is triggered
@@ -269,5 +270,6 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only triggered by loadingMore flag
   }, [activeTab?.id, state.loadingMore])
 }

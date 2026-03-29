@@ -234,6 +234,7 @@ export function DocumentList({
     } else if (selectedIndex >= scrollBottom - SCROLL_MARGIN) {
       scrollbox.scrollTo(selectedIndex - viewportHeight + SCROLL_MARGIN + 1)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollRef is a stable ref, selectedIndex is the only trigger
   }, [selectedIndex])
 
   const visibleColumns = columns.filter((c) => c.visible)

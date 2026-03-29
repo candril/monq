@@ -29,9 +29,7 @@ import { buildCommands } from "./commands/builder"
 import { buildCollectionCommands } from "./commands/collections"
 import { buildDatabaseCommands } from "./commands/databases"
 import { usePaletteActions } from "./hooks/usePaletteActions"
-import { theme } from "./theme"
 import { formatDocumentCount, resolveSortField, resolveSortDirection } from "./utils/format"
-import type { Command } from "./commands/types"
 
 interface AppProps {
   uri: string
@@ -227,8 +225,6 @@ export function App({ uri }: AppProps) {
           bsonProjectionVisible={state.bsonProjectionVisible}
           bsonExternalVersion={state.bsonExternalVersion}
           editing={state.queryVisible}
-          columns={state.columns}
-          schemaMap={state.schemaMap}
           onQueryChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
           onBsonSortChange={(v) => dispatch({ type: "SET_BSON_SORT", input: v })}
           onBsonProjectionChange={(v) => dispatch({ type: "SET_BSON_PROJECTION", input: v })}
