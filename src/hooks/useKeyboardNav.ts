@@ -55,14 +55,19 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
     }
 
     // Ctrl+D / Ctrl+U: half-page scroll (nvim behaviour)
-    // Cursor moves by half the viewport, scroll moves by the same amount.
+    // If the preview is open, scroll the preview. Otherwise scroll the document list.
     if ((key.ctrl && key.name === "d") || (key.ctrl && key.name === "u")) {
       if (state.view !== "documents") return
+      const dir = key.name === "d" ? 1 : -1
+      if (state.previewPosition) {
+        // Preview is open — scroll it
+        dispatch({ type: "SCROLL_PREVIEW", delta: dir * 10 })
+        return
+      }
       const scrollbox = docListScrollRef.current
       if (!scrollbox) return
       const viewportHeight = scrollbox.viewport?.height ?? 20
       const half = Math.floor(viewportHeight / 2)
-      const dir = key.name === "d" ? 1 : -1
       const newIndex = Math.max(0, Math.min(state.documents.length - 1, state.selectedIndex + dir * half))
       const newScrollTop = Math.max(0, scrollbox.scrollTop + dir * half)
       dispatch({ type: "SELECT_DOCUMENT", index: newIndex })
@@ -692,13 +697,6 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
                 },
               },
             })
-          } else if (key.ctrl && state.previewPosition) {
-            dispatch({ type: "SCROLL_PREVIEW", delta: 10 })
-          }
-          break
-        case "u":
-          if (key.ctrl && state.previewPosition) {
-            dispatch({ type: "SCROLL_PREVIEW", delta: -10 })
           }
           break
         case "p":
