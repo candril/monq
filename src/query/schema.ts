@@ -45,11 +45,16 @@ function detectType(value: unknown): FieldType {
   return "string"
 }
 
+const MAX_DEPTH = 3
+const MAX_ARRAY_ITEMS = 5
+
 /** Build a schema map from a sample of documents */
 export function buildSchemaMap(documents: Document[]): SchemaMap {
   const map: SchemaMap = new Map()
 
-  function walk(obj: Record<string, unknown>, prefix: string, parentPath: string) {
+  function walk(obj: Record<string, unknown>, prefix: string, parentPath: string, depth: number) {
+    if (depth >= MAX_DEPTH) return
+
     for (const [key, value] of Object.entries(obj)) {
       const path = prefix ? `${prefix}.${key}` : key
       const type = detectType(value)
@@ -74,21 +79,27 @@ export function buildSchemaMap(documents: Document[]): SchemaMap {
 
       // Recurse into objects
       if (type === "object" && value !== null) {
-        walk(value as Record<string, unknown>, path, path)
+        walk(value as Record<string, unknown>, path, path, depth + 1)
       }
 
-      // Recurse into array elements (sample first element)
+      // Recurse into array-of-objects: sample up to MAX_ARRAY_ITEMS items.
+      // If any item is a scalar the array is mixed/scalar — skip children entirely.
       if (type === "array" && Array.isArray(value) && value.length > 0) {
-        const first = value[0]
-        if (first !== null && typeof first === "object" && !Array.isArray(first)) {
-          walk(first as Record<string, unknown>, path, path)
+        const items = value.slice(0, MAX_ARRAY_ITEMS)
+        const allObjects = items.every(
+          (v) => v !== null && typeof v === "object" && !Array.isArray(v),
+        )
+        if (allObjects) {
+          for (const item of items) {
+            walk(item as Record<string, unknown>, path, path, depth + 1)
+          }
         }
       }
     }
   }
 
   for (const doc of documents.slice(0, 50)) {
-    walk(doc as Record<string, unknown>, "", "")
+    walk(doc as Record<string, unknown>, "", "", 0)
   }
 
   // Sort children alphabetically

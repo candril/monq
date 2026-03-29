@@ -105,4 +105,81 @@ describe("buildSchemaMap", () => {
     expect(map.has("role")).toBe(true)
     expect(map.has("age")).toBe(true)
   })
+
+  test("array-of-objects unions children across all sampled items", () => {
+    // arrange — each item has a different key; only first-element sampling would miss "role"
+    const docs = [{ members: [{ name: "Alice" }, { role: "admin" }, { name: "Bob", role: "user" }] }]
+
+    // act
+    const map = buildSchemaMap(docs)
+
+    // assert
+    expect(map.has("members.name")).toBe(true)
+    expect(map.has("members.role")).toBe(true)
+    expect(map.get("members")?.children).toContain("name")
+    expect(map.get("members")?.children).toContain("role")
+  })
+
+  test("mixed array (scalars + objects) produces no children", () => {
+    // arrange
+    const docs = [{ tags: ["hello", { nested: true }] }]
+
+    // act
+    const map = buildSchemaMap(docs)
+
+    // assert
+    expect(map.get("tags")?.type).toBe("array")
+    expect(map.get("tags")?.children).toHaveLength(0)
+    expect(map.has("tags.nested")).toBe(false)
+  })
+
+  test("array of scalars produces no children", () => {
+    // arrange
+    const docs = [{ tags: ["a", "b", "c"] }]
+
+    // act
+    const map = buildSchemaMap(docs)
+
+    // assert
+    expect(map.get("tags")?.type).toBe("array")
+    expect(map.get("tags")?.children).toHaveLength(0)
+  })
+
+  test("depth limit: paths deeper than 3 levels are not indexed", () => {
+    // arrange — a.b.c is depth 3 (ok), a.b.c.d is depth 4 (should be ignored)
+    const docs = [{ a: { b: { c: { d: "too deep" } } } }]
+
+    // act
+    const map = buildSchemaMap(docs)
+
+    // assert
+    expect(map.has("a")).toBe(true)
+    expect(map.has("a.b")).toBe(true)
+    expect(map.has("a.b.c")).toBe(true)
+    expect(map.has("a.b.c.d")).toBe(false)
+  })
+
+  test("array items beyond MAX_ARRAY_ITEMS (5) are not sampled", () => {
+    // arrange — 7 items; items 6 and 7 have a unique key "extra"
+    const docs = [
+      {
+        members: [
+          { name: "A" },
+          { name: "B" },
+          { name: "C" },
+          { name: "D" },
+          { name: "E" },
+          { extra: "F" },
+          { extra: "G" },
+        ],
+      },
+    ]
+
+    // act
+    const map = buildSchemaMap(docs)
+
+    // assert
+    expect(map.has("members.name")).toBe(true)
+    expect(map.has("members.extra")).toBe(false)
+  })
 })

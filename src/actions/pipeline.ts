@@ -38,10 +38,13 @@ function stripPipelineHeader(source: string): string {
 
 /** Build the comment header prepended to every pipeline file on open */
 function buildHeader(collectionName: string, dbName: string, schemaMap: SchemaMap): string {
-  const topLevelFields = [...schemaMap.entries()].filter(([p]) => !p.includes("."))
+  const allFields = [...schemaMap.entries()]
   const fieldLines =
-    topLevelFields.length > 0
-      ? topLevelFields.map(([p, info]) => `//   ${p}: ${info.type}`)
+    allFields.length > 0
+      ? [
+          ...allFields.slice(0, 10).map(([p, info]) => `//   ${p}: ${info.type}`),
+          ...(allFields.length > 10 ? [`//   … and ${allFields.length - 10} more fields`] : []),
+        ]
       : [`//   (no schema sampled)`]
 
   return [
@@ -194,7 +197,6 @@ function buildJsonSchema(collectionName: string, schemaMap: SchemaMap): string {
   }
 
   for (const [path, info] of schemaMap) {
-    if (path.includes(".")) continue
     matchProperties[path] = fieldValueSchema(path, info.type)
   }
 

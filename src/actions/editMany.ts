@@ -34,23 +34,48 @@ async function getTempDir(collectionName: string): Promise<string> {
 
 // ── Schema sidecar ───────────────────────────────────────────────────────────
 
-const FIELD_TYPE_TO_JSON_SCHEMA: Record<FieldType, object> = {
-  string: { type: "string" },
-  number: { type: "number" },
-  boolean: { type: "boolean" },
-  null: { type: "null" },
-  object: { type: "object" },
-  array: { type: "array" },
-  objectid: { type: "object" },
-  date: { type: "object" },
-  mixed: {},
+function fieldToJsonSchema(path: string, schemaMap: SchemaMap): object {
+  const info = schemaMap.get(path)
+  if (!info) return {}
+
+  switch (info.type) {
+    case "string":
+      return { type: "string" }
+    case "number":
+      return { type: "number" }
+    case "boolean":
+      return { type: "boolean" }
+    case "null":
+      return { type: "null" }
+    case "objectid":
+    case "date":
+      return { type: "object" }
+    case "mixed":
+      return {}
+    case "object": {
+      const properties: Record<string, object> = {}
+      for (const child of info.children) {
+        properties[child] = fieldToJsonSchema(`${path}.${child}`, schemaMap)
+      }
+      return { type: "object", properties }
+    }
+    case "array": {
+      if (info.children.length === 0) return { type: "array" }
+      // array-of-objects: build items schema from children
+      const itemProperties: Record<string, object> = {}
+      for (const child of info.children) {
+        itemProperties[child] = fieldToJsonSchema(`${path}.${child}`, schemaMap)
+      }
+      return { type: "array", items: { type: "object", properties: itemProperties } }
+    }
+  }
 }
 
 function generateSchema(collectionName: string, schemaMap: SchemaMap): object {
   const properties: Record<string, object> = {}
-  for (const [path, info] of schemaMap) {
+  for (const path of schemaMap.keys()) {
     if (path.includes(".")) continue
-    properties[path] = FIELD_TYPE_TO_JSON_SCHEMA[info.type] ?? {}
+    properties[path] = fieldToJsonSchema(path, schemaMap)
   }
   return {
     $schema: "http://json-schema.org/draft-07/schema",
@@ -63,11 +88,13 @@ function generateSchema(collectionName: string, schemaMap: SchemaMap): object {
 // ── Header builders ───────────────────────────────────────────────────────────
 
 function buildSchemaLines(collectionName: string, schemaMap?: SchemaMap): string[] {
+  const allFields = schemaMap ? [...schemaMap.entries()] : []
   const fieldLines =
-    schemaMap && schemaMap.size > 0
-      ? [...schemaMap.entries()]
-          .filter(([p]) => !p.includes("."))
-          .map(([p, info]) => `//   ${p}: ${info.type}`)
+    allFields.length > 0
+      ? [
+          ...allFields.slice(0, 10).map(([p, info]) => `//   ${p}: ${info.type}`),
+          ...(allFields.length > 10 ? [`//   … and ${allFields.length - 10} more fields`] : []),
+        ]
       : [`//   (no schema sampled)`]
   return [`// Schema (${collectionName}):`, ...fieldLines, `//`]
 }
