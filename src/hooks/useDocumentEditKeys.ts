@@ -32,7 +32,13 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
       if (docsToEdit.length === 0) return true
 
       renderer.suspend()
-      openEditorForMany(activeTab.collectionName, state.dbName, docsToEdit, undefined, state.schemaMap)
+      openEditorForMany(
+        activeTab.collectionName,
+        state.dbName,
+        docsToEdit,
+        undefined,
+        state.schemaMap,
+      )
         .then(async (outcome) => {
           renderer.resume()
           if (outcome.cancelled) return
@@ -88,7 +94,11 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
         })
         .catch((err: Error) => {
           renderer.resume()
-          dispatch({ type: "SHOW_MESSAGE", message: `Insert failed: ${err.message}`, kind: "error" })
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Insert failed: ${err.message}`,
+            kind: "error",
+          })
         })
       return true
     }
@@ -104,9 +114,9 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
       if (docsToDelete.length === 0) return true
       dispatch({
         type: "SHOW_DELETE_CONFIRM",
-          confirmation: {
-            docs: docsToDelete,
-            resolve: async (confirmed) => {
+        confirmation: {
+          docs: docsToDelete,
+          resolve: async (confirmed) => {
             if (!confirmed) return
             const errors: string[] = []
             for (const doc of docsToDelete) {
@@ -149,7 +159,13 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
         added: result.added,
         goBack: () => {
           renderer.suspend()
-          openEditorForMany(activeTab.collectionName, state.dbName, docsToEdit, editedDocs, state.schemaMap)
+          openEditorForMany(
+            activeTab.collectionName,
+            state.dbName,
+            docsToEdit,
+            editedDocs,
+            state.schemaMap,
+          )
             .then(async (o2) => {
               renderer.resume()
               if (o2.cancelled) return
@@ -169,11 +185,20 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
             })
             .catch((err: Error) => {
               renderer.resume()
-              dispatch({ type: "SHOW_MESSAGE", message: `Edit failed: ${err.message}`, kind: "error" })
+              dispatch({
+                type: "SHOW_MESSAGE",
+                message: `Edit failed: ${err.message}`,
+                kind: "error",
+              })
             })
         },
         resolve: async (missingAction, addedAction) => {
-          const errors = await applyConfirmActions(activeTab.collectionName, result, missingAction, addedAction)
+          const errors = await applyConfirmActions(
+            activeTab.collectionName,
+            result,
+            missingAction,
+            addedAction,
+          )
           if (errors.length > 0) {
             dispatch({ type: "SHOW_MESSAGE", message: errors[0], kind: "error" })
           } else {

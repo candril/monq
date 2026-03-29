@@ -95,5 +95,3 @@ export function ConfirmDialog({ title, lines, options, focusedIndex }: ConfirmDi
     </box>
   )
 }
-
-

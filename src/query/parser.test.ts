@@ -1,5 +1,11 @@
 import { describe, test, expect } from "bun:test"
-import { parseSimpleQueryFull, filterToSimple, bsonToSimple, simpleToBson, projectionToSimple } from "./parser"
+import {
+  parseSimpleQueryFull,
+  filterToSimple,
+  bsonToSimple,
+  simpleToBson,
+  projectionToSimple,
+} from "./parser"
 
 const emptySchema = new Map()
 

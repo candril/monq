@@ -91,7 +91,6 @@ export type AppAction =
   | { type: "ENTER_SIMPLE_MODE"; query: string }
   | { type: "SHOW_PIPELINE_CONFIRM"; simpleQuery: string }
   | { type: "DISMISS_PIPELINE_CONFIRM" }
-
   | { type: "CONFIRM_OVERWRITE_SIMPLE"; query: string }
   | { type: "CONFIRM_NEW_TAB_SIMPLE"; query: string }
   | { type: "ADD_PIPELINE_MATCH_CONDITION"; field: string; value: unknown }

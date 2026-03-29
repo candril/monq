@@ -142,5 +142,3 @@ export async function replaceDocument(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await collection.replaceOne({ _id: originalId as any }, newDoc)
 }
-
-

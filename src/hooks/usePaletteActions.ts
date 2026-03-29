@@ -11,7 +11,12 @@ import type { AppAction } from "../state"
 import type { Command } from "../commands/types"
 import { editDocument } from "../actions/edit"
 import { openPipelineEditor, writePipelineFile, pipelineFilePaths } from "../actions/pipeline"
-import { startWatching, stopWatching, reloadFromFile, openTmuxSplit } from "../actions/pipelineWatch"
+import {
+  startWatching,
+  stopWatching,
+  reloadFromFile,
+  openTmuxSplit,
+} from "../actions/pipelineWatch"
 import { openEditorForInsert } from "../actions/editMany"
 import { disconnect, deleteDocument, listDatabases, switchDatabase } from "../providers/mongodb"
 import { serializeDocument } from "../utils/document"
@@ -286,7 +291,11 @@ export function usePaletteActions({
             })
             .catch((err: Error) => {
               renderer.resume()
-              dispatch({ type: "SHOW_MESSAGE", message: `Insert failed: ${err.message}`, kind: "error" })
+              dispatch({
+                type: "SHOW_MESSAGE",
+                message: `Insert failed: ${err.message}`,
+                kind: "error",
+              })
             })
           break
         }
@@ -301,7 +310,7 @@ export function usePaletteActions({
           if (docsToDelete.length === 0) break
           dispatch({
             type: "SHOW_DELETE_CONFIRM",
-              confirmation: {
+            confirmation: {
               docs: docsToDelete,
               resolve: async (confirmed) => {
                 if (!confirmed) return
@@ -345,7 +354,11 @@ export function usePaletteActions({
                 ? JSON.stringify(val, null, 2)
                 : String(val)
           process.stdout.write(`\x1b]52;c;${btoa(text)}\x07`)
-          dispatch({ type: "SHOW_MESSAGE", message: `Copied ${col.field} to clipboard`, kind: "info" })
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Copied ${col.field} to clipboard`,
+            kind: "info",
+          })
           break
         }
 

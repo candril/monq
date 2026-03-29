@@ -65,7 +65,11 @@ export function App({ uri }: AppProps) {
   const pageSize = terminalHeight + 10
 
   useMongoConnection({ uri, dispatch, dbName: state.dbName })
-  const { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex } = useKeyboardNav({ state, dispatch, docListScrollRef })
+  const { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex } = useKeyboardNav({
+    state,
+    dispatch,
+    docListScrollRef,
+  })
   useDocumentLoader({ state, dispatch, pageSize })
 
   // Build palette commands based on mode

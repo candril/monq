@@ -11,7 +11,14 @@ import { useTerminalDimensions } from "@opentui/react"
 import type { Document } from "mongodb"
 import type { DetectedColumn, SelectionMode } from "../types"
 import { theme } from "../theme"
-import { formatValue, valueColor, detectValueType, padRight, truncate, getNestedValue } from "../utils/format"
+import {
+  formatValue,
+  valueColor,
+  detectValueType,
+  padRight,
+  truncate,
+  getNestedValue,
+} from "../utils/format"
 import { Loading } from "./Loading"
 
 const SCROLL_MARGIN = 3
@@ -199,7 +206,6 @@ function sliceSegments(
 
   return result
 }
-
 
 export function DocumentList({
   documents,

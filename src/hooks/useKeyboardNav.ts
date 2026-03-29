@@ -31,7 +31,12 @@ interface UseKeyboardNavOptions {
 
 export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboardNavOptions) {
   const renderer = useRenderer()
-  const { handleKey: handleDialogKey, pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex } = useDialogKeys({ state, dispatch })
+  const {
+    handleKey: handleDialogKey,
+    pipelineFocusedIndex,
+    bulkEditFocusedIndex,
+    deleteFocusedIndex,
+  } = useDialogKeys({ state, dispatch })
   const { handleKey: handlePipelineKey } = usePipelineKeys({ state, dispatch, renderer })
   const { handleKey: handleEditKey } = useDocumentEditKeys({ state, dispatch, renderer })
 
@@ -54,12 +59,19 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
       if (!scrollbox) return
       const viewportHeight = scrollbox.viewport?.height ?? 20
       const half = Math.floor(viewportHeight / 2)
-      const newIndex = Math.max(0, Math.min(state.documents.length - 1, state.selectedIndex + dir * half))
+      const newIndex = Math.max(
+        0,
+        Math.min(state.documents.length - 1, state.selectedIndex + dir * half),
+      )
       const newScrollTop = Math.max(0, scrollbox.scrollTop + dir * half)
       dispatch({ type: "SELECT_DOCUMENT", index: newIndex })
       scrollbox.scrollTo(newScrollTop)
-      if (dir === 1 && !state.loadingMore && state.loadedCount < state.documentCount &&
-          newIndex >= state.documents.length - 10) {
+      if (
+        dir === 1 &&
+        !state.loadingMore &&
+        state.loadedCount < state.documentCount &&
+        newIndex >= state.documents.length - 10
+      ) {
         dispatch({ type: "LOAD_MORE" })
       }
       return
@@ -181,8 +193,11 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
       case "down": {
         if (state.selectionMode === "selecting") dispatch({ type: "MOVE_SELECTION", delta: 1 })
         else dispatch({ type: "MOVE_DOCUMENT", delta: 1 })
-        if (!state.loadingMore && state.loadedCount < state.documentCount &&
-            state.selectedIndex >= state.documents.length - 10) {
+        if (
+          !state.loadingMore &&
+          state.loadedCount < state.documentCount &&
+          state.selectedIndex >= state.documents.length - 10
+        ) {
           dispatch({ type: "LOAD_MORE" })
         }
         break
@@ -244,10 +259,18 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
           const col = visCols[state.selectedColumnIndex]
           if (!col) break
           const val = getNestedValue(doc as Record<string, unknown>, col.field)
-          const text = val === undefined ? "" : typeof val === "object" && val !== null
-            ? JSON.stringify(val, null, 2) : String(val)
+          const text =
+            val === undefined
+              ? ""
+              : typeof val === "object" && val !== null
+                ? JSON.stringify(val, null, 2)
+                : String(val)
           process.stdout.write(`\x1b]52;c;${btoa(text)}\x07`)
-          dispatch({ type: "SHOW_MESSAGE", message: `Copied ${col.field} to clipboard`, kind: "info" })
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Copied ${col.field} to clipboard`,
+            kind: "info",
+          })
         }
         break
       }
@@ -261,26 +284,51 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
         if (state.pipelineMode) {
           const matchStage = state.pipeline.find((s) => "$match" in s) as any
           if (!matchStage) {
-            dispatch({ type: "SHOW_MESSAGE", message: "Cannot add filter: pipeline has no $match stage", kind: "warning" })
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: "Cannot add filter: pipeline has no $match stage",
+              kind: "warning",
+            })
             break
           }
           if (col.field in (matchStage.$match ?? {})) {
-            dispatch({ type: "SHOW_MESSAGE", message: `${col.field} is already in $match — edit pipeline with Ctrl+F to change it`, kind: "warning" })
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: `${col.field} is already in $match — edit pipeline with Ctrl+F to change it`,
+              kind: "warning",
+            })
             break
           }
-          const isSimpleValue = val === null || typeof val === "string" || typeof val === "number" || typeof val === "boolean"
+          const isSimpleValue =
+            val === null ||
+            typeof val === "string" ||
+            typeof val === "number" ||
+            typeof val === "boolean"
           if (!isSimpleValue) {
-            dispatch({ type: "SHOW_MESSAGE", message: `Cannot filter by ${col.field}: complex value — edit pipeline with Ctrl+F`, kind: "warning" })
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: `Cannot filter by ${col.field}: complex value — edit pipeline with Ctrl+F`,
+              kind: "warning",
+            })
             break
           }
           dispatch({ type: "ADD_PIPELINE_MATCH_CONDITION", field: col.field, value: val })
         } else {
-          const alreadyFiltered = state.queryInput.split(" ").some(
-            (t) => t.startsWith(`${col.field}:`) || t.startsWith(`${col.field}>`) ||
-                   t.startsWith(`${col.field}<`) || t.startsWith(`${col.field}!`),
-          )
+          const alreadyFiltered = state.queryInput
+            .split(" ")
+            .some(
+              (t) =>
+                t.startsWith(`${col.field}:`) ||
+                t.startsWith(`${col.field}>`) ||
+                t.startsWith(`${col.field}<`) ||
+                t.startsWith(`${col.field}!`),
+            )
           if (alreadyFiltered) {
-            dispatch({ type: "SHOW_MESSAGE", message: `${col.field} is already in filter — use / to edit`, kind: "warning" })
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: `${col.field} is already in filter — use / to edit`,
+              kind: "warning",
+            })
             break
           }
           let formatted: string
@@ -299,7 +347,10 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
           const projTokens = existingTokens.filter(
             (t: string) => t.startsWith("+") || (t.startsWith("-") && !/[><!:]/.test(t.slice(1))),
           )
-          dispatch({ type: "SET_QUERY_INPUT", input: [...filterTokens, token, ...projTokens].join(" ") })
+          dispatch({
+            type: "SET_QUERY_INPUT",
+            input: [...filterTokens, token, ...projTokens].join(" "),
+          })
           dispatch({ type: "SUBMIT_QUERY" })
         }
         break
@@ -330,7 +381,12 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
             newPipeline = [...state.pipeline, { $project: existingProj }]
           }
           const newSource = JSON.stringify({ pipeline: newPipeline }, null, 2)
-          dispatch({ type: "SET_PIPELINE", pipeline: newPipeline, source: newSource, isAggregate: classifyPipeline(newPipeline) })
+          dispatch({
+            type: "SET_PIPELINE",
+            pipeline: newPipeline,
+            source: newSource,
+            isAggregate: classifyPipeline(newPipeline),
+          })
         } else if (state.queryMode !== "bson") {
           const { projection: projObj } = parseSimpleQueryFull(state.queryInput)
           const proj: Record<string, 0 | 1> = { ...(projObj ?? {}) }
@@ -342,12 +398,15 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
             proj[col.field] = 0
             dispatch({ type: "SHOW_MESSAGE", message: `Hiding ${col.field}`, kind: "info" })
           }
-          const nonProjTokens = state.queryInput.trim().split(/\s+/).filter((t: string) => {
-            if (!t) return false
-            if (t.startsWith("+")) return false
-            if (t.startsWith("-") && !/[><!:]/.test(t.slice(1))) return false
-            return true
-          })
+          const nonProjTokens = state.queryInput
+            .trim()
+            .split(/\s+/)
+            .filter((t: string) => {
+              if (!t) return false
+              if (t.startsWith("+")) return false
+              if (t.startsWith("-") && !/[><!:]/.test(t.slice(1))) return false
+              return true
+            })
           const projStr = Object.keys(proj).length > 0 ? " " + projectionToSimple(proj) : ""
           dispatch({ type: "SET_QUERY_INPUT", input: (nonProjTokens.join(" ") + projStr).trim() })
           dispatch({ type: "SUBMIT_QUERY" })

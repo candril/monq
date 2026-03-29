@@ -57,7 +57,10 @@ describe("diffDocs", () => {
     // arrange
     const id1 = makeId()
     const id2 = makeId()
-    const original = [{ _id: id1, name: "Alice" }, { _id: id2, name: "Bob" }]
+    const original = [
+      { _id: id1, name: "Alice" },
+      { _id: id2, name: "Bob" },
+    ]
     const edited = [{ _id: id1, name: "Alice" }]
 
     // act
@@ -89,7 +92,10 @@ describe("diffDocs", () => {
     const id1 = makeId()
     const id2 = makeId()
     const original = [{ _id: id1, name: "Alice" }]
-    const edited = [{ _id: id1, name: "Alice" }, { _id: id2, name: "Ghost" }]
+    const edited = [
+      { _id: id1, name: "Alice" },
+      { _id: id2, name: "Ghost" },
+    ]
 
     // act
     const { result } = diffDocs(original, edited)
@@ -106,13 +112,13 @@ describe("diffDocs", () => {
     const id3 = makeId()
     const original = [
       { _id: id1, name: "Alice", score: 10 }, // will be updated
-      { _id: id2, name: "Bob", score: 20 },   // will be unchanged
+      { _id: id2, name: "Bob", score: 20 }, // will be unchanged
       { _id: id3, name: "Carol", score: 30 }, // will be missing
     ]
     const edited = [
       { _id: id1, name: "Alice", score: 99 },
       { _id: id2, name: "Bob", score: 20 },
-      { name: "Dave" },                        // added (no _id)
+      { name: "Dave" }, // added (no _id)
     ]
 
     // act
@@ -139,7 +145,10 @@ describe("diffDocs", () => {
 
   test("all docs removed — all appear in missing", () => {
     // arrange
-    const original = [{ _id: makeId(), name: "Alice" }, { _id: makeId(), name: "Bob" }]
+    const original = [
+      { _id: makeId(), name: "Alice" },
+      { _id: makeId(), name: "Bob" },
+    ]
 
     // act
     const { result } = diffDocs(original, [])

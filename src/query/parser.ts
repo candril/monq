@@ -424,5 +424,3 @@ export function getLastToken(input: string): { prefix: string; lastToken: string
     lastToken: input.slice(lastSpace + 1),
   }
 }
-
-

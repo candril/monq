@@ -9,7 +9,12 @@ import type { CliRenderer } from "@opentui/core"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import { openPipelineEditor, writePipelineFile, pipelineFilePaths } from "../actions/pipeline"
-import { startWatching, stopWatching, reloadFromFile, openTmuxSplit } from "../actions/pipelineWatch"
+import {
+  startWatching,
+  stopWatching,
+  reloadFromFile,
+  openTmuxSplit,
+} from "../actions/pipelineWatch"
 import { classifyPipeline, extractFindParts } from "../query/pipeline"
 import { filterToSimple, projectionToSimple } from "../query/parser"
 import type { Document } from "mongodb"
@@ -30,11 +35,7 @@ function buildProjSuffix(projection: Document | undefined): string {
   return " " + projectionToSimple(Object.fromEntries(entries) as Record<string, 0 | 1>)
 }
 
-function switchToSimple(
-  state: AppState,
-  dispatch: Dispatch<AppAction>,
-  openQuery: boolean,
-) {
+function switchToSimple(state: AppState, dispatch: Dispatch<AppAction>, openQuery: boolean) {
   const { filter, projection } = extractFindParts(state.pipeline)
   const { query, lossless } = filterToSimple(filter as Record<string, unknown>)
   const hasComplexStages = classifyPipeline(state.pipeline)
@@ -123,9 +124,17 @@ export function usePipelineKeys({ state, dispatch, renderer }: UsePipelineKeysOp
           if (result === "tmux") {
             startWatching(queryFile, () => reloadFromFile(queryFile, dispatch))
             dispatch({ type: "START_PIPELINE_WATCH" })
-            dispatch({ type: "SHOW_MESSAGE", message: "Opened in tmux split — watching for saves", kind: "info" })
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: "Opened in tmux split — watching for saves",
+              kind: "info",
+            })
           } else if (result === "clipboard") {
-            dispatch({ type: "SHOW_MESSAGE", message: `Path copied to clipboard: ${queryFile}`, kind: "info" })
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: `Path copied to clipboard: ${queryFile}`,
+              kind: "info",
+            })
           } else {
             dispatch({ type: "SHOW_MESSAGE", message: `Pipeline file: ${queryFile}`, kind: "info" })
           }
