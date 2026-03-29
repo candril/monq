@@ -139,43 +139,32 @@ export function ConnectionScreen({ profiles, onConnect }: ConnectionScreenProps)
 
   const error = resolveError ?? uriError
 
+  const title = mode === "uri" ? "Custom URI" : "connections"
+  const hint = mode === "uri"
+    ? "Enter connect  ·  Tab list  ·  Esc quit"
+    : "↑↓ navigate  ·  Enter connect  ·  Tab URI  ·  Esc quit"
+
   return (
     <box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
-      <box
-        flexDirection="column"
-        width={52}
-        backgroundColor={theme.modalBg}
-      >
-        {/* Title bar */}
-        <box
-          height={1}
-          paddingLeft={2}
-          paddingRight={2}
-          backgroundColor={theme.headerBg}
-          flexDirection="row"
-          justifyContent="space-between"
-        >
+      {/* Title */}
+      <box marginBottom={1} flexDirection="column" alignItems="center">
+        <text>
+          <span fg={theme.primary}><strong>monq</strong></span>
+          <span fg={theme.textDim}> — {title}</span>
+        </text>
+        <text>
+          <span fg={theme.textDim}>{profiles.length} saved connections</span>
+        </text>
+      </box>
+
+      {/* Search / URI input */}
+      <box minWidth={36} flexDirection="column" marginBottom={1}>
+        <box>
           <text>
-            <span fg={theme.primary}><strong>monq</strong></span>
-            <span fg={theme.textDim}> — {mode === "uri" ? "custom URI" : "connections"}</span>
-          </text>
-          <text>
-            <span fg={theme.textMuted}>{profiles.length} saved</span>
+            <span fg={theme.textMuted}>{"─".repeat(36)}</span>
           </text>
         </box>
-
-        {/* Input row */}
-        <box
-          flexDirection="row"
-          paddingLeft={2}
-          paddingRight={2}
-          paddingTop={1}
-          paddingBottom={1}
-          backgroundColor={theme.headerBg}
-          marginTop={1}
-          marginLeft={1}
-          marginRight={1}
-        >
+        <box flexDirection="row" paddingLeft={1} paddingRight={1}>
           <text>
             <span fg={theme.primary}>{"› "}</span>
           </text>
@@ -189,75 +178,70 @@ export function ConnectionScreen({ profiles, onConnect }: ConnectionScreenProps)
             }}
             placeholder={mode === "uri" ? DEFAULT_URI : "type to filter..."}
             focused
-            backgroundColor={theme.headerBg}
+            backgroundColor={theme.bg}
             textColor={theme.text}
             placeholderColor={theme.textMuted}
             cursorColor={theme.primary}
-            width={44}
+            width={32}
           />
         </box>
-
-        {/* Profile list */}
-        <box flexDirection="column" minHeight={MIN_LIST_HEIGHT} paddingTop={1} paddingBottom={1}>
-          {mode === "uri" ? (
-            <box paddingLeft={3} paddingTop={1}>
-              <text>
-                <span fg={theme.textMuted}>Enter a connection URI above, Tab to go back</span>
-              </text>
-            </box>
-          ) : filtered.length === 0 ? (
-            <box paddingLeft={3} paddingTop={1}>
-              <text>
-                <span fg={theme.textMuted}>No matches</span>
-              </text>
-            </box>
-          ) : (
-            filtered.map((profile, i) => {
-              const isSelected = i === safeCursor
-              return (
-                <box
-                  key={profile.key}
-                  flexDirection="row"
-                  paddingLeft={2}
-                  paddingRight={2}
-                  backgroundColor={isSelected ? theme.selection : undefined}
-                >
-                  <text>
-                    <span fg={isSelected ? theme.text : theme.textDim}>{profile.name}</span>
-                    {" "}
-                    <span fg={isSelected ? theme.textDim : theme.textMuted}>
-                      {profileHint(profile)}
-                    </span>
-                  </text>
-                </box>
-              )
-            })
-          )}
+        <box>
+          <text>
+            <span fg={theme.textMuted}>{"─".repeat(36)}</span>
+          </text>
         </box>
+      </box>
 
-        {/* Footer */}
-        <box
-          height={1}
-          paddingLeft={2}
-          paddingRight={2}
-          backgroundColor={theme.headerBg}
-          flexDirection="row"
-          justifyContent="space-between"
-        >
+      {/* Profile list / URI mode body */}
+      <box flexDirection="column" minWidth={36} minHeight={MIN_LIST_HEIGHT}>
+        {mode === "uri" ? (
+          <box paddingLeft={2} paddingTop={1}>
+            <text>
+              <span fg={theme.textMuted}>Enter a URI above, Tab to go back</span>
+            </text>
+          </box>
+        ) : filtered.length === 0 ? (
+          <box paddingLeft={2} paddingTop={1}>
+            <text>
+              <span fg={theme.textMuted}>No matches</span>
+            </text>
+          </box>
+        ) : (
+          filtered.map((profile, i) => {
+            const isSelected = i === safeCursor
+            return (
+              <box
+                key={profile.key}
+                flexDirection="row"
+                justifyContent="space-between"
+                paddingLeft={2}
+                paddingRight={2}
+                width={36}
+                backgroundColor={isSelected ? theme.selection : undefined}
+              >
+                <text>
+                  <span fg={isSelected ? theme.text : theme.textDim}>{profile.name}</span>
+                </text>
+                <text>
+                  <span fg={isSelected ? theme.textDim : theme.textMuted}>
+                    {profileHint(profile)}
+                  </span>
+                </text>
+              </box>
+            )
+          })
+        )}
+      </box>
+
+      {/* Error / hint row */}
+      <box marginTop={1}>
+        <text>
           {error ? (
-            <text>
-              <span fg={theme.error}>{error}</span>
-            </text>
+            <span fg={theme.error}>{error}</span>
           ) : (
-            <text>
-              <span fg={theme.textMuted}>
-                {mode === "uri"
-                  ? "Enter connect  ·  Tab list  ·  Esc quit"
-                  : "Enter connect  ·  Tab URI  ·  Esc quit"}
-              </span>
-            </text>
+            <span fg={theme.textMuted}>{hint}</span>
           )}
-        </box>
+        </text>
       </box>
     </box>
   )

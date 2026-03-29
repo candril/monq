@@ -331,6 +331,7 @@ export function App({
               selectedRows={state.selectedRows}
               loading={state.documentsLoading}
               scrollRef={docListScrollRef}
+              themeVersion={themeVersion}
             />
           </box>
         ) : null}

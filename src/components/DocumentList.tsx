@@ -39,6 +39,7 @@ interface DocumentListProps {
   selectedRows: Set<number>
   loading?: boolean
   scrollRef?: React.RefObject<ScrollBoxRenderable>
+  themeVersion?: number
 }
 
 /** Compute natural column widths, then expand capped columns to fill available screen width */

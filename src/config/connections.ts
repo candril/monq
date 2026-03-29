@@ -78,7 +78,8 @@ export function profileHint(profile: ConnectionProfile): string {
     }
   }
   if (profile.uri_cmd) {
-    return `[${profile.uri_cmd.join(" ")}]`
+    const cmd = profile.uri_cmd[0] ?? ""
+    return `via ${cmd.split("/").pop() ?? cmd}`
   }
   return ""
 }

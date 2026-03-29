@@ -38,8 +38,6 @@ const BSON_KEY_BINDINGS: BsonKeyBinding[] = [
   { name: "return", shift: true, action: "newline" },
 ]
 
-const BADGE_SIMPLE_FG = theme.querySimple
-const BADGE_BSON_FG = theme.queryBson
 const TEXTAREA_HEIGHT = 4
 
 interface FilterBarProps {
@@ -185,7 +183,7 @@ export function FilterBar({
   if (!query && !editing) return null
 
   const badgeLabel = queryMode === "simple" ? "simple" : "BSON"
-  const badgeBg = queryMode === "simple" ? BADGE_SIMPLE_FG : BADGE_BSON_FG
+  const badgeBg = queryMode === "simple" ? theme.querySimple : theme.queryBson
 
   // Extract projection tokens (+field / -field bare) for display highlighting
   const simpleProj = queryMode === "simple" ? parseSimpleQueryFull(query).projection : undefined
