@@ -31,12 +31,13 @@ import { buildCommands } from "./commands/builder"
 import { loadHistory, appendHistory } from "./utils/history"
 import { buildCollectionCommands } from "./commands/collections"
 import { buildDatabaseCommands } from "./commands/databases"
+import { buildThemeCommands } from "./commands/themes"
 import { usePaletteActions } from "./hooks/usePaletteActions"
 import { formatDocumentCount, resolveSortField, resolveSortDirection } from "./utils/format"
 import { randomConnectionMessage } from "./utils/loadingMessages"
 import type { Keymap } from "./config/types"
 
-type PaletteMode = "commands" | "collections" | "databases"
+type PaletteMode = "commands" | "collections" | "databases" | "themes"
 
 interface AppProps {
   uri: string
@@ -48,6 +49,10 @@ interface AppProps {
 export function App({ uri, keymap, configWarnings = [], onBackToUri }: AppProps) {
   const [state, dispatch] = useReducer(appReducer, null, createInitialState)
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("commands")
+  // Active theme preset ID — used to show a checkmark in the theme picker
+  const [activeThemeId, setActiveThemeId] = useState("tokyo-night")
+  // Bump this to force a full re-render of content so components re-read the updated theme
+  const [themeVersion, setThemeVersion] = useState(0)
   const [loadingMessage, setLoadingMessage] = useState(randomConnectionMessage)
   // Hold-off: don't show the loading screen until 500ms have passed.
   // Prevents a jarring flash when the connection is very fast.
@@ -114,11 +119,17 @@ export function App({ uri, keymap, configWarnings = [], onBackToUri }: AppProps)
     [state.databases, state.dbName],
   )
 
+  const handleThemeChange = useCallback((presetId: string) => {
+    setActiveThemeId(presetId)
+    setThemeVersion((v) => v + 1)
+  }, [])
+
   const { handleSelect: handlePaletteSelect } = usePaletteActions({
     state,
     dispatch,
     renderer,
     setPaletteMode,
+    onThemeChange: handleThemeChange,
   })
 
   const handlePaletteClose = useCallback(() => {
@@ -126,9 +137,18 @@ export function App({ uri, keymap, configWarnings = [], onBackToUri }: AppProps)
     dispatch({ type: "CLOSE_COMMAND_PALETTE" })
   }, [])
 
+  // Build theme commands list (re-computed when active theme changes)
+  const themeCommands = useMemo(
+    () => buildThemeCommands(activeThemeId),
+    [activeThemeId],
+  )
+
   // Palette visible for in-app Ctrl+P commands only (startup flow uses WelcomeScreen)
   const paletteVisible =
-    state.commandPaletteVisible || paletteMode === "databases" || paletteMode === "collections"
+    state.commandPaletteVisible ||
+    paletteMode === "databases" ||
+    paletteMode === "collections" ||
+    paletteMode === "themes"
 
   const effectivePaletteMode: PaletteMode = paletteMode
 
@@ -137,7 +157,9 @@ export function App({ uri, keymap, configWarnings = [], onBackToUri }: AppProps)
       ? databaseCommands
       : effectivePaletteMode === "collections"
         ? collectionCommands
-        : mainCommands
+        : effectivePaletteMode === "themes"
+          ? themeCommands
+          : mainCommands
   const effectivePlaceholder =
     effectivePaletteMode === "databases"
       ? "Switch database..."
@@ -145,7 +167,9 @@ export function App({ uri, keymap, configWarnings = [], onBackToUri }: AppProps)
         ? state.collectionsLoading
           ? "Loading collections..."
           : "Open collection..."
-        : "Search commands..."
+        : effectivePaletteMode === "themes"
+          ? "Choose theme..."
+          : "Search commands..."
 
   // Welcome screen: shown when db is loaded but no tab is open yet
   const showWelcome = !state.error && !state.collectionsLoading && !state.activeTabId

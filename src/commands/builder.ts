@@ -236,6 +236,13 @@ export function buildCommands(state: AppState): Command[] {
     })
   }
 
+  // Theme
+  commands.push({
+    id: "theme:pick",
+    label: "Change Theme",
+    category: "themes",
+  })
+
   // Global
   commands.push({
     id: "app:quit",

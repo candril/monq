@@ -24,12 +24,15 @@ import { serializeDocument } from "../utils/document"
 import { getNestedValue } from "../utils/format"
 import { copyToClipboard } from "../utils/clipboard"
 import { parseSimpleQueryFull, projectionToSimple } from "../query/parser"
+import { findPreset } from "../themes/index"
+import { setTheme } from "../theme"
 
 interface UsePaletteActionsOptions {
   state: AppState
   dispatch: Dispatch<AppAction>
   renderer: CliRenderer
-  setPaletteMode: (mode: "commands" | "collections" | "databases") => void
+  setPaletteMode: (mode: "commands" | "collections" | "databases" | "themes") => void
+  onThemeChange: (presetId: string) => void
 }
 
 export function usePaletteActions({
@@ -37,6 +40,7 @@ export function usePaletteActions({
   dispatch,
   renderer,
   setPaletteMode,
+  onThemeChange,
 }: UsePaletteActionsOptions) {
   const handleSelect = useCallback(
     (cmd: Command) => {
@@ -46,6 +50,20 @@ export function usePaletteActions({
         switchDatabase(selectedDb)
         dispatch({ type: "SELECT_DATABASE", dbName: selectedDb })
         setPaletteMode("collections")
+        return
+      }
+
+      // Theme selection from theme picker sub-palette
+      if (cmd.id.startsWith("theme:") && cmd.id !== "theme:pick") {
+        const presetId = cmd.id.slice(6)
+        const preset = findPreset(presetId)
+        if (preset) {
+          setTheme(preset.theme)
+          onThemeChange(presetId)
+          dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+          setPaletteMode("commands")
+          dispatch({ type: "SHOW_MESSAGE", message: `Theme: ${preset.name}`, kind: "info" })
+        }
         return
       }
 
@@ -420,6 +438,10 @@ export function usePaletteActions({
           dispatch({ type: "SELECT_ALL" })
           break
 
+        case "theme:pick":
+          setPaletteMode("themes")
+          break
+
         case "app:quit":
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
           stopWatching()
@@ -432,7 +454,7 @@ export function usePaletteActions({
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       }
     },
-    [state, dispatch, renderer, setPaletteMode],
+    [state, dispatch, renderer, setPaletteMode, onThemeChange],
   )
 
   return { handleSelect }

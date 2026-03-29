@@ -12,6 +12,7 @@ export const CATEGORY_ORDER = [
   "selection",
   "database",
   "collection",
+  "themes",
 ] as const
 
 export type CommandCategory = (typeof CATEGORY_ORDER)[number]
