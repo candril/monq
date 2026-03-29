@@ -10,8 +10,9 @@ import { Shell } from "./components/Shell"
 import { Header } from "./components/Header"
 import { FilterBar } from "./components/FilterBar"
 import { PipelineBar } from "./components/PipelineBar"
-import { ConfirmDialog } from "./components/ConfirmDialog"
-import type { ConfirmLine, ConfirmOption } from "./components/ConfirmDialog"
+import { PipelineConfirmDialog } from "./components/PipelineConfirmDialog"
+import { BulkEditConfirmDialog } from "./components/BulkEditConfirmDialog"
+import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog"
 import { Toast } from "./components/Toast"
 import { Loading } from "./components/Loading"
 import { ErrorView } from "./components/ErrorView"
@@ -31,23 +32,8 @@ import { usePaletteActions } from "./hooks/usePaletteActions"
 import { openEditorForMany, applyConfirmActions } from "./actions/editMany"
 import { stopWatching } from "./actions/pipelineWatch"
 import { theme } from "./theme"
+import { formatDocumentCount } from "./utils/format"
 import type { Command } from "./commands/types"
-import type { Document } from "mongodb"
-
-function docSummary(doc: Document): string {
-  const LABEL_FIELDS = ["name", "title", "label", "email", "username", "slug", "key"]
-  for (const field of LABEL_FIELDS) {
-    const val = doc[field]
-    if (val !== undefined && val !== null && typeof val !== "object")
-      return `${field}: ${String(val)}`
-  }
-  for (const [key, val] of Object.entries(doc)) {
-    if (key === "_id") continue
-    if (val !== undefined && val !== null && typeof val !== "object")
-      return `${key}: ${String(val)}`
-  }
-  return `_id: ${String(doc._id)}`
-}
 
 interface AppProps {
   uri: string
@@ -154,20 +140,12 @@ export function App({ uri }: AppProps) {
         loading={state.collectionsLoading || state.documentsLoading}
         right={
           activeTab
-            ? (() => {
-                const loaded = state.loadedCount
-                const filtered = state.documentCount
-                const total = state.totalDocumentCount
-                const hasFilter = !!(state.queryInput || state.pipelineMode)
-                // "340 of 2,034 | Total: 2,100" or "340 of 2,034" or "2,034 docs"
-                if (loaded < filtered) {
-                  const range = `${loaded.toLocaleString()} of ${filtered.toLocaleString()}`
-                  return hasFilter ? `${range} | Total: ${total.toLocaleString()}` : range
-                }
-                return hasFilter
-                  ? `${filtered.toLocaleString()} of ${total.toLocaleString()}`
-                  : `${filtered.toLocaleString()} docs`
-              })()
+            ? formatDocumentCount(
+                state.loadedCount,
+                state.documentCount,
+                state.totalDocumentCount,
+                !!(state.queryInput || state.pipelineMode),
+              )
             : ""
         }
         selectionMode={state.selectionMode}
@@ -275,106 +253,29 @@ export function App({ uri }: AppProps) {
         placeholder={effectivePlaceholder}
       />
 
-      {state.pipelineConfirm &&
-        (() => {
-          const hasComplex = state.pipeline.some(
-            (s) => !["$match", "$sort", "$project"].includes(Object.keys(s)[0]),
-          )
-          const lines: import("./components/ConfirmDialog").ConfirmLine[] = [
-            {
-              text: hasComplex
-                ? "Pipeline has complex stages that cannot be expressed in simple mode."
-                : "Some filter conditions cannot be fully translated to simple mode.",
-              dim: true,
-            },
-            { text: "" },
-            {
-              text: state.pipelineConfirm.simpleQuery
-                ? `Translated: ${state.pipelineConfirm.simpleQuery}`
-                : "(no translatable conditions)",
-              dim: true,
-            },
-          ]
-          const options: import("./components/ConfirmDialog").ConfirmOption[] = [
-            { key: "n", label: "New tab (clean filter)", color: theme.primary },
-            { key: "o", label: "Overwrite (use translated portion)", color: theme.warning },
-            { key: "Esc", label: "Cancel", color: theme.textMuted },
-          ]
-          return (
-            <ConfirmDialog
-              title="Switch to simple filter?"
-              lines={lines}
-              options={options}
-              focusedIndex={pipelineFocusedIndex}
-            />
-          )
-        })()}
+      {state.pipelineConfirm && (
+        <PipelineConfirmDialog
+          pipeline={state.pipeline}
+          simpleQuery={state.pipelineConfirm.simpleQuery}
+          focusedIndex={pipelineFocusedIndex}
+        />
+      )}
 
       <Toast message={state.message} onDismiss={() => dispatch({ type: "CLEAR_MESSAGE" })} />
 
-      {state.bulkEditConfirmation &&
-        (() => {
-          const { missing, added } = state.bulkEditConfirmation
-          const missingCount = missing.length
-          const addedCount = added.length
-          const lines: ConfirmLine[] = []
-          if (missingCount > 0) {
-            lines.push({
-              text: `${missingCount} doc${missingCount === 1 ? "" : "s"} removed from array:`,
-              dim: true,
-            })
-            for (const doc of missing) lines.push({ text: `  ${docSummary(doc)}`, danger: true })
-          }
-          if (addedCount > 0) {
-            if (missingCount > 0) lines.push({ text: "" })
-            lines.push({
-              text: `${addedCount} new doc${addedCount === 1 ? "" : "s"} added to array:`,
-              dim: true,
-            })
-            for (const doc of added) lines.push({ text: `  ${docSummary(doc)}` })
-          }
-          const options: ConfirmOption[] = [
-            { key: "b", label: "back to editor", color: theme.primary },
-            { key: "i", label: "skip side effects", color: theme.secondary },
-          ]
-          if (missingCount > 0)
-            options.push({ key: "d", label: `delete ${missingCount}`, color: theme.error })
-          if (addedCount > 0)
-            options.push({ key: "a", label: `insert ${addedCount}`, color: theme.success })
-          if (missingCount > 0 && addedCount > 0)
-            options.push({ key: "x", label: "both", color: theme.error })
-          options.push({ key: "c", label: "cancel", color: theme.textMuted })
-          return (
-            <ConfirmDialog
-              title="Bulk Edit — Side Effects"
-              lines={lines}
-              options={options}
-              focusedIndex={bulkEditFocusedIndex}
-            />
-          )
-        })()}
+      {state.bulkEditConfirmation && (
+        <BulkEditConfirmDialog
+          confirmation={state.bulkEditConfirmation}
+          focusedIndex={bulkEditFocusedIndex}
+        />
+      )}
 
-      {state.deleteConfirmation &&
-        (() => {
-          const { docs } = state.deleteConfirmation
-          const lines: ConfirmLine[] = [
-            { text: `Delete ${docs.length} document${docs.length === 1 ? "" : "s"}?` },
-            { text: "" },
-            ...docs.map((doc) => ({ text: `  ${docSummary(doc)}`, danger: true })),
-          ]
-          const options: ConfirmOption[] = [
-            { key: "c", label: "cancel", color: theme.textMuted },
-            { key: "d", label: `delete ${docs.length}`, color: theme.error },
-          ]
-          return (
-            <ConfirmDialog
-              title="Delete Documents"
-              lines={lines}
-              options={options}
-              focusedIndex={deleteFocusedIndex}
-            />
-          )
-        })()}
+      {state.deleteConfirmation && (
+        <DeleteConfirmDialog
+          confirmation={state.deleteConfirmation}
+          focusedIndex={deleteFocusedIndex}
+        />
+      )}
     </Shell>
   )
 }

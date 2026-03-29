@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test"
 import { ObjectId } from "mongodb"
-import { formatValue, detectValueType, getNestedValue, padRight, truncate } from "./format"
+import { formatValue, detectValueType, getNestedValue, padRight, truncate, formatDocumentCount } from "./format"
 
 describe("detectValueType", () => {
   test("null", () => expect(detectValueType(null)).toBe("null"))
@@ -117,5 +117,28 @@ describe("truncate", () => {
     // assert
     expect(result.length).toBeLessThanOrEqual(8)
     expect(result).toContain("~")
+  })
+})
+
+describe("formatDocumentCount", () => {
+  test("all loaded, no filter — shows doc count", () => {
+    expect(formatDocumentCount(100, 100, 100, false)).toBe("100 docs")
+  })
+
+  test("all loaded, with filter — shows filtered of total", () => {
+    expect(formatDocumentCount(50, 50, 100, true)).toBe("50 of 100")
+  })
+
+  test("partial load, no filter — shows range", () => {
+    expect(formatDocumentCount(20, 100, 100, false)).toBe("20 of 100")
+  })
+
+  test("partial load, with filter — shows range and total", () => {
+    expect(formatDocumentCount(20, 50, 100, true)).toBe("20 of 50 | Total: 100")
+  })
+
+  test("large numbers formatted with locale separators", () => {
+    const result = formatDocumentCount(2034, 2034, 2034, false)
+    expect(result).toContain("2,034")
   })
 })

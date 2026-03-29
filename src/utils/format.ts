@@ -109,6 +109,36 @@ export function padRight(text: string, width: number): string {
   return text + " ".repeat(width - text.length)
 }
 
+/** Format the document count string shown in the header */
+export function formatDocumentCount(
+  loaded: number,
+  filtered: number,
+  total: number,
+  hasFilter: boolean,
+): string {
+  if (loaded < filtered) {
+    const range = `${loaded.toLocaleString()} of ${filtered.toLocaleString()}`
+    return hasFilter ? `${range} | Total: ${total.toLocaleString()}` : range
+  }
+  return hasFilter
+    ? `${filtered.toLocaleString()} of ${total.toLocaleString()}`
+    : `${filtered.toLocaleString()} docs`
+}
+
+/** Return a human-readable summary of a document for confirm dialogs */
+export function docSummary(doc: Record<string, unknown>): string {
+  const LABEL_FIELDS = ["name", "title", "label", "email", "username", "slug", "key"]
+  for (const field of LABEL_FIELDS) {
+    const val = doc[field]
+    if (val !== undefined && val !== null && typeof val !== "object") return `${field}: ${String(val)}`
+  }
+  for (const [key, val] of Object.entries(doc)) {
+    if (key === "_id") continue
+    if (val !== undefined && val !== null && typeof val !== "object") return `${key}: ${String(val)}`
+  }
+  return `_id: ${String(doc._id)}`
+}
+
 /** Resolve a dot-separated field path from a document object */
 export function getNestedValue(doc: Record<string, unknown>, field: string): unknown {
   const parts = field.split(".")
