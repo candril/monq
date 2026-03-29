@@ -3,7 +3,7 @@
  * Thin composition — logic in hooks, display in components.
  */
 
-import { useReducer, useMemo, useCallback, useState, useRef } from "react"
+import { useReducer, useMemo, useCallback, useState, useRef, useEffect } from "react"
 import { useRenderer, useTerminalDimensions } from "@opentui/react"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { Shell } from "./components/Shell"
@@ -19,6 +19,7 @@ import { ErrorView } from "./components/ErrorView"
 import { DocumentList } from "./components/DocumentList"
 import { DocumentPreview } from "./components/DocumentPreview"
 import { FilterSuggestions } from "./components/FilterSuggestions"
+import { HistoryPicker } from "./components/HistoryPicker"
 import { CommandPalette } from "./components/CommandPalette"
 import { WelcomeScreen } from "./components/WelcomeScreen"
 import { TabBar } from "./components/TabBar"
@@ -27,6 +28,7 @@ import { useMongoConnection } from "./hooks/useMongoConnection"
 import { useKeyboardNav } from "./hooks/useKeyboardNav"
 import { useDocumentLoader } from "./hooks/useDocumentLoader"
 import { buildCommands } from "./commands/builder"
+import { loadHistory, appendHistory } from "./utils/history"
 import { buildCollectionCommands } from "./commands/collections"
 import { buildDatabaseCommands } from "./commands/databases"
 import { usePaletteActions } from "./hooks/usePaletteActions"
@@ -47,6 +49,25 @@ export function App({ uri, onBackToUri }: AppProps) {
   const docListScrollRef = useRef<ScrollBoxRenderable>(null)
 
   const pageSize = terminalHeight + 10
+
+  // Load query history from disk once on mount
+  useEffect(() => {
+    loadHistory().then((entries) => dispatch({ type: "LOAD_HISTORY", entries }))
+  }, [])
+
+  // Append to history whenever a non-empty simple query is submitted.
+  // Also update in-memory historyEntries so Ctrl-K/J works within the same session.
+  const prevReloadCounter = useRef(state.reloadCounter)
+  useEffect(() => {
+    if (prevReloadCounter.current === state.reloadCounter) return
+    prevReloadCounter.current = state.reloadCounter
+    if (state.queryMode === "simple" && state.queryInput.trim()) {
+      const query = state.queryInput.trim()
+      appendHistory(query)
+      dispatch({ type: "APPEND_HISTORY_ENTRY", entry: query })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.reloadCounter])
 
   useMongoConnection({ uri, dispatch, dbName: state.dbName })
   const { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex } = useKeyboardNav({
@@ -205,9 +226,22 @@ export function App({ uri, onBackToUri }: AppProps) {
         )}
       </box>
 
-      {/* Suggestions only in simple mode */}
+      {/* History picker — Ctrl-Y while simple bar is open */}
+      {state.historyPickerOpen && state.queryVisible && (
+        <HistoryPicker
+          entries={state.historyEntries}
+          onPick={(entry) => {
+            dispatch({ type: "SET_QUERY_INPUT", input: entry })
+            dispatch({ type: "CLOSE_HISTORY_PICKER" })
+            dispatch({ type: "SUBMIT_QUERY" })
+          }}
+          onClose={() => dispatch({ type: "CLOSE_HISTORY_PICKER" })}
+        />
+      )}
+
+      {/* Suggestions only in simple mode, hidden when history picker is open */}
       <FilterSuggestions
-        visible={state.queryVisible && !state.pipelineMode && state.queryMode === "simple"}
+        visible={state.queryVisible && !state.pipelineMode && state.queryMode === "simple" && !state.historyPickerOpen}
         query={state.queryInput}
         queryMode={state.queryMode}
         columns={state.columns}

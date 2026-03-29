@@ -223,4 +223,9 @@ export interface AppState {
   bulkEditConfirmation: BulkEditConfirmation | null
   // Delete confirmation dialog (null = not showing)
   deleteConfirmation: DeleteConfirmation | null
+
+  // Query history (simple mode, newest-first, loaded from disk at startup)
+  historyEntries: string[]
+  /** Whether the history picker overlay is open */
+  historyPickerOpen: boolean
 }

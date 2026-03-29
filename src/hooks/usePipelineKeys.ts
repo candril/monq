@@ -149,6 +149,12 @@ export function usePipelineKeys({ state, dispatch, renderer }: UsePipelineKeysOp
       return true
     }
 
+    // Ctrl-Y: open history picker while simple query bar is open
+    if (key.ctrl && key.name === "y" && state.queryVisible && state.queryMode === "simple") {
+      dispatch({ type: "OPEN_HISTORY_PICKER" })
+      return true
+    }
+
     // /: open filter (switches to simple first if in pipeline mode)
     if (key.name === "/") {
       if (state.pipelineMode) {

@@ -41,8 +41,8 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
   const { handleKey: handleEditKey } = useDocumentEditKeys({ state, dispatch, renderer })
 
   useKeyboard((key) => {
-    // Ctrl+P: open command palette (only when a collection is open)
-    if (key.ctrl && key.name === "p" && state.activeTabId) {
+    // Ctrl+P: open command palette (only when a collection is open and query bar is closed)
+    if (key.ctrl && key.name === "p" && state.activeTabId && !state.queryVisible && !state.historyPickerOpen) {
       dispatch({ type: "OPEN_COMMAND_PALETTE" })
       return
     }

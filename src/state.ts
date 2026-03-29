@@ -114,6 +114,11 @@ export type AppAction =
   | { type: "CLEAR_BULK_EDIT_CONFIRM" }
   | { type: "SHOW_DELETE_CONFIRM"; confirmation: DeleteConfirmation }
   | { type: "CLEAR_DELETE_CONFIRM" }
+  // History
+  | { type: "LOAD_HISTORY"; entries: string[] }
+  | { type: "APPEND_HISTORY_ENTRY"; entry: string }
+  | { type: "OPEN_HISTORY_PICKER" }
+  | { type: "CLOSE_HISTORY_PICKER" }
 
 // ============================================================================
 // Helpers
@@ -177,6 +182,8 @@ export function createInitialState(): AppState {
     selectionAnchor: null,
     bulkEditConfirmation: null,
     deleteConfirmation: null,
+    historyEntries: [],
+    historyPickerOpen: false,
   }
 }
 
@@ -763,7 +770,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case "CLOSE_QUERY":
-      return { ...state, queryVisible: false }
+      return { ...state, queryVisible: false, historyPickerOpen: false }
 
     case "SET_QUERY_INPUT":
       return { ...state, queryInput: action.input }
@@ -1177,6 +1184,22 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "TOGGLE_FILTER_BAR":
       return { ...state, filterBarVisible: !state.filterBarVisible }
+
+    case "LOAD_HISTORY":
+      return { ...state, historyEntries: action.entries }
+
+    case "APPEND_HISTORY_ENTRY": {
+      // Deduplicate then prepend (newest-first); cap at 100
+      const deduped = state.historyEntries.filter((e) => e !== action.entry)
+      const entries = [action.entry, ...deduped].slice(0, 100)
+      return { ...state, historyEntries: entries }
+    }
+
+    case "OPEN_HISTORY_PICKER":
+      return { ...state, historyPickerOpen: true }
+
+    case "CLOSE_HISTORY_PICKER":
+      return { ...state, historyPickerOpen: false }
 
     default:
       return state

@@ -18,71 +18,13 @@
 
 - Syntax highlighting in BSON textareas (P2)
 - Inline BSON parse error display (P2) — errors currently silently fall back to unfiltered fetch
-- Query history with up/down arrows (P3)
-- Projection field validation against schema (P3)
-- Visual diff of active vs. previous filter (P3)
-
-## Description
-
-A dual-mode query bar for filtering documents. Simple mode uses human-readable `Key:Value`
-syntax that auto-converts to MongoDB queries. BSON mode is an expanding multi-section panel
-that exposes filter, sort, and projection as raw MongoDB JSON — and is designed to grow into
-full aggregation pipeline support in the future.
-
-## Out of Scope
-
-- Aggregation pipelines (planned, see Future section below)
-- Query history / saved queries (future spec)
-- Index-aware query suggestions
-- Live / debounced results (submit on Enter only)
-
-## Capabilities
-
-### P1 - Must Have (all done)
-
-- **Simple mode** (default): single-line `<input>` at the bottom of the screen — **done**
-  - Parse `Key:Value` pairs into MongoDB filters
-  - `Author:Peter` → `{ "Author": "Peter" }`
-  - `Author:Peter State:Closed` → `{ "Author": "Peter", "State": "Closed" }`
-  - Comparison operators: `age>25`, `age>=25`, `age<25`, `count!=0`
-  - Bracket list: `field:[a,b,c]` → `{ "field": { "$in": [a, b, c] } }` / `-field:[a,b]` → `$nin`
-  - Array size: `field:size:N` → `{ "field": { "$size": N } }`
-  - Regex: `name:/^john/i` → `{ "name": { "$regex": "^john", "$options": "i" } }`
-  - Negation: `-Field:Value` → `{ "Field": { "$ne": "Value" } }`
-  - Dot-notation: `address.city:London` → `{ "address.city": "London" }`
-  - Null / exists checks: `email:null`, `email:exists`, `email:!exists`
-  - `$elemMatch` auto-generated for array ancestors
-  - Field name suggestions with dot-notation drill-down (schema-aware)
-  - Execute on Enter, clear with Backspace (outside bar), open with `/`
-
-- **BSON mode**: expanding multi-section panel, toggled with `Tab` from the filter bar — **done**
-  - **Filter section** (always visible): raw MongoDB filter JSON textarea
-  - **Sort section** (toggle with `Ctrl+O`): raw MongoDB sort JSON textarea
-  - **Projection section** (toggle with `Ctrl+J`): raw MongoDB projection JSON textarea
-  - `Tab` cycles focus between visible sections
-  - `Ctrl+F` pretty-prints (formats) the currently focused section
-  - `Enter` submits all sections
-  - `Escape` closes the BSON panel (returns to simple mode display)
-  - Mode badge: `[Simple]` in green / `[BSON]` in orange — always visible when bar is open
-
-- **Mode migration on Tab switch** — **done**:
-  - Simple → BSON: current simple query is parsed and pre-populated as pretty-printed JSON
-    in the filter textarea; active sort state is pre-populated in the sort textarea
-  - BSON → Simple: filter textarea content is carried back into the simple input as-is
-    (user's raw JSON is preserved as the query string)
-
-### P2 - Should Have
-
-- Filter-from-value: press `f` on a cell to append `field:value` to the simple query — **done** (see spec 016)
-- Show current mode indicator in the filter bar at all times (even when closed, if a
-  query is active) — **done** (mode badge always visible in filter bar)
-- Syntax highlighting in BSON textareas (JSON language) — **not done**
-- BSON parse error shown inline (red message below the offending textarea) rather than
-  silently falling back to unfiltered — **not done**
-
-### P3 - Nice to Have
-
-- Query history with up/down arrows (simple mode) — **not done**
+- Query history picker — **done**
+  - `Ctrl-Y` while simple bar is open shows history overlay above the input
+  - `Ctrl-P` / `Ctrl-N` to navigate entries, `Enter` to pick, `Escape` or `Ctrl-Y` to dismiss
+  - Picking a history entry sets the input and submits immediately
+  - Persisted to `$XDG_DATA_HOME/monq/history` (default `~/.local/share/monq/history`)
+  - Deduplicates entries; capped at 100; loaded at startup and updated in-session
+  - Field suggestions are suppressed while the history picker is open
 - Validate projection fields against known schema — **not done**
 - Visual diff of active filter vs. previous filter — **not done**
 
