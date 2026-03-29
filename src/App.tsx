@@ -32,6 +32,8 @@ import { loadHistory, appendHistory } from "./utils/history"
 import { buildCollectionCommands } from "./commands/collections"
 import { buildDatabaseCommands } from "./commands/databases"
 import { buildThemeCommands } from "./commands/themes"
+import { findPreset } from "./themes/index"
+import { setTheme } from "./theme"
 import { usePaletteActions } from "./hooks/usePaletteActions"
 import { formatDocumentCount, resolveSortField, resolveSortDirection } from "./utils/format"
 import { randomConnectionMessage } from "./utils/loadingMessages"
@@ -53,6 +55,15 @@ export function App({ uri, keymap, configWarnings = [], onBackToUri }: AppProps)
   const [activeThemeId, setActiveThemeId] = useState("tokyo-night")
   // Bump this to force a full re-render of content so components re-read the updated theme
   const [themeVersion, setThemeVersion] = useState(0)
+  // The theme that was active when the theme picker was opened — used to revert on cancel
+  const previewBaseThemeId = useRef("tokyo-night")
+
+  // Capture base theme when the themes picker opens so escape can revert
+  useEffect(() => {
+    if (paletteMode === "themes") {
+      previewBaseThemeId.current = activeThemeId
+    }
+  }, [paletteMode])
   const [loadingMessage, setLoadingMessage] = useState(randomConnectionMessage)
   // Hold-off: don't show the loading screen until 500ms have passed.
   // Prevents a jarring flash when the connection is very fast.
@@ -120,8 +131,19 @@ export function App({ uri, keymap, configWarnings = [], onBackToUri }: AppProps)
   )
 
   const handleThemeChange = useCallback((presetId: string) => {
+    previewBaseThemeId.current = presetId
     setActiveThemeId(presetId)
     setThemeVersion((v) => v + 1)
+  }, [])
+
+  // Live preview: apply theme as cursor moves over presets, revert on null (close/escape)
+  const handleThemeHighlight = useCallback((presetId: string | null) => {
+    const id = presetId ?? previewBaseThemeId.current
+    const preset = findPreset(id)
+    if (preset) {
+      setTheme(preset.theme)
+      setThemeVersion((v) => v + 1)
+    }
   }, [])
 
   const { handleSelect: handlePaletteSelect } = usePaletteActions({
@@ -133,9 +155,17 @@ export function App({ uri, keymap, configWarnings = [], onBackToUri }: AppProps)
   })
 
   const handlePaletteClose = useCallback(() => {
+    // Revert to the base theme if the picker was open (in case user pressed escape mid-preview)
+    if (paletteMode === "themes") {
+      const base = findPreset(previewBaseThemeId.current)
+      if (base) {
+        setTheme(base.theme)
+        setThemeVersion((v) => v + 1)
+      }
+    }
     setPaletteMode("commands")
     dispatch({ type: "CLOSE_COMMAND_PALETTE" })
-  }, [])
+  }, [paletteMode])
 
   // Build theme commands list (re-computed when active theme changes)
   const themeCommands = useMemo(
@@ -354,6 +384,7 @@ export function App({ uri, keymap, configWarnings = [], onBackToUri }: AppProps)
         commands={effectiveCommands}
         onSelect={handlePaletteSelect}
         onClose={handlePaletteClose}
+        onHighlight={paletteMode === "themes" ? (cmd) => handleThemeHighlight(cmd ? cmd.id.slice(6) : null) : undefined}
         placeholder={effectivePlaceholder}
       />
 

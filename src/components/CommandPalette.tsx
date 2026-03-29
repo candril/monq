@@ -23,6 +23,7 @@ interface CommandPaletteProps {
   commands: Command[]
   onSelect: (command: Command) => void
   onClose: () => void
+  onHighlight?: (command: Command | null) => void
   placeholder?: string
 }
 
@@ -77,6 +78,7 @@ export function CommandPalette({
   commands,
   onSelect,
   onClose,
+  onHighlight,
   placeholder = "Search...",
 }: CommandPaletteProps) {
   const [query, setQuery] = useState("")
@@ -87,6 +89,8 @@ export function CommandPalette({
     if (visible) {
       setQuery("")
       setSelectedIndex(0)
+    } else {
+      onHighlight?.(null)
     }
   }, [visible])
 
@@ -102,6 +106,13 @@ export function CommandPalette({
       setSelectedIndex(Math.max(0, commandCount - 1))
     }
   }, [commandCount, selectedIndex])
+
+  // Fire onHighlight whenever the highlighted command changes
+  useEffect(() => {
+    if (!visible || !onHighlight) return
+    const selected = items.find((it) => it.type === "command" && it.globalIndex === selectedIndex)
+    onHighlight(selected?.type === "command" ? selected.command : null)
+  }, [selectedIndex, visible, items])
 
   // Auto-scroll: need to map selectedIndex to visual row
   useEffect(() => {
@@ -129,6 +140,7 @@ export function CommandPalette({
     if (!visible) return
 
     if (key.name === "escape") {
+      onHighlight?.(null)
       onClose()
     } else if (key.name === "return") {
       const selected = items.find((it) => it.type === "command" && it.globalIndex === selectedIndex)
