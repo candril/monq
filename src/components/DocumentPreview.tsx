@@ -50,6 +50,7 @@ export function DocumentPreview({ document, position, scrollOffset }: DocumentPr
       width={isRight ? "50%" : "100%"}
       height={isRight ? "100%" : "50%"}
       flexDirection="column"
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OpenTUI border prop not typed
       border={[isRight ? "left" : "top"] as any}
       borderColor={theme.border}
       overflow="hidden"
@@ -62,6 +63,7 @@ export function DocumentPreview({ document, position, scrollOffset }: DocumentPr
             syntaxStyle: jsonSyntaxStyle,
             drawUnstyledText: false,
             conceal: false,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OpenTUI code props not typed
           } as any)}
         />
       </scrollbox>

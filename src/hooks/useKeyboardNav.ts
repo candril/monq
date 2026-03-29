@@ -17,7 +17,7 @@ import { disconnect } from "../providers/mongodb"
 import { serializeDocument } from "../utils/document"
 import { getNestedValue } from "../utils/format"
 import { projectionToSimple, parseSimpleQueryFull } from "../query/parser"
-import { classifyPipeline } from "../query/pipeline"
+import { classifyPipeline, stageOf } from "../query/pipeline"
 import { stopWatching } from "../actions/pipelineWatch"
 import { useDialogKeys } from "./useDialogKeys"
 import { usePipelineKeys } from "./usePipelineKeys"
@@ -286,8 +286,8 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
         if (!doc || !col) break
         const val = getNestedValue(doc as Record<string, unknown>, col.field) ?? null
         if (state.pipelineMode) {
-          const matchStage = state.pipeline.find((s) => "$match" in s) as any
-          if (!matchStage) {
+          const matchStageDoc = state.pipeline.find((s) => "$match" in s)
+          if (!matchStageDoc) {
             dispatch({
               type: "SHOW_MESSAGE",
               message: "Cannot add filter: pipeline has no $match stage",
@@ -295,6 +295,7 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
             })
             break
           }
+          const matchStage = stageOf(matchStageDoc)
           if (col.field in (matchStage.$match ?? {})) {
             dispatch({
               type: "SHOW_MESSAGE",
@@ -366,7 +367,9 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
         if (state.pipelineMode) {
           const existingProjIdx = state.pipeline.findIndex((s) => "$project" in s)
           const existingProj: Record<string, 0 | 1> =
-            existingProjIdx !== -1 ? { ...(state.pipeline[existingProjIdx] as any).$project } : {}
+            existingProjIdx !== -1
+              ? { ...(stageOf(state.pipeline[existingProjIdx]).$project as Record<string, 0 | 1>) }
+              : {}
           if (existingProj[col.field] === 0) {
             delete existingProj[col.field]
             dispatch({ type: "SHOW_MESSAGE", message: `Showing ${col.field}`, kind: "info" })

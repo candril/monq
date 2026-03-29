@@ -7,6 +7,14 @@ import type { Document } from "mongodb"
 // Stages that can be expressed as find(filter, { sort, projection })
 const FIND_COMPATIBLE_STAGES = new Set(["$match", "$sort", "$project"])
 
+/** Typed pipeline stage — a Document with a single known operator key */
+type PipelineStage = { [K in string]: Document }
+
+/** Cast a Document to a typed pipeline stage for safe property access */
+export function stageOf(stage: Document): PipelineStage {
+  return stage as PipelineStage
+}
+
 /** Returns true if the pipeline requires aggregate() rather than find() */
 export function classifyPipeline(pipeline: Document[]): boolean {
   if (pipeline.length === 0) return false
@@ -19,8 +27,11 @@ export function extractFindParts(pipeline: Document[]): {
   sort?: Document
   projection?: Document
 } {
-  const filter = (pipeline.find((s) => "$match" in s) as Record<string, Document>)?.$match ?? {}
-  const sort = (pipeline.find((s) => "$sort" in s) as Record<string, Document>)?.$sort
-  const projection = (pipeline.find((s) => "$project" in s) as Record<string, Document>)?.$project
+  const matchStage = pipeline.find((s) => "$match" in s)
+  const sortStage = pipeline.find((s) => "$sort" in s)
+  const projectStage = pipeline.find((s) => "$project" in s)
+  const filter = matchStage ? (stageOf(matchStage).$match ?? {}) : {}
+  const sort = sortStage ? stageOf(sortStage).$sort : undefined
+  const projection = projectStage ? stageOf(projectStage).$project : undefined
   return { filter, sort, projection }
 }

@@ -8,6 +8,7 @@ import type { Dispatch } from "react"
 import type { CliRenderer } from "@opentui/core"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
+import type { EditManyResult } from "../actions/editMany"
 import { deleteDocument } from "../providers/mongodb"
 import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../actions/editMany"
 
@@ -151,7 +152,7 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
   // originalDocs: the true source of truth from the first editor open (never changes).
   // editedDocs: what the user last saved (shown in the editor on goBack).
   function showBulkConfirm(
-    result: any,
+    result: EditManyResult,
     originalDocs: import("mongodb").Document[],
     editedDocs: import("mongodb").Document[],
   ): void {

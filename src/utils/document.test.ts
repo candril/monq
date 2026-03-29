@@ -47,7 +47,7 @@ describe("serializeDocument / deserializeDocument", () => {
     const result = deserializeDocument(serializeDocument(doc))
 
     // assert
-    expect((result.address as any).city).toBe("Berlin")
+    expect((result.address as Record<string, string>).city).toBe("Berlin")
   })
 
   test("serialized output is valid JSON", () => {

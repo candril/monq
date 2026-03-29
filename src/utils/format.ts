@@ -116,9 +116,9 @@ export function resolveSortField(
   sortField: string | null,
 ): string | null {
   if (!pipelineMode) return sortField
-  const sortStage = pipeline.find((s) => "$sort" in s) as any
-  const entries = Object.entries(sortStage?.$sort ?? {})
-  return entries.length === 1 ? (entries[0][0] as string) : null
+  const sortStage = pipeline.find((s) => "$sort" in s)
+  const entries = Object.entries((sortStage?.["$sort"] as Record<string, unknown>) ?? {})
+  return entries.length === 1 ? entries[0][0] : null
 }
 
 /** Resolve the active sort direction from pipeline stages or simple mode state */
@@ -128,8 +128,8 @@ export function resolveSortDirection(
   sortDirection: 1 | -1,
 ): 1 | -1 {
   if (!pipelineMode) return sortDirection
-  const sortStage = pipeline.find((s) => "$sort" in s) as any
-  const entries = Object.entries(sortStage?.$sort ?? {})
+  const sortStage = pipeline.find((s) => "$sort" in s)
+  const entries = Object.entries((sortStage?.["$sort"] as Record<string, unknown>) ?? {})
   return entries.length === 1 ? (entries[0][1] as 1 | -1) : -1
 }
 

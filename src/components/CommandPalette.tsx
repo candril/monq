@@ -7,7 +7,7 @@ import { useState, useMemo, useEffect, useRef } from "react"
 import { useKeyboard } from "@opentui/react"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import type { Command } from "../commands/types"
-import { CATEGORY_ORDER } from "../commands/types"
+import { CATEGORY_ORDER, type CommandCategory } from "../commands/types"
 import { fuzzyFilter } from "../utils/fuzzy"
 import { theme } from "../theme"
 
@@ -38,8 +38,8 @@ function buildPaletteItems(commands: Command[]): { items: PaletteItem[]; command
 
   // Sort groups by CATEGORY_ORDER
   const sortedCategories = [...groups.keys()].sort((a, b) => {
-    const ai = CATEGORY_ORDER.indexOf(a as any)
-    const bi = CATEGORY_ORDER.indexOf(b as any)
+    const ai = CATEGORY_ORDER.indexOf(a as CommandCategory)
+    const bi = CATEGORY_ORDER.indexOf(b as CommandCategory)
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
   })
 

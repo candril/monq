@@ -18,11 +18,12 @@ export interface EditManyResult {
 
 export type EditManyConfirmAction = "ignore" | "delete" | "insert"
 
+type MaybeObjectId = { toHexString?: () => string }
+
 function docIdKey(doc: Document): string | null {
   if (doc._id === undefined || doc._id === null) return null
-  return typeof (doc._id as any).toHexString === "function"
-    ? (doc._id as any).toHexString()
-    : String(doc._id)
+  const id = doc._id as MaybeObjectId
+  return typeof id.toHexString === "function" ? id.toHexString() : String(doc._id)
 }
 
 async function getTempDir(collectionName: string): Promise<string> {

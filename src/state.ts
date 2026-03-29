@@ -16,6 +16,7 @@ import type {
   View,
 } from "./types"
 import { parseSimpleQueryFull, simpleToBson, bsonToSimple } from "./query/parser"
+import { stageOf } from "./query/pipeline"
 
 // ============================================================================
 // Actions
@@ -245,9 +246,12 @@ function restoreFromTab(_state: AppState, tab: Tab): Partial<AppState> {
 // Selection Helpers
 // ============================================================================
 
+type MaybeObjectId = { toHexString?: () => string }
+
 function idKey(id: unknown): string {
-  return id != null && typeof (id as any).toHexString === "function"
-    ? (id as any).toHexString()
+  const maybeId = id as MaybeObjectId
+  return id != null && typeof maybeId.toHexString === "function"
+    ? maybeId.toHexString()
     : String(id)
 }
 
@@ -586,22 +590,21 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "CYCLE_SORT": {
       // Determine next sort field/direction by cycling: none → asc → desc → none
+      const pipelineSortStage = state.pipelineMode
+        ? state.pipeline.find((s) => "$sort" in s)
+        : undefined
+      const pipelineSortEntries = pipelineSortStage
+        ? Object.entries(stageOf(pipelineSortStage).$sort ?? {})
+        : []
       const currentField = state.pipelineMode
-        ? (() => {
-            const sortStage = state.pipeline.find((s) => "$sort" in s) as any
-            if (!sortStage) return null
-            const entries = Object.entries(sortStage.$sort ?? {})
-            return entries.length === 1 && entries[0][0] === action.field ? action.field : null
-          })()
+        ? pipelineSortEntries.length === 1 && pipelineSortEntries[0][0] === action.field
+          ? action.field
+          : null
         : state.sortField
       const currentDir = state.pipelineMode
-        ? (() => {
-            const sortStage = state.pipeline.find((s) => "$sort" in s) as any
-            const entries = Object.entries(sortStage?.$sort ?? {})
-            return entries.length === 1 && entries[0][0] === action.field
-              ? (entries[0][1] as 1 | -1)
-              : -1
-          })()
+        ? pipelineSortEntries.length === 1 && pipelineSortEntries[0][0] === action.field
+          ? (pipelineSortEntries[0][1] as 1 | -1)
+          : -1
         : state.sortDirection
 
       let sortField: string | null
@@ -959,7 +962,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
       const updatedPipeline = state.pipeline.map((stage, i) => {
         if (i !== matchIdx) return stage
-        const existingMatch = (stage as any).$match ?? {}
+        const existingMatch = stageOf(stage).$match ?? {}
         return { $match: { ...existingMatch, [action.field]: action.value } }
       })
 
