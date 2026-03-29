@@ -147,6 +147,9 @@ export function CommandPalette({
       (key.ctrl && key.name === "j")
     ) {
       setSelectedIndex((i) => Math.min(commandCount - 1, i + 1))
+    } else if (key.ctrl && key.name === "w") {
+      setQuery((q) => q.replace(/\S+\s*$/, ""))
+      setSelectedIndex(0)
     } else if (key.name === "backspace") {
       setQuery((q) => q.slice(0, -1))
       setSelectedIndex(0)

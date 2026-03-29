@@ -1,4 +1,4 @@
-# mon-q
+# monq
 
 A terminal-based MongoDB browser and query tool. Keyboard-first, zero config — pass `--uri` and explore.
 

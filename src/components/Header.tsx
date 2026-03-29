@@ -35,7 +35,7 @@ export function Header({
     <box height={1} backgroundColor={theme.headerBg} paddingX={1} flexDirection="row">
       {/* Left side: App name + collection/db/host (collection most visible) */}
       <text>
-        <span fg={theme.textMuted}>Mon-Q</span>
+        <span fg={theme.textMuted}>Monq</span>
         {collectionName && (
           <span fg={theme.text}>
             {" "}

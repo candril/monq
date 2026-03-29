@@ -3,7 +3,7 @@
  * Thin composition — logic in hooks, display in components.
  */
 
-import { useReducer, useMemo, useCallback, useState, useRef, useEffect } from "react"
+import { useReducer, useMemo, useCallback, useState, useRef } from "react"
 import { useRenderer, useTerminalDimensions } from "@opentui/react"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { Shell } from "./components/Shell"
@@ -20,6 +20,7 @@ import { DocumentList } from "./components/DocumentList"
 import { DocumentPreview } from "./components/DocumentPreview"
 import { FilterSuggestions } from "./components/FilterSuggestions"
 import { CommandPalette } from "./components/CommandPalette"
+import { WelcomeScreen } from "./components/WelcomeScreen"
 import { TabBar } from "./components/TabBar"
 import { appReducer, createInitialState } from "./state"
 import { useMongoConnection } from "./hooks/useMongoConnection"
@@ -31,11 +32,11 @@ import { buildDatabaseCommands } from "./commands/databases"
 import { usePaletteActions } from "./hooks/usePaletteActions"
 import { formatDocumentCount, resolveSortField, resolveSortDirection } from "./utils/format"
 
+type PaletteMode = "commands" | "collections" | "databases"
+
 interface AppProps {
   uri: string
 }
-
-type PaletteMode = "commands" | "collections" | "databases"
 
 export function App({ uri }: AppProps) {
   const [state, dispatch] = useReducer(appReducer, null, createInitialState)
@@ -54,7 +55,7 @@ export function App({ uri }: AppProps) {
   })
   useDocumentLoader({ state, dispatch, pageSize })
 
-  // Build palette commands based on mode
+  // Build palette commands based on mode (for in-app switching via Ctrl+P)
   const mainCommands = useMemo(() => buildCommands(state), [state])
   const collectionCommands = useMemo(
     () => buildCollectionCommands(state.collections),
@@ -65,14 +66,6 @@ export function App({ uri }: AppProps) {
     [state.databases, state.dbName],
   )
 
-  // Open the db picker palette when state requests it
-  useEffect(() => {
-    if (state.dbPickerOpen) {
-      setPaletteMode("databases")
-      dispatch({ type: "CLOSE_DB_PICKER" }) // consumed — palette visibility is controlled separately
-    }
-  }, [state.dbPickerOpen])
-
   const { handleSelect: handlePaletteSelect } = usePaletteActions({
     state,
     dispatch,
@@ -81,35 +74,15 @@ export function App({ uri }: AppProps) {
   })
 
   const handlePaletteClose = useCallback(() => {
-    // Can't escape the db picker if no db has been selected yet
-    if (paletteMode === "databases" && !state.dbName) {
-      return
-    }
-    if (paletteMode === "collections" || paletteMode === "databases") {
-      // Go back to main commands (or close palette if triggered explicitly)
-      setPaletteMode("commands")
-      if (paletteMode === "databases") {
-        dispatch({ type: "CLOSE_COMMAND_PALETTE" })
-      }
-    } else {
-      dispatch({ type: "CLOSE_COMMAND_PALETTE" })
-      setPaletteMode("commands")
-    }
-  }, [paletteMode, state.dbName])
+    setPaletteMode("commands")
+    dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+  }, [])
 
-  // Show palette automatically when no db is selected, or when no tab is open, or explicitly opened
+  // Palette visible for in-app Ctrl+P commands only (startup flow uses WelcomeScreen)
   const paletteVisible =
-    state.commandPaletteVisible ||
-    paletteMode === "databases" ||
-    (state.view === "collections" && !state.collectionsLoading && !state.error && !!state.dbName)
+    state.commandPaletteVisible || paletteMode === "databases" || paletteMode === "collections"
 
-  // Determine the effective palette mode
-  const effectivePaletteMode: PaletteMode =
-    paletteMode === "databases"
-      ? "databases"
-      : !state.activeTabId && paletteVisible
-        ? "collections"
-        : paletteMode
+  const effectivePaletteMode: PaletteMode = paletteMode
 
   const effectiveCommands =
     effectivePaletteMode === "databases"
@@ -123,6 +96,31 @@ export function App({ uri }: AppProps) {
       : effectivePaletteMode === "collections"
         ? "Open collection..."
         : "Search commands..."
+
+  // Welcome screen: shown when db is loaded but no tab is open yet
+  const showWelcome = !state.error && !state.collectionsLoading && !state.activeTabId
+
+  // Determine welcome step
+  const welcomeStep: 1 | 2 = !state.dbName ? 1 : 2
+
+  const handleSelectDatabase = useCallback(
+    (name: string) => {
+      dispatch({ type: "SELECT_DATABASE", dbName: name })
+    },
+    [],
+  )
+
+  const handleSelectCollection = useCallback(
+    (name: string) => {
+      dispatch({ type: "OPEN_TAB", collectionName: name })
+    },
+    [],
+  )
+
+  const handleWelcomeBack = useCallback(() => {
+    // Return to step 1: clear dbName but keep databases list in state
+    dispatch({ type: "RESET_DATABASE" })
+  }, [])
 
   const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
   const selectedDoc = state.documents[state.selectedIndex] ?? null
@@ -159,6 +157,17 @@ export function App({ uri }: AppProps) {
           <ErrorView message={state.error} />
         ) : state.collectionsLoading ? (
           <Loading message="Connecting to MongoDB..." />
+        ) : showWelcome ? (
+          <WelcomeScreen
+            step={welcomeStep}
+            databases={state.databases}
+            collections={state.collections.map((c) => c.name)}
+            dbName={state.dbName}
+            host={state.host}
+            onSelectDatabase={handleSelectDatabase}
+            onSelectCollection={handleSelectCollection}
+            onBack={handleWelcomeBack}
+          />
         ) : activeTab ? (
           <box
             flexGrow={1}

@@ -45,7 +45,7 @@ function buildHeader(collectionName: string, dbName: string, schemaMap: SchemaMa
       : [`//   (no schema sampled)`]
 
   return [
-    `// Mon-Q — MongoDB aggregation pipeline for ${collectionName} @ ${dbName}`,
+    `// Monq — MongoDB aggregation pipeline for ${collectionName} @ ${dbName}`,
     `// Save to apply (:wq). Quit without saving (:q!) to cancel.`,
     `//`,
     `// Schema (${collectionName}):`,
@@ -200,7 +200,7 @@ function buildJsonSchema(collectionName: string, schemaMap: SchemaMap): string {
 
   const schema = {
     $schema: "http://json-schema.org/draft-07/schema",
-    title: `Mon-Q Pipeline — ${collectionName}`,
+    title: `Monq Pipeline — ${collectionName}`,
     type: "object",
     properties: {
       pipeline: {

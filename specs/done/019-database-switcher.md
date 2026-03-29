@@ -4,7 +4,7 @@
 
 ## Description
 
-When no database is specified in the connection URI (e.g. `mongodb://localhost:27017`), Mon-Q automatically opens the command palette in database-picker mode so the user can choose one before seeing any collections. A `Switch Database` command in the normal palette lets the user change the active database at any time, which closes all open tabs and reloads the collection list from scratch.
+When no database is specified in the connection URI (e.g. `mongodb://localhost:27017`), Monq automatically opens the command palette in database-picker mode so the user can choose one before seeing any collections. A `Switch Database` command in the normal palette lets the user change the active database at any time, which closes all open tabs and reloads the collection list from scratch.
 
 ## Out of Scope
 
@@ -16,7 +16,7 @@ When no database is specified in the connection URI (e.g. `mongodb://localhost:2
 
 ### P1 - Must Have
 
-- **DB picker on startup** — if `parseUri` returns an empty `dbName`, Mon-Q opens the command palette in `"databases"` mode immediately after the connection is established (instead of showing an empty collection list).
+- **DB picker on startup** — if `parseUri` returns an empty `dbName`, Monq opens the command palette in `"databases"` mode immediately after the connection is established (instead of showing an empty collection list).
 - **`Switch Database` command** — a command in the palette (category `"navigation"`) labelled `Switch Database`. Selecting it switches the palette to `"databases"` mode, populated by `listDatabases()`.
 - **Palette databases mode** — mirrors the existing `"collections"` mode: fuzzy-searchable list, `j/k` / arrows to navigate, `Enter` to confirm, `Escape` to cancel (no-op on startup when no db is yet selected). Placeholder reads `Switch database...`.
 - **On database selected** — calls `switchDatabase(dbName)`, dispatches `SELECT_DATABASE`, closes palette. `SELECT_DATABASE` closes all tabs, clears collections, sets `state.dbName`, then triggers a collection reload.

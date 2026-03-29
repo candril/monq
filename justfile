@@ -2,13 +2,13 @@
 default:
     @just --list
 
-# Run the TUI application
-run uri:
-    bun src/index.tsx --uri "{{uri}}"
+# Run the TUI application (uri optional)
+run uri="":
+    bun src/index.tsx {{ if uri != "" { '--uri "' + uri + '"' } else { "" } }}
 
-# Run with hot reload (watches for changes)
-dev uri:
-    bun --watch src/index.tsx --uri "{{uri}}"
+# Run with hot reload (uri optional)
+dev uri="":
+    bun --watch src/index.tsx {{ if uri != "" { '--uri "' + uri + '"' } else { "" } }}
 
 # Install dependencies
 install:

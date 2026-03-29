@@ -1,6 +1,6 @@
 # Specs
 
-This directory contains feature specifications for Mon-Q.
+This directory contains feature specifications for Monq.
 
 ## Format
 

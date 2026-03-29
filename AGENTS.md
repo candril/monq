@@ -1,4 +1,4 @@
-# Mon-Q
+# Monq
 
 A terminal-based MongoDB browser and query tool built with OpenTUI React. Browse collections, query documents, and modify data with a keyboard-first interface.
 
@@ -137,7 +137,7 @@ function App() {
   return (
     <box width="100%" height="100%" flexDirection="column">
       <box height={1} backgroundColor="#1a1a2e">
-        <text fg="#7aa2f7">Mon-Q</text>
+        <text fg="#7aa2f7">Monq</text>
       </box>
       <box flexGrow={1}>
         <text>Count: {count}</text>
@@ -212,7 +212,7 @@ await collection.updateOne({ _id: id }, { $set: updates })
 
 ### Query Modes
 
-Mon-Q supports two query modes:
+Monq supports two query modes:
 
 **Simple mode** (default) - Human-readable key:value pairs:
 ```

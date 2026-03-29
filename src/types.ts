@@ -1,5 +1,5 @@
 /**
- * Type definitions for Mon-Q
+ * Type definitions for Monq
  */
 
 import type { Document } from "mongodb"

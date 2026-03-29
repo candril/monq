@@ -29,7 +29,7 @@ function buildHeader(
       : [`//   (no schema sampled)`]
 
   return [
-    `// Mon-Q — editing document in ${collectionName} @ ${dbName}`,
+    `// Monq — editing document in ${collectionName} @ ${dbName}`,
     `// _id: ${idStr} (read-only — changes to _id are ignored)`,
     `// Save to apply (:wq). Quit without saving (:q!) to cancel.`,
     `//`,

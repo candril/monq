@@ -4,9 +4,9 @@
 
 ## Description
 
-Decouple Mon-Q from MongoDB so that any tabular or document-oriented data source can be
+Decouple Monq from MongoDB so that any tabular or document-oriented data source can be
 browsed with the same keyboard-first interface. The first additional backend is CSV/TSV,
-making Mon-Q useful for local file exploration as well as remote databases.
+making Monq useful for local file exploration as well as remote databases.
 
 ## Out of Scope
 

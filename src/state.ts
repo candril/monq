@@ -31,6 +31,7 @@ export type AppAction =
   | { type: "OPEN_DB_PICKER" }
   | { type: "CLOSE_DB_PICKER" }
   | { type: "SELECT_DATABASE"; dbName: string }
+  | { type: "RESET_DATABASE" }
   // Collections
   | { type: "SET_COLLECTIONS"; collections: CollectionInfo[] }
   | { type: "SET_COLLECTIONS_LOADING"; loading: boolean }
@@ -279,13 +280,46 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     // Database picker
     case "SET_DATABASES":
-      return { ...state, databases: action.databases }
+      // Receiving the database list means the no-DB startup fetch is done
+      return { ...state, databases: action.databases, collectionsLoading: false }
 
     case "OPEN_DB_PICKER":
       return { ...state, dbPickerOpen: true }
 
     case "CLOSE_DB_PICKER":
       return { ...state, dbPickerOpen: false }
+
+    case "RESET_DATABASE":
+      // Go back to step 1 of welcome flow: clear dbName but keep databases list loaded
+      return {
+        ...state,
+        dbName: "",
+        dbPickerOpen: false,
+        tabs: [],
+        activeTabId: null,
+        closedTabs: [],
+        collections: [],
+        collectionsLoading: false,
+        collectionSelectedIndex: 0,
+        documents: [],
+        documentCount: 0,
+        totalDocumentCount: 0,
+        columns: [],
+        schemaMap: new Map(),
+        sortField: null,
+        sortDirection: -1,
+        queryInput: "",
+        queryMode: "simple",
+        bsonSort: "",
+        bsonProjection: "",
+        pipelineMode: false,
+        pipeline: [],
+        pipelineSource: "",
+        selectionMode: "none",
+        selectedIds: new Set(),
+        frozenIds: new Set(),
+        selectedRows: new Set(),
+      }
 
     case "SELECT_DATABASE":
       return {

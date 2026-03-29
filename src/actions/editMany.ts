@@ -54,7 +54,7 @@ function generateSchema(collectionName: string, schemaMap: SchemaMap): object {
   }
   return {
     $schema: "http://json-schema.org/draft-07/schema",
-    title: `Mon-Q documents — ${collectionName}`,
+    title: `Monq documents — ${collectionName}`,
     type: "object",
     properties: { documents: { type: "array", items: { type: "object", properties } } },
   }
@@ -79,7 +79,7 @@ function buildEditHeader(
   schemaMap?: SchemaMap,
 ): string {
   return [
-    `// Mon-Q — bulk editing ${docCount} document${docCount === 1 ? "" : "s"} in ${collectionName} @ ${dbName}`,
+    `// Monq — bulk editing ${docCount} document${docCount === 1 ? "" : "s"} in ${collectionName} @ ${dbName}`,
     `// Save to apply (:wq). Quit without saving (:q!) to cancel.`,
     `//`,
     `// Rules:`,
@@ -95,7 +95,7 @@ function buildEditHeader(
 
 function buildInsertHeader(collectionName: string, dbName: string, schemaMap?: SchemaMap): string {
   return [
-    `// Mon-Q — inserting into ${collectionName} @ ${dbName}`,
+    `// Monq — inserting into ${collectionName} @ ${dbName}`,
     `// Save to apply (:wq). Quit without saving (:q!) to cancel.`,
     `//`,
     `// Rules:`,

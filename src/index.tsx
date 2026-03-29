@@ -1,6 +1,10 @@
 import { createCliRenderer, ConsolePosition, getTreeSitterClient } from "@opentui/core"
 import { createRoot } from "@opentui/react"
+import { useState } from "react"
+import { useRenderer } from "@opentui/react"
 import { App } from "./App"
+import { UriScreen } from "./components/UriScreen"
+import { Shell } from "./components/Shell"
 import { registerSyntaxParsers } from "./syntax-parsers"
 import { stopWatching } from "./actions/pipelineWatch"
 
@@ -15,22 +19,15 @@ process.on("SIGTERM", () => {
   process.exit(0)
 })
 
-// Parse --uri from argv (before starting the renderer)
+// Parse URI from argv — supports:
+//   monq --uri mongodb://...
+//   monq mongodb://...        (bare positional)
+//   monq                      (shows URI input screen)
 const args = process.argv.slice(2)
 const uriIndex = args.indexOf("--uri")
-const uri = uriIndex !== -1 ? args[uriIndex + 1] : null
-
-if (!uri) {
-  console.error("error: --uri is required\n")
-  console.error("Usage:")
-  console.error("  monq --uri <mongodb-uri>\n")
-  console.error("Options:")
-  console.error("  --uri <uri>   MongoDB connection URI (required)\n")
-  console.error("Examples:")
-  console.error("  monq --uri mongodb://localhost:27017")
-  console.error("  monq --uri mongodb+srv://user:pass@cluster.mongodb.net/mydb")
-  process.exit(1)
-}
+const flagUri = uriIndex !== -1 ? (args[uriIndex + 1] ?? null) : null
+const positionalUri = args.find((a) => a.startsWith("mongodb://") || a.startsWith("mongodb+srv://")) ?? null
+const initialUri = flagUri ?? positionalUri
 
 // Register tree-sitter parsers (JSON for document preview)
 registerSyntaxParsers()
@@ -47,4 +44,19 @@ const renderer = await createCliRenderer({
   },
 })
 
-createRoot(renderer).render(<App uri={uri} />)
+/** Root: shows URI input screen if no --uri was given, then mounts App */
+function Root() {
+  const [uri, setUri] = useState<string | null>(initialUri)
+
+  if (!uri) {
+    return (
+      <Shell>
+        <UriScreen onConnect={setUri} />
+      </Shell>
+    )
+  }
+
+  return <App uri={uri} />
+}
+
+createRoot(renderer).render(<Root />)

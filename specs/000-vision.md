@@ -1,10 +1,10 @@
-# Mon-Q Vision
+# Monq Vision
 
 **Status**: Ready
 
-## What is Mon-Q?
+## What is Monq?
 
-Mon-Q (monk) is a terminal-based MongoDB browser and query tool. It brings the same keyboard-first, beautiful TUI experience as PResto to the world of MongoDB data exploration.
+Monq (monk) is a terminal-based MongoDB browser and query tool. It brings the same keyboard-first, beautiful TUI experience as PResto to the world of MongoDB data exploration.
 
 ## Core Philosophy
 
