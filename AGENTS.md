@@ -2,6 +2,10 @@
 
 A terminal-based MongoDB browser and query tool built with OpenTUI React. Browse collections, query documents, and modify data with a keyboard-first interface.
 
+## Architecture Decisions
+
+Before making structural changes, read the ADRs in `docs/adr/`. They capture the key decisions and their rationale. ADR-000 defines the format.
+
 ## Spec-Driven Development
 
 **All features must have a spec before implementation.**
