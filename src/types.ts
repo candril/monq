@@ -16,7 +16,6 @@ export type SelectionMode = "none" | "selecting" | "selected"
 export interface BulkEditConfirmation {
   missing: import("mongodb").Document[]
   added: import("mongodb").Document[]
-  focusedIndex: number
   resolve: (missingAction: "ignore" | "delete", addedAction: "ignore" | "insert") => void
   goBack: () => void
 }
@@ -24,7 +23,6 @@ export interface BulkEditConfirmation {
 /** Pending delete confirmation */
 export interface DeleteConfirmation {
   docs: import("mongodb").Document[]
-  focusedIndex: number
   resolve: (confirmed: boolean) => void
 }
 
@@ -141,7 +139,7 @@ export interface AppState {
   /** True when pipeline has stages that can't be expressed as find() */
   pipelineIsAggregate: boolean
   /** When set, show the pipeline→simple confirmation dialog */
-  pipelineConfirm: { simpleQuery: string; focusedIndex: number } | null
+  pipelineConfirm: { simpleQuery: string } | null
   /** True while fs.watch is active on the pipeline file */
   pipelineWatching: boolean
   /** Whether the filter/pipeline bar is visible at the bottom */

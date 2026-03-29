@@ -301,9 +301,8 @@ export function usePaletteActions({
           if (docsToDelete.length === 0) break
           dispatch({
             type: "SHOW_DELETE_CONFIRM",
-            confirmation: {
+              confirmation: {
               docs: docsToDelete,
-              focusedIndex: -1,
               resolve: async (confirmed) => {
                 if (!confirmed) return
                 const errors: string[] = []

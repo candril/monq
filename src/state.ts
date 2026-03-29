@@ -91,7 +91,7 @@ export type AppAction =
   | { type: "ENTER_SIMPLE_MODE"; query: string }
   | { type: "SHOW_PIPELINE_CONFIRM"; simpleQuery: string }
   | { type: "DISMISS_PIPELINE_CONFIRM" }
-  | { type: "MOVE_PIPELINE_CONFIRM_FOCUS"; delta: number }
+
   | { type: "CONFIRM_OVERWRITE_SIMPLE"; query: string }
   | { type: "CONFIRM_NEW_TAB_SIMPLE"; query: string }
   | { type: "ADD_PIPELINE_MATCH_CONDITION"; field: string; value: unknown }
@@ -118,12 +118,8 @@ export type AppAction =
   | { type: "SELECT_ALL" }
   | { type: "SHOW_BULK_EDIT_CONFIRM"; confirmation: BulkEditConfirmation }
   | { type: "CLEAR_BULK_EDIT_CONFIRM" }
-  | { type: "MOVE_BULK_EDIT_FOCUS"; delta: number }
-  | { type: "SET_BULK_EDIT_FOCUS"; index: number }
   | { type: "SHOW_DELETE_CONFIRM"; confirmation: DeleteConfirmation }
   | { type: "CLEAR_DELETE_CONFIRM" }
-  | { type: "MOVE_DELETE_FOCUS"; delta: number }
-  | { type: "SET_DELETE_FOCUS"; index: number }
 
 // ============================================================================
 // Helpers
@@ -888,21 +884,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     // Tab pipeline→simple but lossy: show confirm dialog
     case "SHOW_PIPELINE_CONFIRM":
-      return { ...state, pipelineConfirm: { simpleQuery: action.simpleQuery, focusedIndex: -1 } }
+      return { ...state, pipelineConfirm: { simpleQuery: action.simpleQuery } }
 
     case "DISMISS_PIPELINE_CONFIRM":
       return { ...state, pipelineConfirm: null }
-
-    case "MOVE_PIPELINE_CONFIRM_FOCUS": {
-      if (!state.pipelineConfirm) return state
-      const cur = state.pipelineConfirm.focusedIndex
-      const next =
-        cur === -1 ? (action.delta > 0 ? 0 : 2) : Math.max(0, Math.min(2, cur + action.delta))
-      return {
-        ...state,
-        pipelineConfirm: { ...state.pipelineConfirm, focusedIndex: next },
-      }
-    }
 
     // Confirm: overwrite simple filter with translated query, reload
     case "CONFIRM_OVERWRITE_SIMPLE":
@@ -1094,56 +1079,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "CLEAR_BULK_EDIT_CONFIRM":
       return { ...state, bulkEditConfirmation: null }
 
-    case "MOVE_BULK_EDIT_FOCUS": {
-      if (!state.bulkEditConfirmation) return state
-      const { missing, added } = state.bulkEditConfirmation
-      const count =
-        3 +
-        (missing.length > 0 ? 1 : 0) +
-        (added.length > 0 ? 1 : 0) +
-        (missing.length > 0 && added.length > 0 ? 1 : 0)
-      const current = state.bulkEditConfirmation.focusedIndex
-      // From -1 (unselected): j goes to 0, k goes to last
-      const next =
-        current === -1
-          ? action.delta > 0
-            ? 0
-            : count - 1
-          : (current + action.delta + count) % count
-      return {
-        ...state,
-        bulkEditConfirmation: { ...state.bulkEditConfirmation, focusedIndex: next },
-      }
-    }
-
-    case "SET_BULK_EDIT_FOCUS": {
-      if (!state.bulkEditConfirmation) return state
-      return {
-        ...state,
-        bulkEditConfirmation: { ...state.bulkEditConfirmation, focusedIndex: action.index },
-      }
-    }
-
     case "SHOW_DELETE_CONFIRM":
       return { ...state, deleteConfirmation: action.confirmation }
 
     case "CLEAR_DELETE_CONFIRM":
       return { ...state, deleteConfirmation: null }
-
-    case "MOVE_DELETE_FOCUS": {
-      if (!state.deleteConfirmation) return state
-      const current = state.deleteConfirmation.focusedIndex
-      const next = current === -1 ? (action.delta > 0 ? 0 : 1) : (current + action.delta + 2) % 2
-      return { ...state, deleteConfirmation: { ...state.deleteConfirmation, focusedIndex: next } }
-    }
-
-    case "SET_DELETE_FOCUS": {
-      if (!state.deleteConfirmation) return state
-      return {
-        ...state,
-        deleteConfirmation: { ...state.deleteConfirmation, focusedIndex: action.index },
-      }
-    }
 
     case "START_PIPELINE_WATCH":
       return { ...state, pipelineWatching: true }

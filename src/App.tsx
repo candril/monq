@@ -65,7 +65,7 @@ export function App({ uri }: AppProps) {
   const pageSize = terminalHeight + 10
 
   useMongoConnection({ uri, dispatch, dbName: state.dbName })
-  useKeyboardNav({ state, dispatch, docListScrollRef })
+  const { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex } = useKeyboardNav({ state, dispatch, docListScrollRef })
   useDocumentLoader({ state, dispatch, pageSize })
 
   // Build palette commands based on mode
@@ -291,7 +291,7 @@ export function App({ uri }: AppProps) {
               title="Switch to simple filter?"
               lines={lines}
               options={options}
-              focusedIndex={state.pipelineConfirm.focusedIndex}
+              focusedIndex={pipelineFocusedIndex}
             />
           )
         })()}
@@ -300,7 +300,7 @@ export function App({ uri }: AppProps) {
 
       {state.bulkEditConfirmation &&
         (() => {
-          const { missing, added, focusedIndex } = state.bulkEditConfirmation
+          const { missing, added } = state.bulkEditConfirmation
           const missingCount = missing.length
           const addedCount = added.length
           const lines: ConfirmLine[] = []
@@ -335,14 +335,14 @@ export function App({ uri }: AppProps) {
               title="Bulk Edit — Side Effects"
               lines={lines}
               options={options}
-              focusedIndex={focusedIndex}
+              focusedIndex={bulkEditFocusedIndex}
             />
           )
         })()}
 
       {state.deleteConfirmation &&
         (() => {
-          const { docs, focusedIndex } = state.deleteConfirmation
+          const { docs } = state.deleteConfirmation
           const lines: ConfirmLine[] = [
             { text: `Delete ${docs.length} document${docs.length === 1 ? "" : "s"}?` },
             { text: "" },
@@ -357,7 +357,7 @@ export function App({ uri }: AppProps) {
               title="Delete Documents"
               lines={lines}
               options={options}
-              focusedIndex={focusedIndex}
+              focusedIndex={deleteFocusedIndex}
             />
           )
         })()}

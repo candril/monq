@@ -104,10 +104,9 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
       if (docsToDelete.length === 0) return true
       dispatch({
         type: "SHOW_DELETE_CONFIRM",
-        confirmation: {
-          docs: docsToDelete,
-          focusedIndex: -1,
-          resolve: async (confirmed) => {
+          confirmation: {
+            docs: docsToDelete,
+            resolve: async (confirmed) => {
             if (!confirmed) return
             const errors: string[] = []
             for (const doc of docsToDelete) {
@@ -148,7 +147,6 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
       confirmation: {
         missing: result.missing,
         added: result.added,
-        focusedIndex: -1,
         goBack: () => {
           renderer.suspend()
           openEditorForMany(activeTab.collectionName, state.dbName, docsToEdit, editedDocs, state.schemaMap)

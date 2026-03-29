@@ -31,7 +31,7 @@ interface UseKeyboardNavOptions {
 
 export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboardNavOptions) {
   const renderer = useRenderer()
-  const { handleKey: handleDialogKey } = useDialogKeys({ state, dispatch })
+  const { handleKey: handleDialogKey, pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex } = useDialogKeys({ state, dispatch })
   const { handleKey: handlePipelineKey } = usePipelineKeys({ state, dispatch, renderer })
   const { handleKey: handleEditKey } = useDocumentEditKeys({ state, dispatch, renderer })
 
@@ -356,4 +356,6 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboar
       }
     }
   })
+
+  return { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex }
 }
