@@ -1,7 +1,5 @@
 /**
- * Confirmation dialogs.
- * ConfirmDialog — badge-style selectable options with j/k navigation + Enter.
- * ConfirmChoiceDialog — simple key-choice list without navigation.
+ * Confirmation dialog — badge-style selectable options with j/k navigation + Enter.
  */
 
 import { theme } from "../theme"
@@ -98,73 +96,4 @@ export function ConfirmDialog({ title, lines, options, focusedIndex }: ConfirmDi
   )
 }
 
-export interface ConfirmChoice {
-  key: string
-  label: string
-  color?: string
-}
 
-interface ConfirmChoiceDialogProps {
-  visible: boolean
-  title: string
-  message?: string
-  choices: ConfirmChoice[]
-}
-
-export function ConfirmChoiceDialog({
-  visible,
-  title,
-  message,
-  choices,
-}: ConfirmChoiceDialogProps) {
-  if (!visible) return null
-  return (
-    <box
-      position="absolute"
-      top={0}
-      left={0}
-      width="100%"
-      height="100%"
-      justifyContent="center"
-      alignItems="center"
-      backgroundColor={theme.overlayBg}
-    >
-      <box
-        flexDirection="column"
-        backgroundColor={theme.modalBg}
-        paddingX={3}
-        paddingY={1}
-        minWidth={50}
-      >
-        <box height={1} justifyContent="center" marginBottom={1}>
-          <text>
-            <span fg={theme.primary}>
-              <strong>{title}</strong>
-            </span>
-          </text>
-        </box>
-        {message && (
-          <box marginBottom={1}>
-            <text>
-              <span fg={theme.textDim}>{message}</span>
-            </text>
-          </box>
-        )}
-        <box flexDirection="column" gap={0}>
-          {choices.map((choice) => (
-            <box key={choice.key} height={1} flexDirection="row" gap={1}>
-              <text>
-                <span fg={choice.color ?? theme.warning}>
-                  <strong>[{choice.key}]</strong>
-                </span>
-              </text>
-              <text>
-                <span fg={theme.text}>{choice.label}</span>
-              </text>
-            </box>
-          ))}
-        </box>
-      </box>
-    </box>
-  )
-}

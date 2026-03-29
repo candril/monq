@@ -131,11 +131,6 @@ export function CommandPalette({
     if (key.name === "escape") {
       onClose()
     } else if (key.name === "return") {
-      const cmd = filtered.find((_, i) => {
-        const item = items.find((it) => it.type === "command" && it.globalIndex === selectedIndex)
-        return item?.type === "command" && item.command === filtered[i]
-      })
-      // Find the command at selectedIndex
       const selected = items.find((it) => it.type === "command" && it.globalIndex === selectedIndex)
       if (selected?.type === "command") {
         onSelect(selected.command)

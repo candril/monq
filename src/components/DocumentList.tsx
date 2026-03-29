@@ -213,8 +213,7 @@ export function DocumentList({
   loading,
   scrollRef: externalScrollRef,
 }: DocumentListProps) {
-  const internalScrollRef = useRef<ScrollBoxRenderable>(null)
-  const scrollRef = externalScrollRef ?? internalScrollRef
+  const scrollRef = externalScrollRef ?? useRef<ScrollBoxRenderable>(null)
   const { width: terminalWidth } = useTerminalDimensions()
 
   useEffect(() => {

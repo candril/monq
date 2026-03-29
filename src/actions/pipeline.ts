@@ -431,14 +431,7 @@ export async function openPipelineEditor(params: {
       return null
     }
 
-    // Cancel if file is unchanged from what was on disk before opening
-    // (user quit without saving — :q!)
-    // We detect this by comparing the current file to what we last wrote
-    const lastWritten = await Bun.file(queryFile)
-      .text()
-      .catch(() => "")
-    // Actually we need to compare to the pre-edit content; simpler: if
-    // content equals template the user cancelled from the initial template
+    // Cancel if unchanged from the initial template (user quit without saving — :q!)
     if (content.trim() === template.trim()) {
       return null
     }
