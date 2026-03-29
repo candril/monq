@@ -42,6 +42,22 @@ test-watch:
 typecheck:
     bun x tsc --noEmit
 
+# Lint source files
+lint:
+    bun run lint
+
+# Lint and auto-fix
+lint-fix:
+    bun run lint:fix
+
+# Format source files
+fmt:
+    bun run fmt
+
+# Check formatting without writing
+fmt-check:
+    bun run fmt:check
+
 # Build standalone binary for current platform
 build:
     bun scripts/build.ts

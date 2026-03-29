@@ -25,11 +25,17 @@
   "scripts": {
     "dev": "bun run src/index.tsx",
     "build": "bun build src/index.tsx --compile --outfile dist/monq",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint --fix src",
+    "fmt": "oxfmt src",
+    "fmt:check": "oxfmt --check src"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/react": "^18.2.0"
+    "@types/react": "^18.2.0",
+    "oxfmt": "^0.42.0",
+    "oxlint": "^1.57.0"
   },
   "peerDependencies": {
     "typescript": "^5"
