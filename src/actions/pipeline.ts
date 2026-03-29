@@ -26,8 +26,15 @@ export interface PipelineResult {
 
 // ── Template generation ─────────────────────────────────────────────────────
 
-/** Regex matching the Mon-Q comment header block at the top of a pipeline file */
-const PIPELINE_HEADER_RE = /^(\/\/[^\n]*\n)*\n/
+/** Strip all leading comment/blank lines from a pipeline file, leaving only the JSON body */
+function stripPipelineHeader(source: string): string {
+  const lines = source.split("\n")
+  let i = 0
+  while (i < lines.length && (lines[i].startsWith("//") || lines[i].trim() === "")) {
+    i++
+  }
+  return lines.slice(i).join("\n")
+}
 
 /** Build the comment header prepended to every pipeline file on open */
 function buildHeader(collectionName: string, dbName: string, schemaMap: SchemaMap): string {
@@ -65,7 +72,7 @@ function buildTemplate(
 
   // Re-open existing pipeline — strip any previous header and re-prepend a fresh one
   if (currentPipelineSource.trim()) {
-    const body = currentPipelineSource.replace(PIPELINE_HEADER_RE, "")
+    const body = stripPipelineHeader(currentPipelineSource)
     return header + body
   }
 
