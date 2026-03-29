@@ -13,6 +13,25 @@ import { parseSimpleQueryFull, parseBsonQuery } from "../query/parser"
 import { buildSchemaMap } from "../query/schema"
 import { classifyPipeline, extractFindParts } from "../query/pipeline"
 
+/**
+ * Strip `_id: 0` from a projection before sending to MongoDB.
+ * _id must always be fetched so edit/delete commands can find the document.
+ * Returns the sanitized projection and whether _id was suppressed.
+ */
+function sanitizeProjection(
+  projection: Record<string, 0 | 1> | undefined,
+): { projection: Record<string, 0 | 1> | undefined; idHidden: boolean } {
+  if (!projection) return { projection, idHidden: false }
+  if (!("_id" in projection) || projection["_id"] !== 0) {
+    return { projection, idHidden: false }
+  }
+  const { _id: _, ...rest } = projection
+  return {
+    projection: Object.keys(rest).length > 0 ? (rest as Record<string, 0 | 1>) : undefined,
+    idHidden: true,
+  }
+}
+
 interface UseDocumentLoaderOptions {
   state: AppState
   dispatch: Dispatch<AppAction>
@@ -43,13 +62,16 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
         SHAPE_PRESERVING.has(Object.keys(stage)[0]),
       )
 
+      let pipelineIdHidden = false
       const fetchPipeline = isAggregate
         ? fetchAggregate(activeTab.collectionName, state.pipeline, { limit: pageSize })
         : (() => {
-            const { filter, sort, projection } = extractFindParts(state.pipeline)
+            const { filter, sort, projection: rawProjection } = extractFindParts(state.pipeline)
+            const { projection: safeProjection, idHidden } = sanitizeProjection(rawProjection)
+            pipelineIdHidden = idHidden
             return fetchDocuments(activeTab.collectionName, filter, {
               sort,
-              projection,
+              projection: safeProjection,
               limit: pageSize,
             })
           })()
@@ -80,6 +102,12 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
               visible: true,
               displayMode: "normal" as const,
             }))
+          }
+
+          // If _id was excluded from the projection, hide it in the column list
+          // but the document data still contains _id so edits work correctly.
+          if (pipelineIdHidden) {
+            columns = columns.map((c) => (c.field === "_id" ? { ...c, visible: false } : c))
           }
 
           dispatch({ type: "SET_DOCUMENTS", documents, count, totalCount: count })
@@ -145,7 +173,15 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
       }
     }
 
-    fetchDocuments(activeTab.collectionName, filter, { sort, projection, limit: pageSize })
+    // Always fetch _id so edit/delete commands work; hide it in the column list
+    // if the user explicitly excluded it via projection.
+    const { projection: safeProjection, idHidden } = sanitizeProjection(projection)
+
+    fetchDocuments(activeTab.collectionName, filter, {
+      sort,
+      projection: safeProjection,
+      limit: pageSize,
+    })
       .then(({ documents, count, totalCount }) => {
         if (cancelled) return
         const detectedFields = detectColumns(documents)
@@ -161,6 +197,8 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
         // When a simple-mode projection is active, don't preserve columns that
         // were excluded or are outside the inclusion set — they weren't fetched
         // and would show as null in every row.
+        // Use the original projection (with _id: 0) for the column visibility logic
+        // so that _id is treated as "excluded" for column preservation purposes.
         const hasSimpleProjection = queryMode === "simple" && projection != null
         const proj = hasSimpleProjection ? projection! : null
         const exclusions = proj
@@ -185,7 +223,13 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
           if (inclusions && !inclusions.has(c.field)) return false // not included
           return true
         })
-        const columns = [...newColumns, ...preserved]
+        let columns = [...newColumns, ...preserved]
+
+        // If _id was excluded from the projection, hide it visually but keep the
+        // fetched data intact so edit/delete commands can still find the document.
+        if (idHidden) {
+          columns = columns.map((c) => (c.field === "_id" ? { ...c, visible: false } : c))
+        }
 
         dispatch({ type: "SET_DOCUMENTS", documents, count, totalCount })
         dispatch({ type: "SET_COLUMNS", columns })
@@ -253,9 +297,12 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
       }
     }
 
+    // Always fetch _id so edit/delete commands work (same logic as Effect 1)
+    const { projection: safeProjection } = sanitizeProjection(projection)
+
     fetchDocuments(activeTab.collectionName, filter, {
       sort,
-      projection,
+      projection: safeProjection,
       skip: state.loadedCount,
       limit: pageSize,
     })
