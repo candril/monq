@@ -14,7 +14,8 @@ import { EJSON } from "bson"
 import type { Document } from "mongodb"
 import type { Dispatch } from "react"
 import type { AppAction } from "../state"
-import { classifyPipeline } from "./pipeline"
+import { classifyPipeline } from "../query/pipeline"
+import { getEditor } from "../utils/editor"
 
 // ── Singleton watcher ────────────────────────────────────────────────────────
 
@@ -110,7 +111,7 @@ export async function reloadFromFile(filePath: string, dispatch: Dispatch<AppAct
  *   "v" = vertical side-by-side (default, -h in tmux terms)
  */
 export function openTmuxSplit(filePath: string): "tmux" | "clipboard" | "none" {
-  const editor = process.env.EDITOR ?? process.env.VISUAL ?? "nvim"
+  const editor = getEditor()
   const editorBase = editor.split("/").pop() ?? editor
 
   if (process.env.TMUX) {

@@ -11,14 +11,10 @@ import type { ScrollBoxRenderable } from "@opentui/core"
 import { ObjectId } from "mongodb"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
-import { disconnect, serializeDocument, deleteDocument } from "../providers/mongodb"
-import {
-  openPipelineEditor,
-  writePipelineFile,
-  pipelineFilePaths,
-  extractFindParts,
-  classifyPipeline,
-} from "../actions/pipeline"
+import { disconnect, deleteDocument } from "../providers/mongodb"
+import { serializeDocument } from "../utils/document"
+import { openPipelineEditor, writePipelineFile, pipelineFilePaths } from "../actions/pipeline"
+import { classifyPipeline, extractFindParts } from "../query/pipeline"
 import {
   startWatching,
   stopWatching,
@@ -27,7 +23,7 @@ import {
 } from "../actions/pipelineWatch"
 import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../actions/editMany"
 import { filterToSimple, projectionToSimple, parseSimpleQueryFull } from "../query/parser"
-import { formatValue } from "../utils/format"
+import { formatValue, getNestedValue } from "../utils/format"
 
 interface UseKeyboardNavOptions {
   state: AppState
@@ -45,16 +41,6 @@ function buildProjSuffix(projection: Document | undefined): string {
   return " " + projectionToSimple(Object.fromEntries(entries) as Record<string, 0 | 1>)
 }
 
-/** Get a nested value from a document */
-function getNestedValue(doc: Record<string, unknown>, field: string): unknown {
-  const parts = field.split(".")
-  let current: unknown = doc
-  for (const part of parts) {
-    if (current == null || typeof current !== "object") return undefined
-    current = (current as Record<string, unknown>)[part]
-  }
-  return current
-}
 
 export function useKeyboardNav({ state, dispatch, docListScrollRef }: UseKeyboardNavOptions) {
   const renderer = useRenderer()

@@ -7,10 +7,11 @@ import { useEffect } from "react"
 import type { Dispatch } from "react"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
-import { fetchDocuments, fetchAggregate, detectColumns } from "../providers/mongodb"
+import { fetchDocuments, fetchAggregate } from "../providers/mongodb"
+import { detectColumns } from "../utils/document"
 import { parseSimpleQueryFull, parseBsonQuery } from "../query/parser"
 import { buildSchemaMap } from "../query/schema"
-import { classifyPipeline, extractFindParts } from "../actions/pipeline"
+import { classifyPipeline, extractFindParts } from "../query/pipeline"
 
 interface UseDocumentLoaderOptions {
   state: AppState

@@ -11,7 +11,7 @@ import { useTerminalDimensions } from "@opentui/react"
 import type { Document } from "mongodb"
 import type { DetectedColumn, SelectionMode } from "../types"
 import { theme } from "../theme"
-import { formatValue, valueColor, detectValueType, padRight, truncate } from "../utils/format"
+import { formatValue, valueColor, detectValueType, padRight, truncate, getNestedValue } from "../utils/format"
 import { Loading } from "./Loading"
 
 const SCROLL_MARGIN = 3
@@ -200,16 +200,6 @@ function sliceSegments(
   return result
 }
 
-/** Get a possibly nested value from a document */
-function getNestedValue(doc: Document, field: string): unknown {
-  const parts = field.split(".")
-  let current: unknown = doc
-  for (const part of parts) {
-    if (current == null || typeof current !== "object") return undefined
-    current = (current as Record<string, unknown>)[part]
-  }
-  return current
-}
 
 export function DocumentList({
   documents,

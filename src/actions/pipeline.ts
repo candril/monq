@@ -15,32 +15,13 @@ import JSON5 from "json5"
 import { EJSON } from "bson"
 import type { SchemaMap } from "../query/schema"
 import { parseSimpleQueryFull } from "../query/parser"
-
-// Stages that can be expressed as find(filter, { sort, projection })
-const FIND_COMPATIBLE_STAGES = new Set(["$match", "$sort", "$project"])
+import { classifyPipeline } from "../query/pipeline"
+import { getEditor } from "../utils/editor"
 
 export interface PipelineResult {
   pipeline: Document[]
   source: string
   isAggregate: boolean
-}
-
-/** Classify whether a pipeline can be run as find() */
-export function classifyPipeline(pipeline: Document[]): boolean {
-  if (pipeline.length === 0) return false
-  return pipeline.some((stage) => !FIND_COMPATIBLE_STAGES.has(Object.keys(stage)[0]))
-}
-
-/** Extract find()-compatible parts from a simple pipeline */
-export function extractFindParts(pipeline: Document[]): {
-  filter: Document
-  sort?: Document
-  projection?: Document
-} {
-  const filter = (pipeline.find((s) => "$match" in s) as any)?.$match ?? {}
-  const sort = (pipeline.find((s) => "$sort" in s) as any)?.$sort
-  const projection = (pipeline.find((s) => "$project" in s) as any)?.$project
-  return { filter, sort, projection }
 }
 
 // ── Template generation ─────────────────────────────────────────────────────
@@ -428,7 +409,7 @@ export async function openPipelineEditor(params: {
   )
   await Bun.write(queryFile, template)
 
-  const editor = process.env.EDITOR || process.env.VISUAL || "vi"
+  const editor = getEditor()
   const editorBase = editor.split("/").pop() ?? editor
 
   // Edit-parse loop: re-open editor on parse errors so user can fix in place

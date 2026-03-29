@@ -108,3 +108,14 @@ export function padRight(text: string, width: number): string {
   if (text.length >= width) return text.slice(0, width)
   return text + " ".repeat(width - text.length)
 }
+
+/** Resolve a dot-separated field path from a document object */
+export function getNestedValue(doc: Record<string, unknown>, field: string): unknown {
+  const parts = field.split(".")
+  let current: unknown = doc
+  for (const part of parts) {
+    if (current === null || typeof current !== "object") return undefined
+    current = (current as Record<string, unknown>)[part]
+  }
+  return current
+}

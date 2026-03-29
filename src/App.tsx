@@ -28,17 +28,13 @@ import { buildCommands } from "./commands/builder"
 import { buildCollectionCommands } from "./commands/collections"
 import { buildDatabaseCommands } from "./commands/databases"
 import { parseSimpleQueryFull, projectionToSimple } from "./query/parser"
+import { getNestedValue } from "./utils/format"
 import { editDocument } from "./actions/edit"
 import { openPipelineEditor, writePipelineFile, pipelineFilePaths } from "./actions/pipeline"
 import { startWatching, stopWatching, reloadFromFile, openTmuxSplit } from "./actions/pipelineWatch"
 import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "./actions/editMany"
-import {
-  disconnect,
-  serializeDocument,
-  listDatabases,
-  switchDatabase,
-  deleteDocument,
-} from "./providers/mongodb"
+import { disconnect, listDatabases, switchDatabase, deleteDocument } from "./providers/mongodb"
+import { serializeDocument } from "./utils/document"
 import { theme } from "./theme"
 import type { Command } from "./commands/types"
 import type { Document } from "mongodb"
@@ -385,15 +381,6 @@ export function App({ uri }: AppProps) {
           const visCols2 = state.columns.filter((c) => c.visible)
           const col = visCols2[state.selectedColumnIndex]
           if (!col) break
-          const getNestedValue = (d: Record<string, unknown>, field: string): unknown => {
-            const parts = field.split(".")
-            let current: unknown = d
-            for (const part of parts) {
-              if (current == null || typeof current !== "object") return undefined
-              current = (current as Record<string, unknown>)[part]
-            }
-            return current
-          }
           const val = getNestedValue(doc as Record<string, unknown>, col.field)
           const text =
             val === undefined

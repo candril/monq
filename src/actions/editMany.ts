@@ -5,6 +5,7 @@ import { EJSON } from "bson"
 import JSON5 from "json5"
 import type { Document } from "mongodb"
 import { replaceDocument, insertDocument, deleteDocument } from "../providers/mongodb"
+import { getEditor, ERROR_COMMENT_RE } from "../utils/editor"
 import type { SchemaMap, FieldType } from "../query/schema"
 
 export interface EditManyResult {
@@ -134,8 +135,6 @@ function parseArray(json: string): Document[] {
 
 // ── Error handling ────────────────────────────────────────────────────────────
 
-const ERROR_COMMENT_RE = /^(\/\/ !! .*\n(\/\/.*\n)*\n?)/m
-
 function stripErrorComment(content: string): string {
   return content.replace(ERROR_COMMENT_RE, "")
 }
@@ -147,7 +146,7 @@ async function openEditorWithError(
 ): Promise<string | null> {
   const errorComment = `// !! PARSE ERROR: ${errorMsg}\n// Fix the JSON below and save, or delete all content to cancel.\n\n`
   await Bun.write(tmpFile, errorComment + stripErrorComment(content))
-  const editor = process.env.EDITOR || process.env.VISUAL || "vi"
+  const editor = getEditor()
   const proc = Bun.spawn([editor, tmpFile], {
     stdin: "inherit",
     stdout: "inherit",
@@ -195,7 +194,7 @@ export async function openEditorForMany(
   const header = buildEditHeader(collectionName, dbName, docsToEdit.length, schemaMap)
   await Bun.write(tmpFile, header + bodyContent)
 
-  const editor = process.env.EDITOR || process.env.VISUAL || "vi"
+  const editor = getEditor()
   const proc = Bun.spawn([editor, tmpFile], {
     stdin: "inherit",
     stdout: "inherit",
@@ -322,7 +321,7 @@ export async function openEditorForInsert(
   const initialContent = header + bodyContent
   await Bun.write(tmpFile, initialContent)
 
-  const editor = process.env.EDITOR || process.env.VISUAL || "vi"
+  const editor = getEditor()
   const proc = Bun.spawn([editor, tmpFile], {
     stdin: "inherit",
     stdout: "inherit",

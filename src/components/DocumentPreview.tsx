@@ -9,7 +9,7 @@ import { SyntaxStyle, RGBA, type ScrollBoxRenderable } from "@opentui/core"
 import type { Document } from "mongodb"
 import type { PreviewPosition } from "../types"
 import { theme } from "../theme"
-import { serializeDocument } from "../providers/mongodb"
+import { serializeDocument } from "../utils/document"
 
 // JSON syntax style matching our Tokyo Night theme
 const jsonSyntaxStyle = SyntaxStyle.fromStyles({

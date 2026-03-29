@@ -10,9 +10,9 @@ import { mkdir, unlink } from "fs/promises"
 import type { Document } from "mongodb"
 import JSON5 from "json5"
 import type { SchemaMap } from "../query/schema"
-import { serializeDocument, deserializeDocument, replaceDocument } from "../providers/mongodb"
-
-const ERROR_COMMENT_RE = /^(\/\/ !! .*\n(\/\/.*\n)*\n?)/m
+import { replaceDocument } from "../providers/mongodb"
+import { serializeDocument, deserializeDocument } from "../utils/document"
+import { getEditor, ERROR_COMMENT_RE } from "../utils/editor"
 
 function buildHeader(
   collectionName: string,
@@ -67,7 +67,7 @@ export async function editDocument(
 
   await Bun.write(tmpFile, initialContent)
 
-  const editor = process.env.EDITOR || process.env.VISUAL || "vi"
+  const editor = getEditor()
 
   // Editor retry loop: re-open with inline error comment on parse failure
   while (true) {
@@ -110,11 +110,9 @@ export async function editDocument(
     }
 
     try {
-      deserializeDocument(stripped)
+      const editedDoc = deserializeDocument(stripped)
       // Parse succeeded — proceed
       await unlink(tmpFile).catch(() => {})
-
-      const editedDoc = deserializeDocument(stripped)
       const { _id: _, ...docWithoutId } = editedDoc
 
       try {
