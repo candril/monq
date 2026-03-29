@@ -303,6 +303,112 @@ export function parseBsonQuery(input: string): Filter<Document> {
   return JSON.parse(trimmed) as Filter<Document>
 }
 
+/**
+ * Convert a simple query string + sort state into BSON textarea strings.
+ * Used when switching simple → BSON mode.
+ */
+export function simpleToBson(
+  queryInput: string,
+  schemaMap: SchemaMap,
+  sortField: string | null,
+  sortDirection: 1 | -1,
+  currentBsonSort: string,
+  currentBsonProjection: string,
+): { bsonFilter: string; bsonSort: string; bsonProjection: string } {
+  const { filter: migratedFilter, projection: migratedProjObj } = parseSimpleQueryFull(
+    queryInput,
+    schemaMap,
+  )
+  let bsonFilter = "{\n  \n}"
+  try {
+    if (Object.keys(migratedFilter).length > 0) {
+      bsonFilter = JSON.stringify(migratedFilter, null, 2)
+    }
+  } catch {
+    /* leave as empty placeholder */
+  }
+  const bsonSort = sortField
+    ? JSON.stringify({ [sortField]: sortDirection }, null, 2)
+    : currentBsonSort
+  const bsonProjection = migratedProjObj
+    ? JSON.stringify(migratedProjObj, null, 2)
+    : currentBsonProjection
+  return { bsonFilter, bsonSort, bsonProjection }
+}
+
+/**
+ * Convert a BSON filter string + projection textarea back to a simple query string.
+ * Returns the original strings unchanged if conversion is not possible.
+ */
+export function bsonToSimple(bsonFilter: string, bsonProjection: string): string {
+  let simpleQuery = bsonFilter
+  try {
+    const filter = JSON.parse(bsonFilter.trim() || "{}")
+    const tokens: string[] = []
+    let canConvert = true
+    for (const [key, val] of Object.entries(filter)) {
+      if (val === null) {
+        tokens.push(`${key}:null`)
+        continue
+      }
+      if (typeof val === "string") {
+        tokens.push(`${key}:${val.includes(" ") ? `"${val}"` : val}`)
+        continue
+      }
+      if (typeof val === "number" || typeof val === "boolean") {
+        tokens.push(`${key}:${val}`)
+        continue
+      }
+      if (typeof val === "object" && !Array.isArray(val)) {
+        const ops = val as Record<string, unknown>
+        const opMap: Record<string, string> = {
+          $gt: ">",
+          $gte: ">=",
+          $lt: "<",
+          $lte: "<=",
+          $ne: "!=",
+        }
+        const entries = Object.entries(ops)
+        if (entries.length === 1 && opMap[entries[0][0]]) {
+          tokens.push(`${key}${opMap[entries[0][0]]}${entries[0][1]}`)
+          continue
+        }
+      }
+      canConvert = false
+      break
+    }
+    simpleQuery = canConvert ? tokens.join(" ") : bsonFilter
+  } catch {
+    /* Not valid JSON — leave as-is */
+  }
+
+  let projTokenStr = ""
+  if (bsonProjection.trim()) {
+    try {
+      const proj = JSON.parse(bsonProjection.trim()) as Record<string, unknown>
+      const projTokens: string[] = []
+      let projOk = true
+      for (const [key, val] of Object.entries(proj)) {
+        if (val === 1) {
+          projTokens.push(`+${key}`)
+          continue
+        }
+        if (val === 0) {
+          projTokens.push(`-${key}`)
+          continue
+        }
+        projOk = false
+        break
+      }
+      if (projOk && projTokens.length > 0) projTokenStr = " " + projTokens.join(" ")
+    } catch {
+      /* skip */
+    }
+  }
+
+  return simpleQuery + projTokenStr
+}
+
 /** Extract the last token being typed (for suggestions) */
 export function getLastToken(input: string): { prefix: string; lastToken: string } {
   // If input ends with whitespace, user started a new token
