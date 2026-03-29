@@ -1,5 +1,63 @@
 import { describe, test, expect } from "bun:test"
-import { detectColumns } from "./document"
+import { ObjectId } from "mongodb"
+import { serializeDocument, deserializeDocument, detectColumns } from "./document"
+
+describe("serializeDocument / deserializeDocument", () => {
+  test("round-trips a plain document", () => {
+    // arrange
+    const doc = { _id: new ObjectId(), name: "Alice", age: 30 }
+
+    // act
+    const result = deserializeDocument(serializeDocument(doc))
+
+    // assert
+    expect(result.name).toBe("Alice")
+    expect(result.age).toBe(30)
+  })
+
+  test("preserves ObjectId type through round-trip", () => {
+    // arrange
+    const id = new ObjectId()
+    const doc = { _id: id, name: "Alice" }
+
+    // act
+    const result = deserializeDocument(serializeDocument(doc))
+
+    // assert
+    expect((result._id as ObjectId).toHexString()).toBe(id.toHexString())
+  })
+
+  test("preserves Date type through round-trip", () => {
+    // arrange
+    const now = new Date("2024-01-01T00:00:00Z")
+    const doc = { _id: new ObjectId(), createdAt: now }
+
+    // act
+    const result = deserializeDocument(serializeDocument(doc))
+
+    // assert
+    expect((result.createdAt as Date).toISOString()).toBe(now.toISOString())
+  })
+
+  test("preserves nested objects", () => {
+    // arrange
+    const doc = { _id: new ObjectId(), address: { city: "Berlin", zip: "10115" } }
+
+    // act
+    const result = deserializeDocument(serializeDocument(doc))
+
+    // assert
+    expect((result.address as any).city).toBe("Berlin")
+  })
+
+  test("serialized output is valid JSON", () => {
+    // arrange
+    const doc = { _id: new ObjectId(), name: "Alice" }
+
+    // act + assert
+    expect(() => JSON.parse(serializeDocument(doc))).not.toThrow()
+  })
+})
 
 describe("detectColumns", () => {
   test("empty array returns empty columns", () => {
