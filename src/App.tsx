@@ -33,11 +33,11 @@ import { buildCollectionCommands } from "./commands/collections"
 import { buildDatabaseCommands } from "./commands/databases"
 import { buildThemeCommands } from "./commands/themes"
 import { findPreset } from "./themes/index"
-import { setTheme } from "./theme"
+import { setTheme, buildTheme } from "./theme"
 import { usePaletteActions } from "./hooks/usePaletteActions"
 import { formatDocumentCount, resolveSortField, resolveSortDirection } from "./utils/format"
 import { randomConnectionMessage } from "./utils/loadingMessages"
-import type { Keymap } from "./config/types"
+import type { Keymap, ThemeConfig } from "./config/types"
 
 type PaletteMode = "commands" | "collections" | "databases" | "themes"
 
@@ -45,14 +45,28 @@ interface AppProps {
   uri: string
   keymap: Keymap
   configWarnings?: string[]
+  /** Theme preset ID active at startup (state file > config > default). */
+  initialThemeId?: string
+  /** The preset ID from config.toml, if any — used as reset target. */
+  configThemeId?: string | null
+  /** The [theme] token overrides from config.toml — re-applied after any preset. */
+  configThemeOverrides?: Partial<ThemeConfig>
   onBackToUri?: () => void
 }
 
-export function App({ uri, keymap, configWarnings = [], onBackToUri }: AppProps) {
+export function App({
+  uri,
+  keymap,
+  configWarnings = [],
+  initialThemeId = "tokyo-night",
+  configThemeId = null,
+  configThemeOverrides = {},
+  onBackToUri,
+}: AppProps) {
   const [state, dispatch] = useReducer(appReducer, null, createInitialState)
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("commands")
   // Active theme preset ID — used to show a checkmark in the theme picker
-  const [activeThemeId, setActiveThemeId] = useState("tokyo-night")
+  const [activeThemeId, setActiveThemeId] = useState(initialThemeId)
   // Bump this to force a full re-render of content so components re-read the updated theme
   const [themeVersion, setThemeVersion] = useState(0)
   // The theme that was active when the theme picker was opened — used to revert on cancel
@@ -138,13 +152,19 @@ export function App({ uri, keymap, configWarnings = [], onBackToUri }: AppProps)
 
   // Live preview: apply theme as cursor moves over presets, revert on null (close/escape)
   const handleThemeHighlight = useCallback((presetId: string | null) => {
-    const id = presetId ?? previewBaseThemeId.current
+    // null = closed/escaped → revert to base
+    // "reset" = hovering Reset entry → preview the config/default theme
+    const id = presetId === null
+      ? previewBaseThemeId.current
+      : presetId === "reset"
+        ? (configThemeId ?? "tokyo-night")
+        : presetId
     const preset = findPreset(id)
     if (preset) {
-      setTheme(preset.theme)
+      setTheme(buildTheme({ ...preset.theme, ...configThemeOverrides }))
       setThemeVersion((v) => v + 1)
     }
-  }, [])
+  }, [configThemeId, configThemeOverrides])
 
   const { handleSelect: handlePaletteSelect } = usePaletteActions({
     state,
@@ -152,6 +172,8 @@ export function App({ uri, keymap, configWarnings = [], onBackToUri }: AppProps)
     renderer,
     setPaletteMode,
     onThemeChange: handleThemeChange,
+    configThemeId,
+    configThemeOverrides,
   })
 
   const handlePaletteClose = useCallback(() => {

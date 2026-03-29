@@ -7,13 +7,26 @@
 import type { UserConfig, ResolvedConfig, ThemeConfig } from "./types"
 import { buildKeymap } from "./keymap"
 import { validateConfig } from "./validate"
+import { THEME_PRESETS } from "../themes/index"
 
 /**
  * Merge user config + validation warnings into a ResolvedConfig.
  * Call validateConfig() before this to collect warnings — or pass them in directly.
  */
 export function mergeConfig(user: UserConfig, warnings: string[] = []): ResolvedConfig {
-  // Theme: only carry over tokens that are valid hex (already warned about others)
+  // theme_preset: validate and record (used as reset target; actual theme application
+  // happens in index.tsx where we can import buildTheme / setTheme without a cycle)
+  let configThemeId: string | null = null
+  if (user.themePreset) {
+    const known = THEME_PRESETS.find((p) => p.id === user.themePreset)
+    if (known) {
+      configThemeId = known.id
+    } else {
+      warnings.push(`config: unknown theme_preset "${user.themePreset}" — ignored`)
+    }
+  }
+
+  // Theme token overrides: only carry over tokens that are valid hex
   const validTheme: Partial<ThemeConfig> = {}
   if (user.theme) {
     const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
@@ -28,6 +41,7 @@ export function mergeConfig(user: UserConfig, warnings: string[] = []): Resolved
   const keymap = buildKeymap(user.keys ?? {})
 
   return {
+    configThemeId,
     theme: validTheme,
     keymap,
     warnings,
@@ -40,7 +54,7 @@ export function mergeConfig(user: UserConfig, warnings: string[] = []): Resolved
  */
 export function resolveConfig(user: UserConfig | null): ResolvedConfig {
   if (!user) {
-    return { theme: {}, keymap: buildKeymap(), warnings: [] }
+    return { configThemeId: null, theme: {}, keymap: buildKeymap(), warnings: [] }
   }
   const warnings = validateConfig(user)
   return mergeConfig(user, warnings)

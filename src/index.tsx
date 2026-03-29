@@ -13,6 +13,8 @@ import { registerSwitchConnection } from "./navigation"
 import { loadConfig } from "./config/loader"
 import { resolveConfig } from "./config/merge"
 import { buildTheme, setTheme } from "./theme"
+import { findPreset } from "./themes/index"
+import { loadStateTheme } from "./state/theme"
 import type { Keymap } from "./config/types"
 
 // Stop file watcher on exit (covers Ctrl+C, SIGTERM, etc.)
@@ -38,8 +40,6 @@ const positionalUri =
 const initialUri = flagUri ?? positionalUri
 
 // Load user config — resolve theme + keymap before the renderer starts.
-// A malformed TOML file is caught here; warnings from invalid values are surfaced
-// as toasts once the app is running.
 let userConfig
 try {
   userConfig = await loadConfig()
@@ -48,9 +48,22 @@ try {
 }
 const resolvedConfig = resolveConfig(userConfig)
 
-// Apply theme overrides (sets the module-level `theme` export in theme.ts so that
-// all components that import { theme } get the user-configured version).
-setTheme(buildTheme(resolvedConfig.theme))
+// Load persisted theme from XDG state file (written by the theme picker).
+// Priority: state file > config.toml theme_preset > built-in Tokyo Night default.
+const stateThemeId = await loadStateTheme()
+const effectivePresetId = stateThemeId ?? resolvedConfig.configThemeId
+
+// Apply the effective preset (if any), then layer config.toml [theme] token overrides on top.
+if (effectivePresetId) {
+  const preset = findPreset(effectivePresetId)
+  if (preset) setTheme(buildTheme({ ...preset.theme, ...resolvedConfig.theme }))
+  else setTheme(buildTheme(resolvedConfig.theme))
+} else {
+  setTheme(buildTheme(resolvedConfig.theme))
+}
+
+// The ID to show as active in the theme picker on first render
+const initialThemeId = effectivePresetId ?? "tokyo-night"
 
 // Keymap and warnings are passed down to App
 const keymap: Keymap = resolvedConfig.keymap
@@ -92,6 +105,9 @@ function Root() {
         uri={uri}
         keymap={keymap}
         configWarnings={configWarnings}
+        initialThemeId={initialThemeId}
+        configThemeId={resolvedConfig.configThemeId}
+        configThemeOverrides={resolvedConfig.theme}
         onBackToUri={() => {
           setUri(null)
           setScreen("picker")

@@ -118,12 +118,16 @@ export type Keymap = Record<ActionName, KeyCombo[]>
 
 /** Raw user config as parsed from TOML — everything optional. */
 export interface UserConfig {
+  /** Named theme preset, e.g. "catppuccin-mocha". Applied before [theme] token overrides. */
+  themePreset?: string
   theme?: Partial<ThemeConfig>
   keys?: KeysConfig
 }
 
 /** Fully resolved config after merging with defaults. */
 export interface ResolvedConfig {
+  /** The preset ID from config.toml (if any). Used as the reset target. */
+  configThemeId: string | null
   theme: Partial<ThemeConfig>
   keymap: Keymap
   /** Startup warnings to surface as toasts (validation issues). */

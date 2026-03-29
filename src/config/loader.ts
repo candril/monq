@@ -28,6 +28,10 @@ export async function loadConfig(): Promise<UserConfig | null> {
 
   const result: UserConfig = {}
 
+  if (typeof raw.theme_preset === "string" && raw.theme_preset.length > 0) {
+    result.themePreset = raw.theme_preset
+  }
+
   if (raw.theme && typeof raw.theme === "object" && !Array.isArray(raw.theme)) {
     result.theme = raw.theme as UserConfig["theme"]
   }

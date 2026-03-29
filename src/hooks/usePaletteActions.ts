@@ -25,7 +25,9 @@ import { getNestedValue } from "../utils/format"
 import { copyToClipboard } from "../utils/clipboard"
 import { parseSimpleQueryFull, projectionToSimple } from "../query/parser"
 import { findPreset } from "../themes/index"
-import { setTheme } from "../theme"
+import { setTheme, buildTheme } from "../theme"
+import { saveStateTheme, clearStateTheme } from "../state/theme"
+import type { ThemeConfig } from "../config/types"
 
 interface UsePaletteActionsOptions {
   state: AppState
@@ -33,6 +35,10 @@ interface UsePaletteActionsOptions {
   renderer: CliRenderer
   setPaletteMode: (mode: "commands" | "collections" | "databases" | "themes") => void
   onThemeChange: (presetId: string) => void
+  /** The preset ID from config.toml (null = none set). Used by the Reset command. */
+  configThemeId: string | null
+  /** The [theme] token overrides from config.toml. Re-applied over the reset preset. */
+  configThemeOverrides: Partial<ThemeConfig>
 }
 
 export function usePaletteActions({
@@ -41,6 +47,8 @@ export function usePaletteActions({
   renderer,
   setPaletteMode,
   onThemeChange,
+  configThemeId,
+  configThemeOverrides,
 }: UsePaletteActionsOptions) {
   const handleSelect = useCallback(
     (cmd: Command) => {
@@ -53,13 +61,29 @@ export function usePaletteActions({
         return
       }
 
-      // Theme selection from theme picker sub-palette
+      // Theme selection / reset from theme picker sub-palette
       if (cmd.id.startsWith("theme:") && cmd.id !== "theme:pick") {
+        // Reset to config/default
+        if (cmd.id === "theme:reset") {
+          const resetPresetId = configThemeId ?? "tokyo-night"
+          const resetPreset = findPreset(resetPresetId)
+          if (resetPreset) {
+            setTheme(buildTheme({ ...resetPreset.theme, ...configThemeOverrides }))
+            onThemeChange(resetPresetId)
+          }
+          clearStateTheme().catch(() => {})
+          dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+          setPaletteMode("commands")
+          dispatch({ type: "SHOW_MESSAGE", message: "Theme reset to config default", kind: "info" })
+          return
+        }
+        // Pick a preset
         const presetId = cmd.id.slice(6)
         const preset = findPreset(presetId)
         if (preset) {
-          setTheme(preset.theme)
+          setTheme(buildTheme({ ...preset.theme, ...configThemeOverrides }))
           onThemeChange(presetId)
+          saveStateTheme(presetId).catch(() => {})
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
           setPaletteMode("commands")
           dispatch({ type: "SHOW_MESSAGE", message: `Theme: ${preset.name}`, kind: "info" })
@@ -454,7 +478,7 @@ export function usePaletteActions({
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       }
     },
-    [state, dispatch, renderer, setPaletteMode, onThemeChange],
+    [state, dispatch, renderer, setPaletteMode, onThemeChange, configThemeId, configThemeOverrides],
   )
 
   return { handleSelect }
