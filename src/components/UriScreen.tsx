@@ -39,72 +39,77 @@ export function UriScreen({ onConnect }: UriScreenProps) {
 
   return (
     <box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
-      {/* Brand */}
-      <box marginBottom={1} flexDirection="column" alignItems="center">
-        <text>
-          <span fg={theme.primary}>
-            <strong>Monq</strong>
-          </span>
-        </text>
-        <text>
-          <span fg={theme.textDim}>MongoDB browser</span>
-        </text>
-      </box>
-
-      {/* Prompt */}
-      <box marginBottom={1}>
-        <text>
-          <span fg={theme.text}>Enter your connection URI</span>
-        </text>
-      </box>
-
-      {/* Input box */}
-      <box flexDirection="column" minWidth={52}>
-        <box>
+      <box
+        flexDirection="column"
+        width={56}
+        backgroundColor={theme.modalBg}
+      >
+        {/* Title bar */}
+        <box
+          height={1}
+          paddingLeft={2}
+          paddingRight={2}
+          backgroundColor={theme.headerBg}
+          flexDirection="row"
+          justifyContent="space-between"
+        >
           <text>
-            <span fg={theme.textMuted}>{"─".repeat(52)}</span>
+            <span fg={theme.primary}><strong>monq</strong></span>
+            <span fg={theme.textDim}> — connect</span>
           </text>
         </box>
-        <box flexDirection="row" paddingLeft={1} paddingRight={1}>
-          <text>
-            <span fg={theme.textDim}>{"> "}</span>
-          </text>
-          <input
-            value={value}
-            onInput={(v) => {
-              setValue(v)
-              setError(null)
-            }}
-            placeholder={DEFAULT_URI}
-            focused
-            backgroundColor={theme.bg}
-            textColor={theme.text}
-            placeholderColor={theme.textMuted}
-            cursorColor={theme.primary}
-            width={48}
-          />
-        </box>
-        <box>
-          <text>
-            <span fg={theme.textMuted}>{"─".repeat(52)}</span>
-          </text>
-        </box>
-      </box>
 
-      {/* Error */}
-      <box marginTop={1} minHeight={1}>
-        {error && (
-          <text>
-            <span fg={theme.error}>{error}</span>
-          </text>
-        )}
-      </box>
+        {/* Body */}
+        <box flexDirection="column" paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1}>
+          {/* Input */}
+          <box flexDirection="column" marginBottom={1}>
+            <box marginBottom={1}>
+              <text>
+                <span fg={theme.textDim}>Connection URI</span>
+              </text>
+            </box>
+            <box
+              flexDirection="row"
+              paddingLeft={1}
+              paddingRight={1}
+              backgroundColor={theme.headerBg}
+            >
+              <text>
+                <span fg={theme.primary}>{"› "}</span>
+              </text>
+              <input
+                value={value}
+                onInput={(v) => {
+                  setValue(v)
+                  setError(null)
+                }}
+                placeholder={DEFAULT_URI}
+                focused
+                backgroundColor={theme.headerBg}
+                textColor={theme.text}
+                placeholderColor={theme.textMuted}
+                cursorColor={theme.primary}
+                width={48}
+              />
+            </box>
+          </box>
 
-      {/* Hint */}
-      <box marginTop={1}>
-        <text>
-          <span fg={theme.textMuted}>Enter to connect · Esc to quit</span>
-        </text>
+          {/* Error */}
+          <box minHeight={1} marginBottom={1}>
+            {error && (
+              <text>
+                <span fg={theme.error}>{error}</span>
+              </text>
+            )}
+          </box>
+
+          {/* Hint */}
+          <box>
+            <text>
+              <span fg={theme.textMuted}>Enter to connect  ·  Esc to quit</span>
+            </text>
+          </box>
+        </box>
       </box>
     </box>
   )

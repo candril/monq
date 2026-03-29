@@ -271,6 +271,102 @@ const oneDarkPro: Theme = {
 }
 
 // ---------------------------------------------------------------------------
+// Rosé Pine
+// ---------------------------------------------------------------------------
+const rosePine: Theme = {
+  bg: "#191724",
+  headerBg: "#1f1d2e",
+  modalBg: "#16141f",
+  overlayBg: "#00000080",
+  selection: "#403d52",
+  text: "#e0def4",
+  textDim: "#6e6a86",
+  textMuted: "#403d52",
+  primary: "#c4a7e7",   // iris
+  secondary: "#ebbcba",  // rose
+  success: "#31748f",    // pine
+  warning: "#f6c177",    // gold
+  error: "#eb6f92",      // love
+  border: "#403d52",
+  jsonKey: "#9ccfd8",    // foam
+  jsonString: "#31748f",
+  jsonNumber: "#f6c177",
+  jsonBoolean: "#c4a7e7",
+  jsonNull: "#6e6a86",
+  jsonObjectId: "#ebbcba",
+  jsonDate: "#ebbcba",
+  jsonBracket: "#6e6a86",
+  tabActive: "#c4a7e7",
+  tabInactive: "#6e6a86",
+  querySimple: "#31748f",
+  queryBson: "#f6c177",
+}
+
+// ---------------------------------------------------------------------------
+// Rosé Pine Moon
+// ---------------------------------------------------------------------------
+const rosePineMoon: Theme = {
+  bg: "#232136",
+  headerBg: "#2a273f",
+  modalBg: "#1e1c31",
+  overlayBg: "#00000080",
+  selection: "#44415a",
+  text: "#e0def4",
+  textDim: "#6e6a86",
+  textMuted: "#44415a",
+  primary: "#c4a7e7",
+  secondary: "#ea9a97",
+  success: "#3e8fb0",
+  warning: "#f6c177",
+  error: "#eb6f92",
+  border: "#44415a",
+  jsonKey: "#9ccfd8",
+  jsonString: "#3e8fb0",
+  jsonNumber: "#f6c177",
+  jsonBoolean: "#c4a7e7",
+  jsonNull: "#6e6a86",
+  jsonObjectId: "#ea9a97",
+  jsonDate: "#ea9a97",
+  jsonBracket: "#6e6a86",
+  tabActive: "#c4a7e7",
+  tabInactive: "#6e6a86",
+  querySimple: "#3e8fb0",
+  queryBson: "#f6c177",
+}
+
+// ---------------------------------------------------------------------------
+// Rosé Pine Dawn (light)
+// ---------------------------------------------------------------------------
+const rosePineDawn: Theme = {
+  bg: "#faf4ed",
+  headerBg: "#fffaf3",
+  modalBg: "#f2e9de",
+  overlayBg: "#00000030",
+  selection: "#dfdad9",
+  text: "#575279",
+  textDim: "#9893a5",
+  textMuted: "#cecacd",
+  primary: "#907aa9",   // iris
+  secondary: "#d7827e",  // rose
+  success: "#286983",    // pine
+  warning: "#ea9d34",    // gold
+  error: "#b4637a",      // love
+  border: "#dfdad9",
+  jsonKey: "#56949f",    // foam
+  jsonString: "#286983",
+  jsonNumber: "#ea9d34",
+  jsonBoolean: "#907aa9",
+  jsonNull: "#9893a5",
+  jsonObjectId: "#d7827e",
+  jsonDate: "#d7827e",
+  jsonBracket: "#9893a5",
+  tabActive: "#907aa9",
+  tabInactive: "#9893a5",
+  querySimple: "#286983",
+  queryBson: "#ea9d34",
+}
+
+// ---------------------------------------------------------------------------
 // Preset registry
 // ---------------------------------------------------------------------------
 
@@ -283,6 +379,9 @@ export const THEME_PRESETS: ThemePreset[] = [
   { id: "dracula", name: "Dracula", theme: dracula },
   { id: "solarized-dark", name: "Solarized Dark", theme: solarizedDark },
   { id: "one-dark-pro", name: "One Dark Pro", theme: oneDarkPro },
+  { id: "rose-pine", name: "Rosé Pine", theme: rosePine },
+  { id: "rose-pine-moon", name: "Rosé Pine Moon", theme: rosePineMoon },
+  { id: "rose-pine-dawn", name: "Rosé Pine Dawn", theme: rosePineDawn },
 ]
 
 export function findPreset(id: string): ThemePreset | undefined {

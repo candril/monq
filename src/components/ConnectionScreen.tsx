@@ -137,37 +137,47 @@ export function ConnectionScreen({ profiles, onConnect }: ConnectionScreenProps)
     return <Loading message={loadingMessage || `Connecting to ${resolvingName}…`} />
   }
 
+  const error = resolveError ?? uriError
+
   return (
     <box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
-      {/* Brand */}
-      <box marginBottom={1} flexDirection="column" alignItems="center">
-        <text>
-          <span fg={theme.primary}>
-            <strong>Monq</strong>
-          </span>
-        </text>
-        <text>
-          <span fg={theme.textDim}>MongoDB browser</span>
-        </text>
-      </box>
-
-      {/* Step title — fixed text, no mode-dependent content to avoid layout shifts */}
-      <box marginBottom={1}>
-        <text>
-          <span fg={theme.text}>Select a connection</span>
-        </text>
-      </box>
-
-      {/* Input — always the same size; switches between filter and URI */}
-      <box minWidth={36} flexDirection="column" marginBottom={1}>
-        <box>
+      <box
+        flexDirection="column"
+        width={52}
+        backgroundColor={theme.modalBg}
+      >
+        {/* Title bar */}
+        <box
+          height={1}
+          paddingLeft={2}
+          paddingRight={2}
+          backgroundColor={theme.headerBg}
+          flexDirection="row"
+          justifyContent="space-between"
+        >
           <text>
-            <span fg={theme.textMuted}>{"─".repeat(36)}</span>
+            <span fg={theme.primary}><strong>monq</strong></span>
+            <span fg={theme.textDim}> — {mode === "uri" ? "custom URI" : "connections"}</span>
+          </text>
+          <text>
+            <span fg={theme.textMuted}>{profiles.length} saved</span>
           </text>
         </box>
-        <box flexDirection="row" paddingLeft={1} paddingRight={1}>
+
+        {/* Input row */}
+        <box
+          flexDirection="row"
+          paddingLeft={2}
+          paddingRight={2}
+          paddingTop={1}
+          paddingBottom={1}
+          backgroundColor={theme.headerBg}
+          marginTop={1}
+          marginLeft={1}
+          marginRight={1}
+        >
           <text>
-            <span fg={theme.textDim}>{"> "}</span>
+            <span fg={theme.primary}>{"› "}</span>
           </text>
           <input
             value={mode === "uri" ? uriValue : query}
@@ -179,76 +189,75 @@ export function ConnectionScreen({ profiles, onConnect }: ConnectionScreenProps)
             }}
             placeholder={mode === "uri" ? DEFAULT_URI : "type to filter..."}
             focused
-            backgroundColor={theme.bg}
+            backgroundColor={theme.headerBg}
             textColor={theme.text}
             placeholderColor={theme.textMuted}
             cursorColor={theme.primary}
-            width={32}
+            width={44}
           />
         </box>
-        <box>
-          <text>
-            <span fg={theme.textMuted}>{"─".repeat(36)}</span>
-          </text>
-        </box>
-      </box>
 
-      {/* Profile list — always rendered at fixed height to avoid layout shifts */}
-      <box flexDirection="column" minWidth={36} minHeight={MIN_LIST_HEIGHT}>
-        {mode === "uri" ? null : filtered.length === 0 ? (
-          <box paddingLeft={2} paddingTop={1}>
-            <text>
-              <span fg={theme.textMuted}>No matches</span>
-            </text>
-          </box>
-        ) : (
-          filtered.map((profile, i) => {
-            const isSelected = i === safeCursor
-            return (
-              <box
-                key={profile.key}
-                flexDirection="row"
-                paddingLeft={2}
-                paddingRight={2}
-                backgroundColor={isSelected ? theme.selection : undefined}
-              >
-                <text>
-                  <span fg={isSelected ? theme.text : theme.textDim}>{profile.name}</span>
-                  {profile.uri ? (
+        {/* Profile list */}
+        <box flexDirection="column" minHeight={MIN_LIST_HEIGHT} paddingTop={1} paddingBottom={1}>
+          {mode === "uri" ? (
+            <box paddingLeft={3} paddingTop={1}>
+              <text>
+                <span fg={theme.textMuted}>Enter a connection URI above, Tab to go back</span>
+              </text>
+            </box>
+          ) : filtered.length === 0 ? (
+            <box paddingLeft={3} paddingTop={1}>
+              <text>
+                <span fg={theme.textMuted}>No matches</span>
+              </text>
+            </box>
+          ) : (
+            filtered.map((profile, i) => {
+              const isSelected = i === safeCursor
+              return (
+                <box
+                  key={profile.key}
+                  flexDirection="row"
+                  paddingLeft={2}
+                  paddingRight={2}
+                  backgroundColor={isSelected ? theme.selection : undefined}
+                >
+                  <text>
+                    <span fg={isSelected ? theme.text : theme.textDim}>{profile.name}</span>
+                    {" "}
                     <span fg={isSelected ? theme.textDim : theme.textMuted}>
-                      {"  " + profileHint(profile)}
+                      {profileHint(profile)}
                     </span>
-                  ) : (
-                    ""
-                  )}
-                </text>
-              </box>
-            )
-          })
-        )}
-      </box>
+                  </text>
+                </box>
+              )
+            })
+          )}
+        </box>
 
-      {/* Error — fixed height so it doesn't shift layout */}
-      <box marginTop={1} minHeight={1} minWidth={36}>
-        {resolveError && (
-          <text>
-            <span fg={theme.error}>{resolveError}</span>
-          </text>
-        )}
-        {uriError && (
-          <text>
-            <span fg={theme.error}>{uriError}</span>
-          </text>
-        )}
-      </box>
-
-      {/* Hint */}
-      <box marginTop={1}>
-        <text>
-          <span fg={theme.textMuted}>
-            {mode === "uri" ? "Tab to list  ·  Esc quit" : "Tab to enter URI  ·  Esc quit"}
-          </span>
-        </text>
+        {/* Footer */}
+        <box
+          height={1}
+          paddingLeft={2}
+          paddingRight={2}
+          backgroundColor={theme.headerBg}
+          flexDirection="row"
+          justifyContent="space-between"
+        >
+          {error ? (
+            <text>
+              <span fg={theme.error}>{error}</span>
+            </text>
+          ) : (
+            <text>
+              <span fg={theme.textMuted}>
+                {mode === "uri"
+                  ? "Enter connect  ·  Tab list  ·  Esc quit"
+                  : "Enter connect  ·  Tab URI  ·  Esc quit"}
+              </span>
+            </text>
+          )}
+        </box>
       </box>
     </box>
   )
