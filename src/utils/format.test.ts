@@ -1,6 +1,13 @@
 import { describe, test, expect } from "bun:test"
 import { ObjectId } from "mongodb"
-import { formatValue, detectValueType, getNestedValue, padRight, truncate, formatDocumentCount } from "./format"
+import {
+  formatValue,
+  detectValueType,
+  getNestedValue,
+  padRight,
+  truncate,
+  formatDocumentCount,
+} from "./format"
 
 describe("detectValueType", () => {
   test("null", () => expect(detectValueType(null)).toBe("null"))

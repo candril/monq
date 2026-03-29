@@ -631,7 +631,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         if (sortField === null) {
           // Clear sort — remove $sort stage entirely
           newPipeline =
-            sortStageIdx !== -1 ? state.pipeline.filter((_, i) => i !== sortStageIdx) : state.pipeline
+            sortStageIdx !== -1
+              ? state.pipeline.filter((_, i) => i !== sortStageIdx)
+              : state.pipeline
         } else {
           const newSortStage = { $sort: { [sortField]: sortDirection } }
           if (sortStageIdx !== -1) {

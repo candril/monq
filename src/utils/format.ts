@@ -109,6 +109,30 @@ export function padRight(text: string, width: number): string {
   return text + " ".repeat(width - text.length)
 }
 
+/** Resolve the active sort field from pipeline stages or simple mode state */
+export function resolveSortField(
+  pipelineMode: boolean,
+  pipeline: Array<Record<string, unknown>>,
+  sortField: string | null,
+): string | null {
+  if (!pipelineMode) return sortField
+  const sortStage = pipeline.find((s) => "$sort" in s) as any
+  const entries = Object.entries(sortStage?.$sort ?? {})
+  return entries.length === 1 ? (entries[0][0] as string) : null
+}
+
+/** Resolve the active sort direction from pipeline stages or simple mode state */
+export function resolveSortDirection(
+  pipelineMode: boolean,
+  pipeline: Array<Record<string, unknown>>,
+  sortDirection: 1 | -1,
+): 1 | -1 {
+  if (!pipelineMode) return sortDirection
+  const sortStage = pipeline.find((s) => "$sort" in s) as any
+  const entries = Object.entries(sortStage?.$sort ?? {})
+  return entries.length === 1 ? (entries[0][1] as 1 | -1) : -1
+}
+
 /** Format the document count string shown in the header */
 export function formatDocumentCount(
   loaded: number,
@@ -130,11 +154,13 @@ export function docSummary(doc: Record<string, unknown>): string {
   const LABEL_FIELDS = ["name", "title", "label", "email", "username", "slug", "key"]
   for (const field of LABEL_FIELDS) {
     const val = doc[field]
-    if (val !== undefined && val !== null && typeof val !== "object") return `${field}: ${String(val)}`
+    if (val !== undefined && val !== null && typeof val !== "object")
+      return `${field}: ${String(val)}`
   }
   for (const [key, val] of Object.entries(doc)) {
     if (key === "_id") continue
-    if (val !== undefined && val !== null && typeof val !== "object") return `${key}: ${String(val)}`
+    if (val !== undefined && val !== null && typeof val !== "object")
+      return `${key}: ${String(val)}`
   }
   return `_id: ${String(doc._id)}`
 }

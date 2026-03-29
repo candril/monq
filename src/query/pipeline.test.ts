@@ -15,7 +15,9 @@ describe("classifyPipeline", () => {
   })
 
   test("$match + $sort + $project — find compatible", () => {
-    expect(classifyPipeline([{ $match: {} }, { $sort: { _id: -1 } }, { $project: { name: 1 } }])).toBe(false)
+    expect(
+      classifyPipeline([{ $match: {} }, { $sort: { _id: -1 } }, { $project: { name: 1 } }]),
+    ).toBe(false)
   })
 
   test("$group — requires aggregate", () => {

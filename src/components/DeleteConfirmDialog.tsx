@@ -16,7 +16,10 @@ export function DeleteConfirmDialog({ confirmation, focusedIndex }: DeleteConfir
       lines={[
         { text: `Delete ${docs.length} document${docs.length === 1 ? "" : "s"}?` },
         { text: "" },
-        ...docs.map((doc) => ({ text: `  ${docSummary(doc as Record<string, unknown>)}`, danger: true })),
+        ...docs.map((doc) => ({
+          text: `  ${docSummary(doc as Record<string, unknown>)}`,
+          danger: true,
+        })),
       ]}
       options={[
         { key: "c", label: "cancel", color: theme.textMuted },

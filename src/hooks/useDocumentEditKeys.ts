@@ -168,7 +168,7 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
             activeTab.collectionName,
             state.dbName,
             originalDocs, // always diff against the original set
-            editedDocs,   // show what the user last saved
+            editedDocs, // show what the user last saved
             state.schemaMap,
           )
             .then(async (o2) => {
@@ -190,7 +190,11 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
             })
             .catch((err: Error) => {
               renderer.resume()
-              dispatch({ type: "SHOW_MESSAGE", message: `Edit failed: ${err.message}`, kind: "error" })
+              dispatch({
+                type: "SHOW_MESSAGE",
+                message: `Edit failed: ${err.message}`,
+                kind: "error",
+              })
             })
         },
         resolve: async (missingAction, addedAction) => {

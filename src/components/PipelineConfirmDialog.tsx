@@ -8,7 +8,11 @@ interface PipelineConfirmDialogProps {
   focusedIndex: number
 }
 
-export function PipelineConfirmDialog({ pipeline, simpleQuery, focusedIndex }: PipelineConfirmDialogProps) {
+export function PipelineConfirmDialog({
+  pipeline,
+  simpleQuery,
+  focusedIndex,
+}: PipelineConfirmDialogProps) {
   const hasComplex = pipeline.some(
     (s) => !["$match", "$sort", "$project"].includes(Object.keys(s)[0]),
   )

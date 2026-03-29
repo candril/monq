@@ -29,10 +29,8 @@ import { buildCommands } from "./commands/builder"
 import { buildCollectionCommands } from "./commands/collections"
 import { buildDatabaseCommands } from "./commands/databases"
 import { usePaletteActions } from "./hooks/usePaletteActions"
-import { openEditorForMany, applyConfirmActions } from "./actions/editMany"
-import { stopWatching } from "./actions/pipelineWatch"
 import { theme } from "./theme"
-import { formatDocumentCount } from "./utils/format"
+import { formatDocumentCount, resolveSortField, resolveSortDirection } from "./utils/format"
 import type { Command } from "./commands/types"
 
 interface AppProps {
@@ -175,18 +173,12 @@ export function App({ uri }: AppProps) {
               columns={state.columns}
               selectedIndex={state.selectedIndex}
               selectedColumnIndex={state.selectedColumnIndex}
-              sortField={(() => {
-                if (!state.pipelineMode) return state.sortField
-                const sortStage = state.pipeline.find((s) => "$sort" in s) as any
-                const entries = Object.entries(sortStage?.$sort ?? {})
-                return entries.length === 1 ? (entries[0][0] as string) : null
-              })()}
-              sortDirection={(() => {
-                if (!state.pipelineMode) return state.sortDirection
-                const sortStage = state.pipeline.find((s) => "$sort" in s) as any
-                const entries = Object.entries(sortStage?.$sort ?? {})
-                return entries.length === 1 ? (entries[0][1] as 1 | -1) : -1
-              })()}
+              sortField={resolveSortField(state.pipelineMode, state.pipeline, state.sortField)}
+              sortDirection={resolveSortDirection(
+                state.pipelineMode,
+                state.pipeline,
+                state.sortDirection,
+              )}
               selectionMode={state.selectionMode}
               selectedRows={state.selectedRows}
               loading={state.documentsLoading}
