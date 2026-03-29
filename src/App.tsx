@@ -34,15 +34,18 @@ import { buildDatabaseCommands } from "./commands/databases"
 import { usePaletteActions } from "./hooks/usePaletteActions"
 import { formatDocumentCount, resolveSortField, resolveSortDirection } from "./utils/format"
 import { randomConnectionMessage } from "./utils/loadingMessages"
+import type { Keymap } from "./config/types"
 
 type PaletteMode = "commands" | "collections" | "databases"
 
 interface AppProps {
   uri: string
+  keymap: Keymap
+  configWarnings?: string[]
   onBackToUri?: () => void
 }
 
-export function App({ uri, onBackToUri }: AppProps) {
+export function App({ uri, keymap, configWarnings = [], onBackToUri }: AppProps) {
   const [state, dispatch] = useReducer(appReducer, null, createInitialState)
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("commands")
   const [loadingMessage, setLoadingMessage] = useState(randomConnectionMessage)
@@ -78,11 +81,25 @@ export function App({ uri, onBackToUri }: AppProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.reloadCounter])
 
+  // Surface config warnings as toasts once on mount
+  useEffect(() => {
+    if (configWarnings.length === 0) return
+    // Show warnings one at a time (first one immediately; subsequent ones via re-renders
+    // would require a queue — for simplicity show only the first warning)
+    dispatch({
+      type: "SHOW_MESSAGE",
+      message: configWarnings[0],
+      kind: "warning",
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useMongoConnection({ uri, dispatch, dbName: state.dbName })
   const { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex } = useKeyboardNav({
     state,
     dispatch,
     docListScrollRef,
+    keymap,
   })
   useDocumentLoader({ state, dispatch, pageSize })
 

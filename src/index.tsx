@@ -10,6 +10,10 @@ import { stopWatching } from "./actions/pipelineWatch"
 import { loadProfiles } from "./config/connections"
 import type { ConnectionProfile } from "./config/connections"
 import { registerSwitchConnection } from "./navigation"
+import { loadConfig } from "./config/loader"
+import { resolveConfig } from "./config/merge"
+import { buildTheme, setTheme } from "./theme"
+import type { Keymap } from "./config/types"
 
 // Stop file watcher on exit (covers Ctrl+C, SIGTERM, etc.)
 process.on("exit", () => stopWatching())
@@ -32,6 +36,25 @@ const flagUri = uriIndex !== -1 ? (args[uriIndex + 1] ?? null) : null
 const positionalUri =
   args.find((a) => a.startsWith("mongodb://") || a.startsWith("mongodb+srv://")) ?? null
 const initialUri = flagUri ?? positionalUri
+
+// Load user config — resolve theme + keymap before the renderer starts.
+// A malformed TOML file is caught here; warnings from invalid values are surfaced
+// as toasts once the app is running.
+let userConfig
+try {
+  userConfig = await loadConfig()
+} catch {
+  userConfig = null
+}
+const resolvedConfig = resolveConfig(userConfig)
+
+// Apply theme overrides (sets the module-level `theme` export in theme.ts so that
+// all components that import { theme } get the user-configured version).
+setTheme(buildTheme(resolvedConfig.theme))
+
+// Keymap and warnings are passed down to App
+const keymap: Keymap = resolvedConfig.keymap
+const configWarnings: string[] = resolvedConfig.warnings
 
 // Load saved connection profiles (empty array if no config file or no [connections] section)
 const savedProfiles: ConnectionProfile[] = initialUri ? [] : await loadProfiles()
@@ -67,6 +90,8 @@ function Root() {
     return (
       <App
         uri={uri}
+        keymap={keymap}
+        configWarnings={configWarnings}
         onBackToUri={() => {
           setUri(null)
           setScreen("picker")

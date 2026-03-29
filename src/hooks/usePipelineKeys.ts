@@ -8,6 +8,8 @@ import type { Dispatch } from "react"
 import type { CliRenderer } from "@opentui/core"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
+import type { Keymap } from "../config/types"
+import { matches } from "../utils/keymap"
 import { openPipelineEditor, writePipelineFile, pipelineFilePaths } from "../actions/pipeline"
 import {
   startWatching,
@@ -23,6 +25,7 @@ interface UsePipelineKeysOptions {
   state: AppState
   dispatch: Dispatch<AppAction>
   renderer: CliRenderer
+  keymap: Keymap
 }
 
 /** Build +field/-field projection suffix from a $project object */
@@ -55,7 +58,7 @@ function switchToSimple(state: AppState, dispatch: Dispatch<AppAction>, openQuer
   }
 }
 
-export function usePipelineKeys({ state, dispatch, renderer }: UsePipelineKeysOptions) {
+export function usePipelineKeys({ state, dispatch, renderer, keymap }: UsePipelineKeysOptions) {
   function handleKey(key: {
     name: string
     ctrl?: boolean
@@ -64,8 +67,8 @@ export function usePipelineKeys({ state, dispatch, renderer }: UsePipelineKeysOp
   }): boolean {
     if (state.view !== "documents" || !state.activeTabId) return false
 
-    // Ctrl+F: open pipeline editor (blocking)
-    if (key.ctrl && key.name === "f") {
+    // pipeline.open: open pipeline editor (blocking)
+    if (matches(key, keymap["pipeline.open"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return true
       stopWatching()
@@ -104,8 +107,8 @@ export function usePipelineKeys({ state, dispatch, renderer }: UsePipelineKeysOp
       return true
     }
 
-    // Ctrl+E: open pipeline file in tmux split (non-blocking)
-    if (key.ctrl && key.name === "e") {
+    // pipeline.open_full: open pipeline file in tmux split (non-blocking)
+    if (matches(key, keymap["pipeline.open_full"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return true
       writePipelineFile({
@@ -143,20 +146,20 @@ export function usePipelineKeys({ state, dispatch, renderer }: UsePipelineKeysOp
       return true
     }
 
-    // Tab: pipeline→simple (when in pipeline mode)
-    if (key.name === "tab" && state.pipelineMode && !state.queryVisible) {
+    // query.toggle_mode: pipeline→simple (when in pipeline mode)
+    if (matches(key, keymap["query.toggle_mode"]) && state.pipelineMode && !state.queryVisible) {
       switchToSimple(state, dispatch, true)
       return true
     }
 
-    // Ctrl-Y: open history picker while simple query bar is open
+    // Ctrl-Y: open history picker while simple query bar is open (not remappable — internal shortcut)
     if (key.ctrl && key.name === "y" && state.queryVisible && state.queryMode === "simple") {
       dispatch({ type: "OPEN_HISTORY_PICKER" })
       return true
     }
 
-    // /: open filter (switches to simple first if in pipeline mode)
-    if (key.name === "/") {
+    // query.open: open filter (switches to simple first if in pipeline mode)
+    if (matches(key, keymap["query.open"])) {
       if (state.pipelineMode) {
         switchToSimple(state, dispatch, true)
       } else {

@@ -8,6 +8,8 @@ import type { Dispatch } from "react"
 import type { CliRenderer } from "@opentui/core"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
+import type { Keymap } from "../config/types"
+import { matches } from "../utils/keymap"
 import type { EditManyResult } from "../actions/editMany"
 import { deleteDocument } from "../providers/mongodb"
 import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../actions/editMany"
@@ -16,14 +18,15 @@ interface UseDocumentEditKeysOptions {
   state: AppState
   dispatch: Dispatch<AppAction>
   renderer: CliRenderer
+  keymap: Keymap
 }
 
-export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEditKeysOptions) {
+export function useDocumentEditKeys({ state, dispatch, renderer, keymap }: UseDocumentEditKeysOptions) {
   function handleKey(key: { name: string; ctrl?: boolean; shift?: boolean }): boolean {
     if (state.view !== "documents") return false
 
-    // e: edit document(s)
-    if (key.name === "e" && !key.ctrl && !key.shift) {
+    // doc.edit: edit document(s)
+    if (matches(key, keymap["doc.edit"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return true
       const cursorOnSelection = state.selectedRows.has(state.selectedIndex)
@@ -70,8 +73,8 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
       return true
     }
 
-    // i: insert document
-    if (key.name === "i" && !key.ctrl && !key.shift) {
+    // doc.insert: insert document
+    if (matches(key, keymap["doc.insert"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return true
       const templateDoc = state.documents[state.selectedIndex]
@@ -104,8 +107,8 @@ export function useDocumentEditKeys({ state, dispatch, renderer }: UseDocumentEd
       return true
     }
 
-    // D (shift+d): delete document(s)
-    if (key.name === "d" && key.shift) {
+    // doc.delete: delete document(s)
+    if (matches(key, keymap["doc.delete"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return true
       const docsToDelete =
