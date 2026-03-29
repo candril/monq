@@ -34,6 +34,7 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/react": "^18.2.0",
+    "@typescript/native-preview": "^7.0.0-dev.20260329.1",
     "oxfmt": "^0.42.0",
     "oxlint": "^1.57.0"
   },

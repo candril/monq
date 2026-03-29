@@ -38,9 +38,9 @@ test:
 test-watch:
     bun test --watch
 
-# Type check without emitting
+# Type check without emitting (using tsgo — native Go port of TypeScript, ~10x faster)
 typecheck:
-    bun x tsc --noEmit
+    bunx tsgo --noEmit
 
 # Run all checks: typecheck + lint + fmt
 check:
