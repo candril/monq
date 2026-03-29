@@ -57,12 +57,18 @@ function buildPaletteItems(commands: Command[]): { items: PaletteItem[]; command
 /** Pretty category label */
 function categoryLabel(category: string): string {
   switch (category) {
-    case "navigation": return "Navigation"
-    case "document": return "Document"
-    case "view": return "View"
-    case "query": return "Query"
-    case "collection": return "Collections"
-    default: return category.charAt(0).toUpperCase() + category.slice(1)
+    case "navigation":
+      return "Navigation"
+    case "document":
+      return "Document"
+    case "view":
+      return "View"
+    case "query":
+      return "Query"
+    case "collection":
+      return "Collections"
+    default:
+      return category.charAt(0).toUpperCase() + category.slice(1)
   }
 }
 
@@ -89,10 +95,7 @@ export function CommandPalette({
     [query, commands],
   )
 
-  const { items, commandCount } = useMemo(
-    () => buildPaletteItems(filtered),
-    [filtered],
-  )
+  const { items, commandCount } = useMemo(() => buildPaletteItems(filtered), [filtered])
 
   useEffect(() => {
     if (selectedIndex >= commandCount) {
@@ -133,15 +136,21 @@ export function CommandPalette({
         return item?.type === "command" && item.command === filtered[i]
       })
       // Find the command at selectedIndex
-      const selected = items.find(
-        (it) => it.type === "command" && it.globalIndex === selectedIndex,
-      )
+      const selected = items.find((it) => it.type === "command" && it.globalIndex === selectedIndex)
       if (selected?.type === "command") {
         onSelect(selected.command)
       }
-    } else if (key.name === "up" || (key.ctrl && key.name === "p") || (key.ctrl && key.name === "k")) {
+    } else if (
+      key.name === "up" ||
+      (key.ctrl && key.name === "p") ||
+      (key.ctrl && key.name === "k")
+    ) {
       setSelectedIndex((i) => Math.max(0, i - 1))
-    } else if (key.name === "down" || (key.ctrl && key.name === "n") || (key.ctrl && key.name === "j")) {
+    } else if (
+      key.name === "down" ||
+      (key.ctrl && key.name === "n") ||
+      (key.ctrl && key.name === "j")
+    ) {
       setSelectedIndex((i) => Math.min(commandCount - 1, i + 1))
     } else if (key.name === "backspace") {
       setQuery((q) => q.slice(0, -1))
@@ -156,9 +165,24 @@ export function CommandPalette({
 
   return (
     <box width="100%" height="100%" position="absolute" top={0} left={0}>
-      <box width="100%" height="100%" position="absolute" top={0} left={0} backgroundColor={theme.overlayBg} />
+      <box
+        width="100%"
+        height="100%"
+        position="absolute"
+        top={0}
+        left={0}
+        backgroundColor={theme.overlayBg}
+      />
 
-      <box position="absolute" top={2} left="25%" width="50%" height="70%" flexDirection="column" backgroundColor={theme.modalBg}>
+      <box
+        position="absolute"
+        top={2}
+        left="25%"
+        width="50%"
+        height="70%"
+        flexDirection="column"
+        backgroundColor={theme.modalBg}
+      >
         <box height={1} />
         <box paddingLeft={2} paddingRight={2} paddingBottom={1} height={2}>
           <input

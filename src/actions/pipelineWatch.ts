@@ -58,10 +58,7 @@ export function stopWatching() {
  * Read and parse the pipeline file, then dispatch SET_PIPELINE.
  * On parse error: dispatch a warning toast (do not clear the existing pipeline).
  */
-export async function reloadFromFile(
-  filePath: string,
-  dispatch: Dispatch<AppAction>,
-) {
+export async function reloadFromFile(filePath: string, dispatch: Dispatch<AppAction>) {
   let content: string
   try {
     content = await Bun.file(filePath).text()

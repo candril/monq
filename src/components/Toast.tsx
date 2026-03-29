@@ -19,24 +19,24 @@ interface ToastProps {
 }
 
 const DURATION: Record<ToastKind, number> = {
-  info:    2500,
+  info: 2500,
   success: 2500,
   warning: 3000,
-  error:   4000,
+  error: 4000,
 }
 
 const KIND_COLOR: Record<ToastKind, string> = {
-  info:    theme.primary,
+  info: theme.primary,
   success: theme.success,
   warning: theme.warning,
-  error:   theme.error,
+  error: theme.error,
 }
 
 const KIND_ICON: Record<ToastKind, string> = {
-  info:    "●",
+  info: "●",
   success: "✓",
   warning: "!",
-  error:   "✗",
+  error: "✗",
 }
 
 export function Toast({ message, onDismiss }: ToastProps) {
@@ -49,7 +49,7 @@ export function Toast({ message, onDismiss }: ToastProps) {
   if (!message) return null
 
   const color = KIND_COLOR[message.kind]
-  const icon  = KIND_ICON[message.kind]
+  const icon = KIND_ICON[message.kind]
 
   // Split into lines for multi-line support
   const lines = message.text.split("\n").filter(Boolean)
@@ -68,12 +68,18 @@ export function Toast({ message, onDismiss }: ToastProps) {
       {lines.map((line, i) => (
         <box key={i} flexDirection="row" gap={1}>
           {i === 0 && (
-            <text><span fg={color}>{icon}</span></text>
+            <text>
+              <span fg={color}>{icon}</span>
+            </text>
           )}
           {i > 0 && (
-            <text><span fg={theme.textMuted}> </span></text>
+            <text>
+              <span fg={theme.textMuted}> </span>
+            </text>
           )}
-          <text><span fg={i === 0 ? theme.text : theme.textMuted}>{line}</span></text>
+          <text>
+            <span fg={i === 0 ? theme.text : theme.textMuted}>{line}</span>
+          </text>
         </box>
       ))}
     </box>

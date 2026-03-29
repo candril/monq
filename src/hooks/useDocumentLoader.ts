@@ -38,15 +38,19 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
       // $group, $addFields, $lookup, $unwind, $replaceRoot, etc. — must start
       // fresh so the column list reflects the actual output shape.
       const SHAPE_PRESERVING = new Set(["$match", "$sort"])
-      const pipelinePreservesShape = state.pipeline.every(
-        (stage) => SHAPE_PRESERVING.has(Object.keys(stage)[0])
+      const pipelinePreservesShape = state.pipeline.every((stage) =>
+        SHAPE_PRESERVING.has(Object.keys(stage)[0]),
       )
 
       const fetchPipeline = isAggregate
         ? fetchAggregate(activeTab.collectionName, state.pipeline, { limit: pageSize })
         : (() => {
             const { filter, sort, projection } = extractFindParts(state.pipeline)
-            return fetchDocuments(activeTab.collectionName, filter, { sort, projection, limit: pageSize })
+            return fetchDocuments(activeTab.collectionName, filter, {
+              sort,
+              projection,
+              limit: pageSize,
+            })
           })()
 
       fetchPipeline
@@ -61,14 +65,19 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
             const existingByField = new Map(existingColumns.map((c) => [c.field, c]))
             const newColumns = detectedFields.map((field) => {
               const existing = existingByField.get(field)
-              return existing ?? { field, frequency: 1, visible: true, displayMode: "normal" as const }
+              return (
+                existing ?? { field, frequency: 1, visible: true, displayMode: "normal" as const }
+              )
             })
             const preserved = existingColumns.filter((c) => !detectedSet.has(c.field))
             columns = [...newColumns, ...preserved]
           } else {
             // Pipeline reshapes documents — detect fresh from results only
             columns = detectedFields.map((field) => ({
-              field, frequency: 1, visible: true, displayMode: "normal" as const,
+              field,
+              frequency: 1,
+              visible: true,
+              displayMode: "normal" as const,
             }))
           }
 
@@ -82,13 +91,19 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
           // user can fix the file and the watcher will retry. Outside watch mode
           // use the full error screen.
           if (state.pipelineWatching) {
-            dispatch({ type: "SHOW_MESSAGE", message: `Pipeline error: ${err.message}`, kind: "error" })
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: `Pipeline error: ${err.message}`,
+              kind: "error",
+            })
           } else {
             dispatch({ type: "SET_ERROR", error: err.message })
           }
         })
 
-      return () => { cancelled = true }
+      return () => {
+        cancelled = true
+      }
     }
 
     // Simple / BSON filter mode
@@ -111,14 +126,22 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
     // Sort: bson mode uses bsonSort textarea, simple mode uses sortField
     let sort: Record<string, 1 | -1> | undefined
     if (queryMode === "bson" && state.bsonSort.trim()) {
-      try { sort = JSON.parse(state.bsonSort) } catch { /* skip */ }
+      try {
+        sort = JSON.parse(state.bsonSort)
+      } catch {
+        /* skip */
+      }
     } else if (state.sortField) {
       sort = { [state.sortField]: state.sortDirection as 1 | -1 }
     }
 
     // BSON mode projection: uses bsonProjection textarea
     if (queryMode === "bson" && state.bsonProjection.trim()) {
-      try { projection = JSON.parse(state.bsonProjection) } catch { /* skip */ }
+      try {
+        projection = JSON.parse(state.bsonProjection)
+      } catch {
+        /* skip */
+      }
     }
 
     fetchDocuments(activeTab.collectionName, filter, { sort, projection, limit: pageSize })
@@ -140,16 +163,25 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
         const hasSimpleProjection = queryMode === "simple" && projection != null
         const proj = hasSimpleProjection ? projection! : null
         const exclusions = proj
-          ? new Set(Object.entries(proj).filter(([, v]) => v === 0).map(([k]) => k))
+          ? new Set(
+              Object.entries(proj)
+                .filter(([, v]) => v === 0)
+                .map(([k]) => k),
+            )
           : null
-        const inclusions = proj && Object.values(proj).some(v => v === 1)
-          ? new Set(Object.entries(proj).filter(([, v]) => v === 1).map(([k]) => k))
-          : null
+        const inclusions =
+          proj && Object.values(proj).some((v) => v === 1)
+            ? new Set(
+                Object.entries(proj)
+                  .filter(([, v]) => v === 1)
+                  .map(([k]) => k),
+              )
+            : null
 
         const preserved = existingColumns.filter((c) => {
-          if (detectedSet.has(c.field)) return false  // already in newColumns
-          if (exclusions?.has(c.field)) return false   // explicitly excluded
-          if (inclusions && !inclusions.has(c.field)) return false  // not included
+          if (detectedSet.has(c.field)) return false // already in newColumns
+          if (exclusions?.has(c.field)) return false // explicitly excluded
+          if (inclusions && !inclusions.has(c.field)) return false // not included
           return true
         })
         const columns = [...newColumns, ...preserved]
@@ -172,7 +204,9 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
         if (!cancelled) dispatch({ type: "SET_ERROR", error: err.message })
       })
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [activeTab?.id, documentsLoading, reloadCounter])
 
   // Effect 2: load next page when LOAD_MORE is triggered
@@ -194,17 +228,27 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
           projection = parsed.projection
         }
       }
-    } catch { /* invalid query — fetch unfiltered */ }
+    } catch {
+      /* invalid query — fetch unfiltered */
+    }
 
     let sort: Record<string, 1 | -1> | undefined
     if (queryMode === "bson" && state.bsonSort.trim()) {
-      try { sort = JSON.parse(state.bsonSort) } catch { /* skip */ }
+      try {
+        sort = JSON.parse(state.bsonSort)
+      } catch {
+        /* skip */
+      }
     } else if (state.sortField) {
       sort = { [state.sortField]: state.sortDirection as 1 | -1 }
     }
 
     if (queryMode === "bson" && state.bsonProjection.trim()) {
-      try { projection = JSON.parse(state.bsonProjection) } catch { /* skip */ }
+      try {
+        projection = JSON.parse(state.bsonProjection)
+      } catch {
+        /* skip */
+      }
     }
 
     fetchDocuments(activeTab.collectionName, filter, {
@@ -221,6 +265,8 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
         if (!cancelled) dispatch({ type: "APPEND_DOCUMENTS", documents: [] })
       })
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [activeTab?.id, state.loadingMore])
 }

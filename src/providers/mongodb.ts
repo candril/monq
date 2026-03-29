@@ -79,7 +79,7 @@ export async function fetchDocuments(
     limit?: number
     sort?: Record<string, 1 | -1>
     projection?: Record<string, 0 | 1>
-  } = {}
+  } = {},
 ): Promise<{ documents: Document[]; count: number; totalCount: number }> {
   const collection = getDb().collection(collectionName)
   const { skip = 0, limit = 50, sort, projection } = options
@@ -88,7 +88,11 @@ export async function fetchDocuments(
 
   const cursor = collection.find(filter, projection ? { projection } : undefined)
   const [documents, count, totalCount] = await Promise.all([
-    cursor.sort(sort ?? { _id: -1 }).skip(skip).limit(limit).toArray(),
+    cursor
+      .sort(sort ?? { _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray(),
     collection.countDocuments(filter),
     hasFilter ? collection.estimatedDocumentCount() : Promise.resolve(0),
   ])
@@ -100,7 +104,7 @@ export async function fetchDocuments(
 export async function fetchAggregate(
   collectionName: string,
   pipeline: Document[],
-  options: { limit?: number } = {}
+  options: { limit?: number } = {},
 ): Promise<{ documents: Document[]; count: number }> {
   const collection = getDb().collection(collectionName)
   const { limit = 200 } = options

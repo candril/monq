@@ -7,7 +7,13 @@
 import { useEffect, useRef } from "react"
 import type { Dispatch } from "react"
 import type { AppAction } from "../state"
-import { parseUri, init, listCollections, listDatabases, switchDatabase } from "../providers/mongodb"
+import {
+  parseUri,
+  init,
+  listCollections,
+  listDatabases,
+  switchDatabase,
+} from "../providers/mongodb"
 
 interface UseMongoConnectionOptions {
   uri: string
@@ -39,7 +45,8 @@ export function useMongoConnection({ uri, dispatch, dbName }: UseMongoConnection
           dispatch({ type: "OPEN_DB_PICKER" })
         })
         .catch((err: Error) => {
-          if (!cancelled) dispatch({ type: "SET_ERROR", error: `Failed to list databases: ${err.message}` })
+          if (!cancelled)
+            dispatch({ type: "SET_ERROR", error: `Failed to list databases: ${err.message}` })
         })
     } else {
       // db is in URI — load collections right away
@@ -52,7 +59,9 @@ export function useMongoConnection({ uri, dispatch, dbName }: UseMongoConnection
         })
     }
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [uri])
 
   // Reload collections when the user switches to a different database
@@ -76,6 +85,8 @@ export function useMongoConnection({ uri, dispatch, dbName }: UseMongoConnection
       .catch((err: Error) => {
         if (!cancelled) dispatch({ type: "SET_ERROR", error: err.message })
       })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [dbName])
 }

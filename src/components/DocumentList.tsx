@@ -211,7 +211,18 @@ function getNestedValue(doc: Document, field: string): unknown {
   return current
 }
 
-export function DocumentList({ documents, columns, selectedIndex, selectedColumnIndex, sortField, sortDirection, selectionMode, selectedRows, loading, scrollRef: externalScrollRef }: DocumentListProps) {
+export function DocumentList({
+  documents,
+  columns,
+  selectedIndex,
+  selectedColumnIndex,
+  sortField,
+  sortDirection,
+  selectionMode,
+  selectedRows,
+  loading,
+  scrollRef: externalScrollRef,
+}: DocumentListProps) {
   const internalScrollRef = useRef<ScrollBoxRenderable>(null)
   const scrollRef = externalScrollRef ?? internalScrollRef
   const { width: terminalWidth } = useTerminalDimensions()
@@ -247,13 +258,15 @@ export function DocumentList({ documents, columns, selectedIndex, selectedColumn
   )
 
   if (documents.length === 0) {
-    return loading
-      ? <Loading message="Loading documents..." />
-      : (
-        <box flexGrow={1} justifyContent="center" alignItems="center">
-          <text><span fg={theme.textDim}>No documents found</span></text>
-        </box>
-      )
+    return loading ? (
+      <Loading message="Loading documents..." />
+    ) : (
+      <box flexGrow={1} justifyContent="center" alignItems="center">
+        <text>
+          <span fg={theme.textDim}>No documents found</span>
+        </text>
+      </box>
+    )
   }
 
   return (
@@ -333,7 +346,9 @@ function HeaderRow({
       ? theme.primary
       : isSorted
         ? theme.warning
-        : col.displayMode === "minimized" ? theme.textMuted : theme.textDim
+        : col.displayMode === "minimized"
+          ? theme.textMuted
+          : theme.textDim
     return { text: label, color }
   })
 
@@ -344,7 +359,9 @@ function HeaderRow({
     <box height={1} width="100%" paddingLeft={1} paddingRight={1}>
       <text>
         {visible.map((seg, i) => (
-          <span key={i} fg={seg.color}>{seg.text}</span>
+          <span key={i} fg={seg.color}>
+            {seg.text}
+          </span>
         ))}
       </text>
     </box>
@@ -385,23 +402,20 @@ function DocumentRow({
   const segments = buildRowSegments(values, colWidthArray)
   const visible = sliceSegments(segments, scrollLeft, viewportWidth)
 
-  const bg = rowSelected && selectionMode !== "none"
-    ? theme.selection
-    : selected
-      ? theme.headerBg
-      : undefined
+  const bg =
+    rowSelected && selectionMode !== "none"
+      ? theme.selection
+      : selected
+        ? theme.headerBg
+        : undefined
 
   return (
-    <box
-      height={1}
-      width="100%"
-      backgroundColor={bg}
-      paddingLeft={1}
-      paddingRight={1}
-    >
+    <box height={1} width="100%" backgroundColor={bg} paddingLeft={1} paddingRight={1}>
       <text>
         {visible.map((seg, i) => (
-          <span key={i} fg={seg.color}>{seg.text}</span>
+          <span key={i} fg={seg.color}>
+            {seg.text}
+          </span>
         ))}
       </text>
     </box>

@@ -136,17 +136,11 @@ export interface ParsedSimpleQuery {
  * +field / bare -field  → projection
  * everything else       → filter
  */
-export function parseSimpleQuery(
-  input: string,
-  schemaMap?: SchemaMap,
-): Filter<Document> {
+export function parseSimpleQuery(input: string, schemaMap?: SchemaMap): Filter<Document> {
   return parseSimpleQueryFull(input, schemaMap).filter
 }
 
-export function parseSimpleQueryFull(
-  input: string,
-  schemaMap?: SchemaMap,
-): ParsedSimpleQuery {
+export function parseSimpleQueryFull(input: string, schemaMap?: SchemaMap): ParsedSimpleQuery {
   const trimmed = input.trim()
   if (!trimmed) return { filter: {}, projection: undefined }
 
@@ -158,7 +152,10 @@ export function parseSimpleQueryFull(
     // +field → projection include
     if (token.startsWith("+")) {
       const field = token.slice(1)
-      if (field && VALID_FIELD.test(field)) { proj[field] = 1; continue }
+      if (field && VALID_FIELD.test(field)) {
+        proj[field] = 1
+        continue
+      }
     }
 
     // Detect negation prefix for filter: -field:value -> $ne
@@ -234,15 +231,25 @@ export function parseSimpleQueryFull(
  * Try to translate a MongoDB filter object back to simple Key:Value syntax.
  * Returns the query string and whether the translation was lossless.
  */
-export function filterToSimple(filter: Record<string, unknown>): { query: string; lossless: boolean } {
+export function filterToSimple(filter: Record<string, unknown>): {
+  query: string
+  lossless: boolean
+} {
   const opMap: Record<string, string> = {
-    $gt: ">", $gte: ">=", $lt: "<", $lte: "<=", $ne: "!=",
+    $gt: ">",
+    $gte: ">=",
+    $lt: "<",
+    $lte: "<=",
+    $ne: "!=",
   }
   const tokens: string[] = []
   let lossless = true
 
   for (const [key, val] of Object.entries(filter)) {
-    if (key.startsWith("$")) { lossless = false; continue }
+    if (key.startsWith("$")) {
+      lossless = false
+      continue
+    }
 
     if (val === null) {
       tokens.push(`${key}:null`)
@@ -285,7 +292,7 @@ export function filterToSimple(filter: Record<string, unknown>): { query: string
  */
 export function projectionToSimple(proj: Record<string, 0 | 1>): string {
   return Object.entries(proj)
-    .map(([k, v]) => v === 1 ? `+${k}` : `-${k}`)
+    .map(([k, v]) => (v === 1 ? `+${k}` : `-${k}`))
     .join(" ")
 }
 
@@ -325,15 +332,24 @@ export function splitProjection(input: string): { filter: string; projection: st
     if (!t) continue
     if (t.startsWith("+")) {
       const f = t.slice(1)
-      if (VALID_FIELD.test(f)) { projTokens.push(t); continue }
+      if (VALID_FIELD.test(f)) {
+        projTokens.push(t)
+        continue
+      }
     }
     if (t.startsWith("-")) {
       const f = t.slice(1)
-      if (VALID_FIELD.test(f) && !/[><!:]/.test(f)) { projTokens.push(t); continue }
+      if (VALID_FIELD.test(f) && !/[><!:]/.test(f)) {
+        projTokens.push(t)
+        continue
+      }
     }
     filterTokens.push(t)
   }
-  return { filter: filterTokens.join(" "), projection: projTokens.map(t => t.replace(/^\+/, "")).join(" ") }
+  return {
+    filter: filterTokens.join(" "),
+    projection: projTokens.map((t) => t.replace(/^\+/, "")).join(" "),
+  }
 }
 
 /** @deprecated Use parseSimpleQueryFull instead */
@@ -356,7 +372,11 @@ export function parseProjection(projection: string): Record<string, 0 | 1> | und
 }
 
 /** @deprecated No longer needed — projection is inline */
-export function isInProjection(_input: string): boolean { return false }
+export function isInProjection(_input: string): boolean {
+  return false
+}
 
 /** @deprecated No longer needed — use getLastToken */
-export function getLastProjectionToken(_input: string): null { return null }
+export function getLastProjectionToken(_input: string): null {
+  return null
+}

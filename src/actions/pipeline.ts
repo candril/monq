@@ -28,9 +28,7 @@ export interface PipelineResult {
 /** Classify whether a pipeline can be run as find() */
 export function classifyPipeline(pipeline: Document[]): boolean {
   if (pipeline.length === 0) return false
-  return pipeline.some(
-    (stage) => !FIND_COMPATIBLE_STAGES.has(Object.keys(stage)[0])
-  )
+  return pipeline.some((stage) => !FIND_COMPATIBLE_STAGES.has(Object.keys(stage)[0]))
 }
 
 /** Extract find()-compatible parts from a simple pipeline */
@@ -40,7 +38,7 @@ export function extractFindParts(pipeline: Document[]): {
   projection?: Document
 } {
   const filter = (pipeline.find((s) => "$match" in s) as any)?.$match ?? {}
-  const sort   = (pipeline.find((s) => "$sort"  in s) as any)?.$sort
+  const sort = (pipeline.find((s) => "$sort" in s) as any)?.$sort
   const projection = (pipeline.find((s) => "$project" in s) as any)?.$project
   return { filter, sort, projection }
 }
@@ -83,15 +81,10 @@ function buildTemplate(
   }
 
   // Build $sort
-  const sortObj = sortField
-    ? { [sortField]: sortDirection }
-    : { _id: -1 }
+  const sortObj = sortField ? { [sortField]: sortDirection } : { _id: -1 }
 
   // Compose pipeline stages
-  const pipelineStages: Document[] = [
-    { $match: matchObj },
-    { $sort: sortObj },
-  ]
+  const pipelineStages: Document[] = [{ $match: matchObj }, { $sort: sortObj }]
   if (projObj) pipelineStages.push({ $project: projObj })
 
   // Compose as proper JSON (JSONC — supports // comments)
@@ -102,15 +95,15 @@ function buildTemplate(
   }
 
   // Pretty-print with helpful comments injected
-  const topLevelFields = [...schemaMap.entries()]
-    .filter(([p]) => !p.includes("."))
+  const topLevelFields = [...schemaMap.entries()].filter(([p]) => !p.includes("."))
 
   const json = JSON.stringify(doc, null, 2)
 
   // Schema section: one line per field so AI agents can read the full schema
-  const fieldLines = topLevelFields.length > 0
-    ? topLevelFields.map(([p, info]) => `//   ${p}: ${info.type}`)
-    : [`//   (no schema sampled)`]
+  const fieldLines =
+    topLevelFields.length > 0
+      ? topLevelFields.map(([p, info]) => `//   ${p}: ${info.type}`)
+      : [`//   (no schema sampled)`]
 
   // Inject comment header and inline hints via string manipulation
   const header = [
@@ -143,29 +136,47 @@ function fieldValueSchema(fieldName: string, fieldType: string): Record<string, 
     // jsonls will suggest all properties when user types {.
     properties: {
       // Comparison
-      $eq:        { description: "Equal to value" },
-      $ne:        { description: "Not equal to value" },
-      $gt:        { description: "Greater than value" },
-      $gte:       { description: "Greater than or equal to value" },
-      $lt:        { description: "Less than value" },
-      $lte:       { description: "Less than or equal to value" },
+      $eq: { description: "Equal to value" },
+      $ne: { description: "Not equal to value" },
+      $gt: { description: "Greater than value" },
+      $gte: { description: "Greater than or equal to value" },
+      $lt: { description: "Less than value" },
+      $lte: { description: "Less than or equal to value" },
       // Array membership
-      $in:        { type: "array", description: "Matches any value in array", items: {} },
-      $nin:       { type: "array", description: "Matches no value in array", items: {} },
-      $all:       { type: "array", description: "Array contains all values", items: {} },
+      $in: { type: "array", description: "Matches any value in array", items: {} },
+      $nin: { type: "array", description: "Matches no value in array", items: {} },
+      $all: { type: "array", description: "Array contains all values", items: {} },
       // Existence / type
-      $exists:    { type: "boolean", description: "true = field exists, false = field missing" },
-      $type:      { description: "BSON type: string | number | bool | date | objectId | array | object | null | int | long | double | decimal" },
+      $exists: { type: "boolean", description: "true = field exists, false = field missing" },
+      $type: {
+        description:
+          "BSON type: string | number | bool | date | objectId | array | object | null | int | long | double | decimal",
+      },
       // String / regex
-      $regex:     { type: "string", description: "Regular expression pattern (e.g. \"^stefan\")" },
-      $options:   { type: "string", description: "Regex flags: i (case-insensitive), m (multiline), s (dotAll), x (extended)" },
+      $regex: { type: "string", description: 'Regular expression pattern (e.g. "^stefan")' },
+      $options: {
+        type: "string",
+        description: "Regex flags: i (case-insensitive), m (multiline), s (dotAll), x (extended)",
+      },
       // Array operators
-      $elemMatch: { type: "object", description: "At least one array element matches all conditions", properties: {} },
-      $size:      { type: "number", description: "Array has exactly N elements" },
+      $elemMatch: {
+        type: "object",
+        description: "At least one array element matches all conditions",
+        properties: {},
+      },
+      $size: { type: "number", description: "Array has exactly N elements" },
       // Arithmetic
-      $mod:       { type: "array", description: "[divisor, remainder] — value mod divisor = remainder", items: { type: "number" } },
+      $mod: {
+        type: "array",
+        description: "[divisor, remainder] — value mod divisor = remainder",
+        items: { type: "number" },
+      },
       // Negation
-      $not:       { type: "object", description: "Negates operator expression, e.g. { $not: { $gt: 5 } }", properties: {} },
+      $not: {
+        type: "object",
+        description: "Negates operator expression, e.g. { $not: { $gt: 5 } }",
+        properties: {},
+      },
     },
   }
 }
@@ -173,16 +184,20 @@ function fieldValueSchema(fieldName: string, fieldType: string): Record<string, 
 function buildJsonSchema(collectionName: string, schemaMap: SchemaMap): string {
   // $match properties — top-level logical operators + per-field operators
   const matchProperties: Record<string, unknown> = {
-    $and:  { type: "array", description: "All conditions must match", items: { type: "object" } },
-    $or:   { type: "array", description: "At least one condition must match", items: { type: "object" } },
-    $nor:  { type: "array", description: "No conditions match", items: { type: "object" } },
+    $and: { type: "array", description: "All conditions must match", items: { type: "object" } },
+    $or: {
+      type: "array",
+      description: "At least one condition must match",
+      items: { type: "object" },
+    },
+    $nor: { type: "array", description: "No conditions match", items: { type: "object" } },
     $expr: { type: "object", description: "Aggregation expression in query context" },
     $text: {
       type: "object",
       description: "Full-text search",
       properties: {
-        $search:        { type: "string", description: "Search string" },
-        $language:      { type: "string", description: "Language for stemming" },
+        $search: { type: "string", description: "Search string" },
+        $language: { type: "string", description: "Language for stemming" },
         $caseSensitive: { type: "boolean" },
         $diacriticSensitive: { type: "boolean" },
       },
@@ -322,7 +337,7 @@ export function pipelineFilePaths(dbName: string, collectionName: string, tabId:
   const dir = join(tmpdir(), "monq", dbName, collectionName, tabId)
   return {
     dir,
-    queryFile:  join(dir, "pipeline.jsonc"),
+    queryFile: join(dir, "pipeline.jsonc"),
     schemaFile: join(dir, ".monq-pipeline-schema.json"),
   }
 }
@@ -343,13 +358,29 @@ export async function writePipelineFile(params: {
   sortDirection: 1 | -1
 }): Promise<string> {
   const {
-    collectionName, dbName, tabId, pipelineSource, currentPipeline, simpleQuery,
-    schemaMap, sortField, sortDirection,
+    collectionName,
+    dbName,
+    tabId,
+    pipelineSource,
+    currentPipeline,
+    simpleQuery,
+    schemaMap,
+    sortField,
+    sortDirection,
   } = params
   const { dir, queryFile, schemaFile } = pipelineFilePaths(dbName, collectionName, tabId)
   await mkdir(dir, { recursive: true })
   await Bun.write(schemaFile, buildJsonSchema(collectionName, schemaMap))
-  const content = buildTemplate(collectionName, dbName, pipelineSource, currentPipeline, simpleQuery, schemaMap, sortField, sortDirection)
+  const content = buildTemplate(
+    collectionName,
+    dbName,
+    pipelineSource,
+    currentPipeline,
+    simpleQuery,
+    schemaMap,
+    sortField,
+    sortDirection,
+  )
   await Bun.write(queryFile, content)
   return queryFile
 }
@@ -366,8 +397,15 @@ export async function openPipelineEditor(params: {
   sortDirection: 1 | -1
 }): Promise<PipelineResult | null> {
   const {
-    collectionName, dbName, tabId, pipelineSource, currentPipeline, simpleQuery,
-    schemaMap, sortField, sortDirection,
+    collectionName,
+    dbName,
+    tabId,
+    pipelineSource,
+    currentPipeline,
+    simpleQuery,
+    schemaMap,
+    sortField,
+    sortDirection,
   } = params
 
   // Stable temp dir scoped to db + collection + tab
@@ -379,8 +417,14 @@ export async function openPipelineEditor(params: {
 
   // Write initial content
   const template = buildTemplate(
-    collectionName, dbName, pipelineSource, currentPipeline, simpleQuery,
-    schemaMap, sortField, sortDirection,
+    collectionName,
+    dbName,
+    pipelineSource,
+    currentPipeline,
+    simpleQuery,
+    schemaMap,
+    sortField,
+    sortDirection,
   )
   await Bun.write(queryFile, template)
 
@@ -409,7 +453,9 @@ export async function openPipelineEditor(params: {
     // Cancel if file is unchanged from what was on disk before opening
     // (user quit without saving — :q!)
     // We detect this by comparing the current file to what we last wrote
-    const lastWritten = await Bun.file(queryFile).text().catch(() => "")
+    const lastWritten = await Bun.file(queryFile)
+      .text()
+      .catch(() => "")
     // Actually we need to compare to the pre-edit content; simpler: if
     // content equals template the user cancelled from the initial template
     if (content.trim() === template.trim()) {
@@ -427,13 +473,13 @@ export async function openPipelineEditor(params: {
       // Strip any previous error comment before prepending
       const cleaned = content.replace(/^(\/\/ !! PARSE ERROR:.*\n.*\n\n)/m, "")
       await Bun.write(queryFile, errorComment + cleaned)
-      continue  // re-open editor
+      continue // re-open editor
     }
 
     const rawPipeline: Document[] = Array.isArray(parsed.pipeline)
       ? parsed.pipeline
       : Array.isArray(parsed)
-        ? parsed  // user wrote just a bare array
+        ? parsed // user wrote just a bare array
         : []
 
     if (rawPipeline.length === 0) {

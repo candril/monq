@@ -10,11 +10,7 @@ import { mkdir, unlink } from "fs/promises"
 import type { Document } from "mongodb"
 import JSON5 from "json5"
 import type { SchemaMap } from "../query/schema"
-import {
-  serializeDocument,
-  deserializeDocument,
-  replaceDocument,
-} from "../providers/mongodb"
+import { serializeDocument, deserializeDocument, replaceDocument } from "../providers/mongodb"
 
 const ERROR_COMMENT_RE = /^(\/\/ !! .*\n(\/\/.*\n)*\n?)/m
 
@@ -26,11 +22,12 @@ function buildHeader(
 ): string {
   const idStr = String(doc._id)
 
-  const fieldLines = schemaMap && schemaMap.size > 0
-    ? [...schemaMap.entries()]
-        .filter(([p]) => !p.includes("."))
-        .map(([p, info]) => `//   ${p}: ${info.type}`)
-    : [`//   (no schema sampled)`]
+  const fieldLines =
+    schemaMap && schemaMap.size > 0
+      ? [...schemaMap.entries()]
+          .filter(([p]) => !p.includes("."))
+          .map(([p, info]) => `//   ${p}: ${info.type}`)
+      : [`//   (no schema sampled)`]
 
   return [
     `// Mon-Q — editing document in ${collectionName} @ ${dbName}`,
@@ -45,7 +42,10 @@ function buildHeader(
 
 function injectErrorComment(content: string, errorMsg: string): string {
   const stripped = content.replace(ERROR_COMMENT_RE, "")
-  return `// !! PARSE ERROR: ${errorMsg}\n// Fix the JSON below and save, or delete all content to cancel.\n\n` + stripped
+  return (
+    `// !! PARSE ERROR: ${errorMsg}\n// Fix the JSON below and save, or delete all content to cancel.\n\n` +
+    stripped
+  )
 }
 
 /** Open a document in $EDITOR, save updates to DB on close. */

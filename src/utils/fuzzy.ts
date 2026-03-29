@@ -30,11 +30,7 @@ export function fuzzyScore(query: string, text: string): number {
 }
 
 /** Filter and sort items by fuzzy match against one or more fields. */
-export function fuzzyFilter<T>(
-  query: string,
-  items: T[],
-  getFields: (item: T) => string[],
-): T[] {
+export function fuzzyFilter<T>(query: string, items: T[], getFields: (item: T) => string[]): T[] {
   if (!query) return items
 
   return items

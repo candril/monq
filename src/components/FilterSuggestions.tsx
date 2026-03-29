@@ -76,7 +76,7 @@ function buildSuggestions(
       const info = schemaMap.get(fullPath)
       const hasChildren = info && info.children.length > 0
       // Projection tokens never get ":" suffix — just field name (or "." for drill-down)
-      const suffix = hasChildren ? "." : (isProjection ? " " : ":")
+      const suffix = hasChildren ? "." : isProjection ? " " : ":"
       return {
         label: projPrefix + fullPath,
         value: prefix + projPrefix + fullPath + suffix,
@@ -97,7 +97,7 @@ function buildSuggestions(
   return filtered.map((field) => {
     const info = schemaMap.get(field)
     const hasChildren = info && info.children.length > 0
-    const suffix = hasChildren ? "." : (isProjection ? " " : ":")
+    const suffix = hasChildren ? "." : isProjection ? " " : ":"
     return {
       label: projPrefix + field,
       value: prefix + projPrefix + field + suffix,
@@ -119,13 +119,16 @@ export function FilterSuggestions({
   const [selectedIndex, setSelectedIndex] = useState(0)
 
   const suggestions = useMemo(
-    () => queryMode === "bson"
-      ? buildBsonSuggestions(columns, schemaMap)
-      : buildSuggestions(query, columns, schemaMap),
+    () =>
+      queryMode === "bson"
+        ? buildBsonSuggestions(columns, schemaMap)
+        : buildSuggestions(query, columns, schemaMap),
     [query, queryMode, columns, schemaMap],
   )
 
-  useEffect(() => { setSelectedIndex(0) }, [suggestions.length])
+  useEffect(() => {
+    setSelectedIndex(0)
+  }, [suggestions.length])
 
   useKeyboard((key) => {
     if (!visible || suggestions.length === 0) return
@@ -160,7 +163,9 @@ export function FilterSuggestions({
                 <span fg={selected ? theme.primary : theme.textDim}>{suggestion.label}</span>
               </text>
               {suggestion.hint && (
-                <text><span fg={theme.textMuted}>{suggestion.hint}</span></text>
+                <text>
+                  <span fg={theme.textMuted}>{suggestion.hint}</span>
+                </text>
               )}
             </box>
           )

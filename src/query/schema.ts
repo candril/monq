@@ -7,7 +7,16 @@
 
 import type { Document } from "mongodb"
 
-export type FieldType = "string" | "number" | "boolean" | "null" | "object" | "array" | "objectid" | "date" | "mixed"
+export type FieldType =
+  | "string"
+  | "number"
+  | "boolean"
+  | "null"
+  | "object"
+  | "array"
+  | "objectid"
+  | "date"
+  | "mixed"
 
 export interface FieldInfo {
   path: string

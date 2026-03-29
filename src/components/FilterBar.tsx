@@ -65,7 +65,6 @@ interface FilterBarProps {
   onSubmit?: () => void
 }
 
-
 // ── BsonTextarea ────────────────────────────────────────────────────────────
 
 /** Safe wrapper around getTextRange — guards against destroyed buffer */
@@ -117,7 +116,9 @@ function BsonTextarea({
       try {
         taRef.current.onContentChange = undefined
         taRef.current.onSubmit = undefined
-      } catch { /* already destroyed */ }
+      } catch {
+        /* already destroyed */
+      }
     }
     taRef.current = ta
     if (!ta) return
@@ -138,7 +139,9 @@ function BsonTextarea({
     if (!ta) return
     try {
       ta.replaceText(currentValue)
-    } catch { /* destroyed */ }
+    } catch {
+      /* destroyed */
+    }
   }, [externalVersion]) // intentionally NOT currentValue
 
   return (
@@ -194,8 +197,7 @@ export function FilterBar({
   const simpleProj = queryMode === "simple" ? parseSimpleQueryFull(query).projection : undefined
   const hasProjTokens = simpleProj != null && Object.keys(simpleProj).length > 0
 
-  const sectionCount =
-    1 + (bsonSortVisible ? 1 : 0) + (bsonProjectionVisible ? 1 : 0)
+  const sectionCount = 1 + (bsonSortVisible ? 1 : 0) + (bsonProjectionVisible ? 1 : 0)
   // header row + sections (textarea + label each)
   const bsonHeight = 1 + sectionCount * (TEXTAREA_HEIGHT + 1)
 
@@ -209,7 +211,11 @@ export function FilterBar({
       {/* Header row: badge + input or BSON pills */}
       <box height={1} flexDirection="row" gap={1}>
         <box backgroundColor={badgeBg} paddingX={1}>
-          <text><span fg={theme.bg}><strong>{badgeLabel}</strong></span></text>
+          <text>
+            <span fg={theme.bg}>
+              <strong>{badgeLabel}</strong>
+            </span>
+          </text>
         </box>
 
         {editing ? (
@@ -221,16 +227,22 @@ export function FilterBar({
                 </span>
               </text>
               <text>
-                {bsonSortVisible
-                  ? <span fg={bsonFocusedSection === "sort" ? theme.primary : theme.warning}>[sort Ctrl+O]</span>
-                  : <span fg={theme.textMuted}>[+sort Ctrl+O]</span>
-                }
+                {bsonSortVisible ? (
+                  <span fg={bsonFocusedSection === "sort" ? theme.primary : theme.warning}>
+                    [sort Ctrl+O]
+                  </span>
+                ) : (
+                  <span fg={theme.textMuted}>[+sort Ctrl+O]</span>
+                )}
               </text>
               <text>
-                {bsonProjectionVisible
-                  ? <span fg={bsonFocusedSection === "projection" ? theme.primary : theme.warning}>[projection Ctrl+K]</span>
-                  : <span fg={theme.textMuted}>[+projection Ctrl+K]</span>
-                }
+                {bsonProjectionVisible ? (
+                  <span fg={bsonFocusedSection === "projection" ? theme.primary : theme.warning}>
+                    [projection Ctrl+K]
+                  </span>
+                ) : (
+                  <span fg={theme.textMuted}>[+projection Ctrl+K]</span>
+                )}
               </text>
             </>
           ) : (
@@ -248,22 +260,40 @@ export function FilterBar({
               />
             </>
           )
-        ) : (
-          queryMode === "simple" && hasProjTokens ? (
-            // Colour +field tokens in secondary, -field bare tokens in warning, rest in text
-            <text>
-              {query.trim().split(/\s+/).map((tok, i) => {
+        ) : queryMode === "simple" && hasProjTokens ? (
+          // Colour +field tokens in secondary, -field bare tokens in warning, rest in text
+          <text>
+            {query
+              .trim()
+              .split(/\s+/)
+              .map((tok, i) => {
                 const sep = i > 0 ? " " : ""
-                if (tok.startsWith("+")) return <span key={i} fg={theme.secondary}>{sep}{tok}</span>
-                if (tok.startsWith("-") && !/[><!:]/.test(tok.slice(1))) return <span key={i} fg={theme.warning}>{sep}{tok}</span>
-                return <span key={i} fg={theme.text}>{sep}{tok}</span>
+                if (tok.startsWith("+"))
+                  return (
+                    <span key={i} fg={theme.secondary}>
+                      {sep}
+                      {tok}
+                    </span>
+                  )
+                if (tok.startsWith("-") && !/[><!:]/.test(tok.slice(1)))
+                  return (
+                    <span key={i} fg={theme.warning}>
+                      {sep}
+                      {tok}
+                    </span>
+                  )
+                return (
+                  <span key={i} fg={theme.text}>
+                    {sep}
+                    {tok}
+                  </span>
+                )
               })}
-            </text>
-          ) : (
-            <text>
-              <span fg={theme.text}>{query}</span>
-            </text>
-          )
+          </text>
+        ) : (
+          <text>
+            <span fg={theme.text}>{query}</span>
+          </text>
         )}
       </box>
 
@@ -306,5 +336,3 @@ export function FilterBar({
     </box>
   )
 }
-
-

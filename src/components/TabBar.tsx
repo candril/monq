@@ -29,15 +29,9 @@ export function TabBar({ tabs, activeTabId }: TabBarProps) {
         return (
           <box key={tab.id} marginRight={2}>
             <text>
-              <span fg={active ? theme.primary : theme.textDim}>
-                {i + 1}:
-              </span>
-              <span fg={active ? theme.text : theme.textDim}>
-                {tab.collectionName}
-              </span>
-              {filter && (
-                <span fg={theme.textMuted}>{filter}</span>
-              )}
+              <span fg={active ? theme.primary : theme.textDim}>{i + 1}:</span>
+              <span fg={active ? theme.text : theme.textDim}>{tab.collectionName}</span>
+              {filter && <span fg={theme.textMuted}>{filter}</span>}
             </text>
           </box>
         )

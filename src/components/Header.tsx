@@ -15,8 +15,20 @@ interface HeaderProps {
   selectionCount?: number
 }
 
-export function Header({ dbName, host, collectionName, loading, right, selectionMode, selectionCount }: HeaderProps) {
-  const hasSelection = selectionMode !== "none" && selectionMode !== undefined && selectionCount !== undefined && selectionCount > 0
+export function Header({
+  dbName,
+  host,
+  collectionName,
+  loading,
+  right,
+  selectionMode,
+  selectionCount,
+}: HeaderProps) {
+  const hasSelection =
+    selectionMode !== "none" &&
+    selectionMode !== undefined &&
+    selectionCount !== undefined &&
+    selectionCount > 0
   const isSelecting = selectionMode === "selecting"
 
   return (
@@ -25,9 +37,12 @@ export function Header({ dbName, host, collectionName, loading, right, selection
       <text>
         <span fg={theme.textMuted}>Mon-Q</span>
         {collectionName && (
-          <span fg={theme.text}>{" "}<strong>{collectionName}</strong></span>
+          <span fg={theme.text}>
+            {" "}
+            <strong>{collectionName}</strong>
+          </span>
         )}
-        <span fg={theme.textDim}>{" "}{dbName}</span>
+        <span fg={theme.textDim}> {dbName}</span>
         <span fg={theme.textMuted}>@{host}</span>
       </text>
 

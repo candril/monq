@@ -27,14 +27,22 @@ export function detectValueType(value: unknown): JsonValueType {
 /** Get the theme color for a value type */
 export function valueColor(type: JsonValueType): string {
   switch (type) {
-    case "string": return theme.jsonString
-    case "number": return theme.jsonNumber
-    case "boolean": return theme.jsonBoolean
-    case "null": return theme.jsonNull
-    case "objectid": return theme.jsonObjectId
-    case "date": return theme.jsonDate
-    case "array": return theme.textDim
-    case "object": return theme.textDim
+    case "string":
+      return theme.jsonString
+    case "number":
+      return theme.jsonNumber
+    case "boolean":
+      return theme.jsonBoolean
+    case "null":
+      return theme.jsonNull
+    case "objectid":
+      return theme.jsonObjectId
+    case "date":
+      return theme.jsonDate
+    case "array":
+      return theme.textDim
+    case "object":
+      return theme.textDim
   }
 }
 

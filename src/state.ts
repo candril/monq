@@ -74,7 +74,12 @@ export type AppAction =
   | { type: "SUBMIT_QUERY" }
   | { type: "CLEAR_QUERY" }
   // Pipeline
-  | { type: "SET_PIPELINE"; pipeline: import("mongodb").Document[]; source: string; isAggregate: boolean }
+  | {
+      type: "SET_PIPELINE"
+      pipeline: import("mongodb").Document[]
+      source: string
+      isAggregate: boolean
+    }
   | { type: "CLEAR_PIPELINE" }
   | { type: "ENTER_PIPELINE_MODE" }
   | { type: "ENTER_SIMPLE_MODE"; query: string }
@@ -334,7 +339,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "MOVE_COLLECTION": {
       const newIndex = Math.max(
         0,
-        Math.min(state.collections.length - 1, state.collectionSelectedIndex + action.delta)
+        Math.min(state.collections.length - 1, state.collectionSelectedIndex + action.delta),
       )
       return { ...state, collectionSelectedIndex: newIndex }
     }
@@ -348,7 +353,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       // Save current tab state first
       const savedTabs = state.activeTabId
         ? state.tabs.map((t) =>
-            t.id === state.activeTabId ? snapshotTab(state, t.id, t.collectionName) : t
+            t.id === state.activeTabId ? snapshotTab(state, t.id, t.collectionName) : t,
           )
         : state.tabs
 
@@ -404,7 +409,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
       // Save current state to active tab, then clone it
       const savedTabs = state.tabs.map((t) =>
-        t.id === state.activeTabId ? snapshotTab(state, t.id, t.collectionName) : t
+        t.id === state.activeTabId ? snapshotTab(state, t.id, t.collectionName) : t,
       )
 
       const newTab: Tab = {
@@ -428,9 +433,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       if (!closingTab) return state
 
       // Snapshot the closing tab for undo
-      const savedClosing = action.tabId === state.activeTabId
-        ? snapshotTab(state, closingTab.id, closingTab.collectionName)
-        : closingTab
+      const savedClosing =
+        action.tabId === state.activeTabId
+          ? snapshotTab(state, closingTab.id, closingTab.collectionName)
+          : closingTab
       const closedTabs = [...state.closedTabs, savedClosing].slice(-10) // Keep last 10
 
       if (state.tabs.length <= 1) {
@@ -489,7 +495,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       // Save current tab state
       const savedTabs = state.activeTabId
         ? state.tabs.map((t) =>
-            t.id === state.activeTabId ? snapshotTab(state, t.id, t.collectionName) : t
+            t.id === state.activeTabId ? snapshotTab(state, t.id, t.collectionName) : t,
           )
         : state.tabs
 
@@ -508,7 +514,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
       // Save current tab state before switching
       const tabs = state.tabs.map((t) =>
-        t.id === state.activeTabId ? snapshotTab(state, t.id, t.collectionName) : t
+        t.id === state.activeTabId ? snapshotTab(state, t.id, t.collectionName) : t,
       )
 
       const targetTab = tabs.find((t) => t.id === action.tabId)
@@ -555,7 +561,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, documentsLoading: action.loading }
 
     case "RELOAD_DOCUMENTS":
-      return { ...state, documentsLoading: true, reloadCounter: state.reloadCounter + 1, loadedCount: 0, loadingMore: false }
+      return {
+        ...state,
+        documentsLoading: true,
+        reloadCounter: state.reloadCounter + 1,
+        loadedCount: 0,
+        loadingMore: false,
+      }
 
     case "SELECT_DOCUMENT":
       return { ...state, selectedIndex: Math.max(0, action.index) }
@@ -563,7 +575,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "MOVE_DOCUMENT": {
       const newIndex = Math.max(
         0,
-        Math.min(state.documents.length - 1, state.selectedIndex + action.delta)
+        Math.min(state.documents.length - 1, state.selectedIndex + action.delta),
       )
       return { ...state, selectedIndex: newIndex }
     }
@@ -601,7 +613,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         documentsLoading: true,
         reloadCounter: state.reloadCounter + 1,
         selectedIndex: 0,
-
       }
     }
 
@@ -609,7 +620,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       const visibleCols = state.columns.filter((c) => c.visible)
       const newColIndex = Math.max(
         0,
-        Math.min(visibleCols.length - 1, state.selectedColumnIndex + action.delta)
+        Math.min(visibleCols.length - 1, state.selectedColumnIndex + action.delta),
       )
       return { ...state, selectedColumnIndex: newColIndex }
     }
@@ -621,9 +632,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
       const nextMode = { normal: "full", full: "minimized", minimized: "normal" } as const
       const columns = state.columns.map((c) =>
-        c.field === targetCol.field
-          ? { ...c, displayMode: nextMode[c.displayMode] }
-          : c
+        c.field === targetCol.field ? { ...c, displayMode: nextMode[c.displayMode] } : c,
       )
       return { ...state, columns }
     }
@@ -632,9 +641,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "OPEN_QUERY": {
       // In simple mode: append space so suggestions show new tokens, not completions.
       // In BSON mode: just show the bar as-is.
-      const queryWithSpace = state.queryMode === "simple" && state.queryInput && !state.queryInput.endsWith(" ")
-        ? state.queryInput + " "
-        : state.queryInput
+      const queryWithSpace =
+        state.queryMode === "simple" && state.queryInput && !state.queryInput.endsWith(" ")
+          ? state.queryInput + " "
+          : state.queryInput
       return { ...state, queryVisible: true, queryInput: queryWithSpace }
     }
 
@@ -645,12 +655,16 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       if (state.queryMode === "bson") {
         return { ...state, queryVisible: true }
       }
-      const { filter: migratedFilter, projection: migratedProjObj } = parseSimpleQueryFull(state.queryInput, state.schemaMap)
+      const { filter: migratedFilter, projection: migratedProjObj } = parseSimpleQueryFull(
+        state.queryInput,
+        state.schemaMap,
+      )
       let bsonFilter = ""
       try {
-        bsonFilter = Object.keys(migratedFilter).length > 0
-          ? JSON.stringify(migratedFilter, null, 2)
-          : "{\n  \n}"
+        bsonFilter =
+          Object.keys(migratedFilter).length > 0
+            ? JSON.stringify(migratedFilter, null, 2)
+            : "{\n  \n}"
       } catch {
         bsonFilter = "{\n  \n}"
       }
@@ -688,12 +702,16 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "TOGGLE_QUERY_MODE": {
       if (state.queryMode === "simple") {
         // simple → bson: migrate current filter + sort + projection into BSON textareas
-        const { filter: migratedFilter2, projection: migratedProj2 } = parseSimpleQueryFull(state.queryInput, state.schemaMap)
+        const { filter: migratedFilter2, projection: migratedProj2 } = parseSimpleQueryFull(
+          state.queryInput,
+          state.schemaMap,
+        )
         let bsonFilter = ""
         try {
-          bsonFilter = Object.keys(migratedFilter2).length > 0
-            ? JSON.stringify(migratedFilter2, null, 2)
-            : "{\n  \n}"
+          bsonFilter =
+            Object.keys(migratedFilter2).length > 0
+              ? JSON.stringify(migratedFilter2, null, 2)
+              : "{\n  \n}"
         } catch {
           bsonFilter = "{\n  \n}"
         }
@@ -724,12 +742,27 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           const tokens: string[] = []
           let canConvert = true
           for (const [key, val] of Object.entries(filter)) {
-            if (val === null) { tokens.push(`${key}:null`); continue }
-            if (typeof val === "string") { tokens.push(`${key}:${val.includes(" ") ? `"${val}"` : val}`); continue }
-            if (typeof val === "number" || typeof val === "boolean") { tokens.push(`${key}:${val}`); continue }
+            if (val === null) {
+              tokens.push(`${key}:null`)
+              continue
+            }
+            if (typeof val === "string") {
+              tokens.push(`${key}:${val.includes(" ") ? `"${val}"` : val}`)
+              continue
+            }
+            if (typeof val === "number" || typeof val === "boolean") {
+              tokens.push(`${key}:${val}`)
+              continue
+            }
             if (typeof val === "object" && !Array.isArray(val)) {
               const ops = val as Record<string, unknown>
-              const opMap: Record<string, string> = { $gt: ">", $gte: ">=", $lt: "<", $lte: "<=", $ne: "!=" }
+              const opMap: Record<string, string> = {
+                $gt: ">",
+                $gte: ">=",
+                $lt: "<",
+                $lte: "<=",
+                $ne: "!=",
+              }
               const entries = Object.entries(ops)
               if (entries.length === 1 && opMap[entries[0][0]]) {
                 tokens.push(`${key}${opMap[entries[0][0]]}${entries[0][1]}`)
@@ -740,7 +773,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             break
           }
           simpleQuery = canConvert ? tokens.join(" ") : state.queryInput
-        } catch { /* Not valid JSON — leave as-is */ }
+        } catch {
+          /* Not valid JSON — leave as-is */
+        }
         // Carry projection back from BSON textarea as +field/-field tokens
         let projTokenStr = ""
         if (state.bsonProjection.trim()) {
@@ -749,12 +784,21 @@ export function appReducer(state: AppState, action: AppAction): AppState {
             const projTokens: string[] = []
             let projOk = true
             for (const [key, val] of Object.entries(proj)) {
-              if (val === 1) { projTokens.push(`+${key}`); continue }
-              if (val === 0) { projTokens.push(`-${key}`); continue }
-              projOk = false; break
+              if (val === 1) {
+                projTokens.push(`+${key}`)
+                continue
+              }
+              if (val === 0) {
+                projTokens.push(`-${key}`)
+                continue
+              }
+              projOk = false
+              break
             }
             if (projOk && projTokens.length > 0) projTokenStr = " " + projTokens.join(" ")
-          } catch { /* skip */ }
+          } catch {
+            /* skip */
+          }
         }
         return {
           ...state,
@@ -805,9 +849,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "FORMAT_BSON_SECTION": {
       const section = state.bsonFocusedSection
-      const raw = section === "filter" ? state.queryInput
-        : section === "sort" ? state.bsonSort
-        : state.bsonProjection
+      const raw =
+        section === "filter"
+          ? state.queryInput
+          : section === "sort"
+            ? state.bsonSort
+            : state.bsonProjection
       let formatted = raw
       try {
         formatted = JSON.stringify(JSON.parse(raw.trim()), null, 2)
@@ -830,22 +877,20 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         tabs: state.tabs.map((t) =>
           t.id === state.activeTabId
             ? { ...t, query: state.queryInput, queryMode: state.queryMode }
-            : t
+            : t,
         ),
       }
 
-     case "CLEAR_QUERY":
-       return {
-         ...state,
-         queryInput: "",
-         queryVisible: false,
-         documentsLoading: true,
-         reloadCounter: state.reloadCounter + 1,
-         selectedIndex: 0,
-         tabs: state.tabs.map((t) =>
-           t.id === state.activeTabId ? { ...t, query: "" } : t
-         ),
-       }
+    case "CLEAR_QUERY":
+      return {
+        ...state,
+        queryInput: "",
+        queryVisible: false,
+        documentsLoading: true,
+        reloadCounter: state.reloadCounter + 1,
+        selectedIndex: 0,
+        tabs: state.tabs.map((t) => (t.id === state.activeTabId ? { ...t, query: "" } : t)),
+      }
 
     // Pipeline
     case "SET_PIPELINE":
@@ -870,7 +915,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         pipelineSource: "",
         pipelineIsAggregate: false,
         pipelineConfirm: null,
-    pipelineWatching: false,
+        pipelineWatching: false,
         queryMode: "simple",
         queryInput: "",
         documentsLoading: true,
@@ -881,10 +926,15 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     // Tab switches mode: simple → pipeline (no reload — same data, just display change)
     case "ENTER_PIPELINE_MODE": {
       const stages: import("mongodb").Document[] = []
-      const { filter: enterFilter, projection: enterProj } = parseSimpleQueryFull(state.queryInput, state.schemaMap)
+      const { filter: enterFilter, projection: enterProj } = parseSimpleQueryFull(
+        state.queryInput,
+        state.schemaMap,
+      )
       try {
         if (Object.keys(enterFilter).length > 0) stages.push({ $match: enterFilter })
-      } catch { /* skip */ }
+      } catch {
+        /* skip */
+      }
       if (state.sortField) {
         stages.push({ $sort: { [state.sortField]: state.sortDirection } })
       }
@@ -928,9 +978,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "MOVE_PIPELINE_CONFIRM_FOCUS": {
       if (!state.pipelineConfirm) return state
       const cur = state.pipelineConfirm.focusedIndex
-      const next = cur === -1
-        ? (action.delta > 0 ? 0 : 2)
-        : Math.max(0, Math.min(2, cur + action.delta))
+      const next =
+        cur === -1 ? (action.delta > 0 ? 0 : 2) : Math.max(0, Math.min(2, cur + action.delta))
       return {
         ...state,
         pipelineConfirm: { ...state.pipelineConfirm, focusedIndex: next },
@@ -961,7 +1010,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       // Add/merge a field:value condition into the $match stage of the pipeline.
       // Only supported when pipeline has a $match stage (find-compatible).
       const matchIdx = state.pipeline.findIndex((s) => "$match" in s)
-      if (matchIdx === -1) return state  // no $match — caller should show toast
+      if (matchIdx === -1) return state // no $match — caller should show toast
 
       const updatedPipeline = state.pipeline.map((stage, i) => {
         if (i !== matchIdx) return stage
@@ -1027,15 +1076,34 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       const selectedIds = new Set(frozenIds)
       if (doc?._id !== undefined) selectedIds.add(idKey(doc._id))
       const selectedRows = deriveSelectedRows(state.documents, selectedIds)
-      return { ...state, selectionMode: "selecting", selectionAnchor: anchor, frozenIds, selectedIds, selectedRows }
+      return {
+        ...state,
+        selectionMode: "selecting",
+        selectionAnchor: anchor,
+        frozenIds,
+        selectedIds,
+        selectedRows,
+      }
     }
 
     case "EXIT_SELECTION_MODE":
-      return { ...state, selectionMode: "none", selectedIds: new Set(), frozenIds: new Set(), selectedRows: new Set(), selectionAnchor: null }
+      return {
+        ...state,
+        selectionMode: "none",
+        selectedIds: new Set(),
+        frozenIds: new Set(),
+        selectedRows: new Set(),
+        selectionAnchor: null,
+      }
 
     case "FREEZE_SELECTION":
       if (state.selectionMode !== "selecting") return state
-      return { ...state, selectionMode: "selected", frozenIds: new Set(state.selectedIds), selectionAnchor: null }
+      return {
+        ...state,
+        selectionMode: "selected",
+        frozenIds: new Set(state.selectedIds),
+        selectionAnchor: null,
+      }
 
     case "TOGGLE_CURRENT_ROW": {
       const doc = state.documents[state.selectedIndex]
@@ -1051,12 +1119,16 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         frozenIds.add(key)
       }
       const selectedRows = deriveSelectedRows(state.documents, selectedIds)
-      const selectionMode: SelectionMode = state.selectionMode === "none" ? "selected" : state.selectionMode
+      const selectionMode: SelectionMode =
+        state.selectionMode === "none" ? "selected" : state.selectionMode
       return { ...state, selectionMode, selectedIds, frozenIds, selectedRows }
     }
 
     case "MOVE_SELECTION": {
-      const newIndex = Math.max(0, Math.min(state.documents.length - 1, state.selectedIndex + action.delta))
+      const newIndex = Math.max(
+        0,
+        Math.min(state.documents.length - 1, state.selectedIndex + action.delta),
+      )
       if (state.selectionMode === "selecting") {
         const anchor = state.selectionAnchor ?? newIndex
         const selectedIds = new Set(state.frozenIds)
@@ -1074,7 +1146,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "JUMP_SELECTION_END": {
       if (state.selectionMode !== "selecting" || state.selectionAnchor === null) return state
-      return { ...state, selectedIndex: state.selectionAnchor, selectionAnchor: state.selectedIndex }
+      return {
+        ...state,
+        selectedIndex: state.selectionAnchor,
+        selectionAnchor: state.selectedIndex,
+      }
     }
 
     case "SELECT_ALL": {
@@ -1084,7 +1160,14 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       }
       const frozenIds = new Set(selectedIds)
       const selectedRows = deriveSelectedRows(state.documents, selectedIds)
-      return { ...state, selectionMode: "selecting", frozenIds, selectedIds, selectedRows, selectionAnchor: state.selectedIndex }
+      return {
+        ...state,
+        selectionMode: "selecting",
+        frozenIds,
+        selectedIds,
+        selectedRows,
+        selectionAnchor: state.selectedIndex,
+      }
     }
 
     case "SHOW_BULK_EDIT_CONFIRM":
@@ -1096,18 +1179,31 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "MOVE_BULK_EDIT_FOCUS": {
       if (!state.bulkEditConfirmation) return state
       const { missing, added } = state.bulkEditConfirmation
-      const count = 3 + (missing.length > 0 ? 1 : 0) + (added.length > 0 ? 1 : 0) + (missing.length > 0 && added.length > 0 ? 1 : 0)
+      const count =
+        3 +
+        (missing.length > 0 ? 1 : 0) +
+        (added.length > 0 ? 1 : 0) +
+        (missing.length > 0 && added.length > 0 ? 1 : 0)
       const current = state.bulkEditConfirmation.focusedIndex
       // From -1 (unselected): j goes to 0, k goes to last
-      const next = current === -1
-        ? (action.delta > 0 ? 0 : count - 1)
-        : (current + action.delta + count) % count
-      return { ...state, bulkEditConfirmation: { ...state.bulkEditConfirmation, focusedIndex: next } }
+      const next =
+        current === -1
+          ? action.delta > 0
+            ? 0
+            : count - 1
+          : (current + action.delta + count) % count
+      return {
+        ...state,
+        bulkEditConfirmation: { ...state.bulkEditConfirmation, focusedIndex: next },
+      }
     }
 
     case "SET_BULK_EDIT_FOCUS": {
       if (!state.bulkEditConfirmation) return state
-      return { ...state, bulkEditConfirmation: { ...state.bulkEditConfirmation, focusedIndex: action.index } }
+      return {
+        ...state,
+        bulkEditConfirmation: { ...state.bulkEditConfirmation, focusedIndex: action.index },
+      }
     }
 
     case "SHOW_DELETE_CONFIRM":
@@ -1119,15 +1215,16 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "MOVE_DELETE_FOCUS": {
       if (!state.deleteConfirmation) return state
       const current = state.deleteConfirmation.focusedIndex
-      const next = current === -1
-        ? (action.delta > 0 ? 0 : 1)
-        : (current + action.delta + 2) % 2
+      const next = current === -1 ? (action.delta > 0 ? 0 : 1) : (current + action.delta + 2) % 2
       return { ...state, deleteConfirmation: { ...state.deleteConfirmation, focusedIndex: next } }
     }
 
     case "SET_DELETE_FOCUS": {
       if (!state.deleteConfirmation) return state
-      return { ...state, deleteConfirmation: { ...state.deleteConfirmation, focusedIndex: action.index } }
+      return {
+        ...state,
+        deleteConfirmation: { ...state.deleteConfirmation, focusedIndex: action.index },
+      }
     }
 
     case "START_PIPELINE_WATCH":

@@ -27,28 +27,63 @@ interface ConfirmDialogProps {
 
 export function ConfirmDialog({ title, lines, options, focusedIndex }: ConfirmDialogProps) {
   return (
-    <box position="absolute" top={0} left={0} width="100%" height="100%" zIndex={200} justifyContent="center" alignItems="center">
-      <box position="absolute" top={0} left={0} width="100%" height="100%" backgroundColor={theme.overlayBg} />
+    <box
+      position="absolute"
+      top={0}
+      left={0}
+      width="100%"
+      height="100%"
+      zIndex={200}
+      justifyContent="center"
+      alignItems="center"
+    >
+      <box
+        position="absolute"
+        top={0}
+        left={0}
+        width="100%"
+        height="100%"
+        backgroundColor={theme.overlayBg}
+      />
       <box minWidth={72} maxWidth="90%" flexDirection="column" backgroundColor={theme.modalBg}>
         <box paddingX={2} paddingY={1} backgroundColor={theme.headerBg}>
-          <text><span fg={theme.warning}>{title}</span></text>
+          <text>
+            <span fg={theme.warning}>{title}</span>
+          </text>
         </box>
         <box flexDirection="column" paddingX={2} paddingY={1}>
           {lines.map((line, i) => (
             <text key={i}>
-              <span fg={line.danger ? theme.error : line.dim ? theme.textDim : theme.text}>{line.text || " "}</span>
+              <span fg={line.danger ? theme.error : line.dim ? theme.textDim : theme.text}>
+                {line.text || " "}
+              </span>
             </text>
           ))}
         </box>
-        <box paddingX={2} paddingTop={1} paddingBottom={1} backgroundColor={theme.headerBg} flexDirection="column" gap={1}>
+        <box
+          paddingX={2}
+          paddingTop={1}
+          paddingBottom={1}
+          backgroundColor={theme.headerBg}
+          flexDirection="column"
+          gap={1}
+        >
           <box flexDirection="row" gap={4} flexWrap="wrap">
             {options.map((opt, i) => {
               const selected = i === focusedIndex
               const bg = selected ? (opt.color ?? theme.primary) : undefined
               const fg = selected ? theme.bg : theme.textDim
               return (
-                <box key={opt.key} paddingLeft={1} paddingRight={1} backgroundColor={bg} flexShrink={0}>
-                  <text fg={fg}>{opt.key}: {opt.label}</text>
+                <box
+                  key={opt.key}
+                  paddingLeft={1}
+                  paddingRight={1}
+                  backgroundColor={bg}
+                  flexShrink={0}
+                >
+                  <text fg={fg}>
+                    {opt.key}: {opt.label}
+                  </text>
                 </box>
               )
             })}
@@ -76,24 +111,56 @@ interface ConfirmChoiceDialogProps {
   choices: ConfirmChoice[]
 }
 
-export function ConfirmChoiceDialog({ visible, title, message, choices }: ConfirmChoiceDialogProps) {
+export function ConfirmChoiceDialog({
+  visible,
+  title,
+  message,
+  choices,
+}: ConfirmChoiceDialogProps) {
   if (!visible) return null
   return (
-    <box position="absolute" top={0} left={0} width="100%" height="100%" justifyContent="center" alignItems="center" backgroundColor={theme.overlayBg}>
-      <box flexDirection="column" backgroundColor={theme.modalBg} paddingX={3} paddingY={1} minWidth={50}>
+    <box
+      position="absolute"
+      top={0}
+      left={0}
+      width="100%"
+      height="100%"
+      justifyContent="center"
+      alignItems="center"
+      backgroundColor={theme.overlayBg}
+    >
+      <box
+        flexDirection="column"
+        backgroundColor={theme.modalBg}
+        paddingX={3}
+        paddingY={1}
+        minWidth={50}
+      >
         <box height={1} justifyContent="center" marginBottom={1}>
-          <text><span fg={theme.primary}><strong>{title}</strong></span></text>
+          <text>
+            <span fg={theme.primary}>
+              <strong>{title}</strong>
+            </span>
+          </text>
         </box>
         {message && (
           <box marginBottom={1}>
-            <text><span fg={theme.textDim}>{message}</span></text>
+            <text>
+              <span fg={theme.textDim}>{message}</span>
+            </text>
           </box>
         )}
         <box flexDirection="column" gap={0}>
           {choices.map((choice) => (
             <box key={choice.key} height={1} flexDirection="row" gap={1}>
-              <text><span fg={choice.color ?? theme.warning}><strong>[{choice.key}]</strong></span></text>
-              <text><span fg={theme.text}>{choice.label}</span></text>
+              <text>
+                <span fg={choice.color ?? theme.warning}>
+                  <strong>[{choice.key}]</strong>
+                </span>
+              </text>
+              <text>
+                <span fg={theme.text}>{choice.label}</span>
+              </text>
             </box>
           ))}
         </box>

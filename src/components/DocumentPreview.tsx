@@ -39,10 +39,7 @@ export function DocumentPreview({ document, position, scrollOffset }: DocumentPr
     }
   }, [scrollOffset])
 
-  const json = useMemo(
-    () => (document ? serializeDocument(document) : ""),
-    [document],
-  )
+  const json = useMemo(() => (document ? serializeDocument(document) : ""), [document])
 
   if (!position || !document) return null
 
@@ -59,7 +56,13 @@ export function DocumentPreview({ document, position, scrollOffset }: DocumentPr
     >
       <scrollbox ref={scrollRef} flexGrow={1}>
         <code
-          {...{ content: json, filetype: "json", syntaxStyle: jsonSyntaxStyle, drawUnstyledText: false, conceal: false } as any}
+          {...({
+            content: json,
+            filetype: "json",
+            syntaxStyle: jsonSyntaxStyle,
+            drawUnstyledText: false,
+            conceal: false,
+          } as any)}
         />
       </scrollbox>
     </box>
