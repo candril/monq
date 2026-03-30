@@ -1,12 +1,46 @@
 <p align="center">
-  <img src="logo.png" alt="monq" width="220" />
+  <img src="logo.png" alt="monq" width="180" />
 </p>
 
-A terminal-based MongoDB browser and query tool. Keyboard-first, zero config — pass `--uri` and explore.
+A terminal-based MongoDB browser and query tool. Keyboard-first, zero config. Pass `--uri` and explore.
 
 ```
 monq --uri mongodb://localhost:27017/mydb
 ```
+
+---
+
+### Browse collections with smart columns
+
+Auto-detects document fields, sorts, hides columns, and scrolls horizontally. Press `/` to open the query bar — filter with `price<20`, `customer:Alice`, regex, arrays and more. Schema-aware field suggestions appear as you type.
+
+<img src="screenshots/document-list.png" alt="Document list" width="100%" />
+
+### Simple query bar with schema-aware suggestions
+
+Filter and project in a single query string. Mix conditions freely — `price<20 product:Webcam` narrows to cheap webcams instantly. Field names are autocompleted from the collection's schema.
+
+<img src="screenshots/query-bar.png" alt="Simple query bar with field suggestions" width="100%" />
+
+### Write aggregation pipelines with live feedback
+
+Press `Ctrl+F` to open the pipeline editor in `$EDITOR`. Results update instantly on save. Use `Ctrl+E` to open a tmux split alongside monq and iterate without leaving the terminal.
+
+<img src="screenshots/pipeline-editor.png" alt="Pipeline editor with live results" width="100%" />
+
+### Everything at your fingertips via the command palette
+
+`Ctrl+P` opens the palette — switch collections, change themes, open the pipeline editor, and more, all from one place.
+
+<img src="screenshots/command-palette.png" alt="Command palette" width="100%" />
+
+### Saved connections with secret resolution
+
+Define named profiles in `~/.config/monq/config.toml`. Use `uri_cmd` to fetch URIs from Vault, 1Password, or any secret manager — secrets never touch the config file.
+
+<img src="screenshots/connections.png" alt="Saved connection profiles" width="100%" />
+
+---
 
 ## Features
 
@@ -19,8 +53,13 @@ monq --uri mongodb://localhost:27017/mydb
 - **Schema-aware suggestions** — field name autocomplete with dot-notation drill-down, projection-aware
 - **Smart columns** — auto-detects document fields, horizontal scroll, sort, column sizing, hide via `-`
 - **Database switcher** — picks database on startup if none in URI; switch anytime via `Ctrl+P`
+- **Saved connections** — named profiles in `~/.config/monq/config.toml`, supports secret-fetching commands
+- **Theme presets** — 11 built-in themes (Tokyo Night, Catppuccin, Gruvbox, Nord, Dracula, and more), switchable via `Ctrl+P`
+- **Config file** — customise keybindings and colours in `~/.config/monq/config.toml`
 
 ## Install
+
+> **Note:** monq is not yet available via any package manager. You need to build from source.
 
 Requires [Bun](https://bun.sh).
 
@@ -31,7 +70,7 @@ bun install
 just build        # produces dist/monq binary
 ```
 
-Then put `dist/monq` on your `$PATH`, or run directly:
+Then put `dist/monq` on your `$PATH`, or run directly without building:
 
 ```sh
 bun src/index.tsx --uri mongodb://localhost:27017/mydb
@@ -49,6 +88,7 @@ Examples:
 monq --uri mongodb://localhost:27017/mydb
 monq --uri "mongodb+srv://user:pass@cluster.mongodb.net/mydb"
 monq --uri mongodb://localhost:27017        # picks database interactively
+monq                                        # shows saved connections or URI prompt
 ```
 
 ## Key Bindings
@@ -124,7 +164,43 @@ Author:Peter -_id -tags         → filter by Author, exclude _id and tags
 
 `+field` = include, bare `-field` = exclude. `-field:value` is still a `$ne` filter.
 
-Projection tokens carry through to the pipeline editor and BSON mode automatically.
+## Configuration
+
+Create `~/.config/monq/config.toml` to customise themes and keybindings:
+
+```toml
+# Pick a built-in theme preset
+theme_preset = "catppuccin-mocha"
+
+[theme]
+# Override individual colour tokens (hex)
+primary = "#ff9e64"
+
+[keys]
+# Remap actions to different keys
+"nav.down" = ["j", "down"]
+"app.quit" = "q"
+```
+
+Available theme presets: `tokyo-night` (default), `catppuccin-mocha`, `catppuccin-latte`, `gruvbox-dark`, `nord`, `dracula`, `solarized-dark`, `one-dark-pro`, `rose-pine`, `rose-pine-moon`, `rose-pine-dawn`.
+
+You can also switch themes interactively at any time from the command palette (`Ctrl+P`).
+
+## Saved Connections
+
+Add named connection profiles to `~/.config/monq/config.toml`:
+
+```toml
+[connections.local]
+name = "Local Dev"
+uri  = "mongodb://localhost:27017"
+
+[connections.prod]
+name    = "Production"
+uri_cmd = ["vault", "read", "-field=uri", "secret/mongo/prod"]
+```
+
+`uri_cmd` runs a command and uses its stdout as the URI — secrets never touch the config file.
 
 ## Tech Stack
 

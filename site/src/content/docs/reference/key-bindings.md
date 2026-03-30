@@ -6,6 +6,8 @@ tableOfContents:
   maxHeadingLevel: 2
 ---
 
+All bindings can be remapped in `~/.config/monq/config.toml`. See [Configuration](/monq/reference/configuration/#keybindings).
+
 ## Navigation
 
 | Key | Action |
@@ -30,6 +32,7 @@ tableOfContents:
 | `s` | Cycle sort on current column |
 | `-` | Hide current column (adds `-field` projection token) |
 | `w` | Cycle column width mode |
+| `Shift+F` | Show / hide filter bar |
 | `Ctrl+F` | Open pipeline editor in `$EDITOR` |
 | `Ctrl+E` | Open pipeline file in tmux split (or copy path) |
 | `Backspace` | Clear query / pipeline |
@@ -43,6 +46,7 @@ tableOfContents:
 | `i` | Insert new document |
 | `v` | Enter / freeze selection mode |
 | `Space` | Toggle row selection |
+| `o` | Jump cursor to selection end |
 | `Ctrl+A` | Select all |
 | `Shift+D` | Delete selected (with confirmation) |
 | `y` / `Y` | Copy cell value / full document JSON |

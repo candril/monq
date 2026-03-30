@@ -22,9 +22,18 @@ monq --uri "mongodb+srv://user:pass@cluster.mongodb.net/mydb"
 
 # Let monq pick the database interactively
 monq --uri mongodb://localhost:27017
+
+# Show saved connections (or URI prompt if none configured)
+monq
 ```
 
 If no database is included in the URI, monq displays a database picker on startup. You can also switch databases at any time with `Ctrl+P`.
+
+## Saved connections
+
+If you have [saved connection profiles](/monq/reference/configuration/#connections) in `~/.config/monq/config.toml`, monq shows a connection picker on startup instead of the URI prompt. Type to fuzzy-filter the list, then press `Enter` to connect.
+
+Press `Tab` from the connection picker to enter a custom URI instead.
 
 ## Query modes
 
@@ -60,3 +69,9 @@ Open multiple collections at once with `t` (clone tab) or by switching after `Ct
 - `v` then `Space` to select rows, then `e` — bulk edit as a JSON array
 - `i` — insert a new document
 - `Shift+D` — delete selected documents (with confirmation)
+
+## Themes
+
+Switch between the 11 built-in colour themes at any time via the command palette (`Ctrl+P` → search "theme"). The selected theme is persisted across sessions.
+
+You can also set a default theme or customise individual colours in `~/.config/monq/config.toml`. See [Configuration](/monq/reference/configuration/) for details.

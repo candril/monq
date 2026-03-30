@@ -79,3 +79,11 @@ clean:
 # Show outdated dependencies
 outdated:
     bun outdated
+
+# Run the documentation site locally
+site-dev:
+    cd site && npm run dev
+
+# Build the documentation site
+site-build:
+    cd site && npm run build

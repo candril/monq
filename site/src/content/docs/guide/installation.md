@@ -3,6 +3,10 @@ title: Installation
 description: How to install monq on your system.
 ---
 
+:::caution
+monq is not yet available via any package manager (Homebrew, npm, etc.). You need to build from source for now.
+:::
+
 ## Prerequisites
 
 - [Bun](https://bun.sh) — monq uses Bun as its runtime and build tool

@@ -6,7 +6,7 @@ hero:
   image:
     file: ../../assets/logo.png
     alt: monq logo
-  tagline: Terminal-based MongoDB browser. Keyboard-first, zero config — pass `--uri` and explore.
+  tagline: Terminal-based MongoDB browser. Keyboard-first, zero config. Pass `--uri` and explore.
   actions:
     - text: Get Started
       link: /monq/guide/installation/
@@ -19,6 +19,42 @@ hero:
 ---
 
 import { CardGrid, Card } from '@astrojs/starlight/components'
+import { Image } from 'astro:assets'
+import documentList from '../../assets/screenshots/document-list.png'
+import queryBar from '../../assets/screenshots/query-bar.png'
+import pipelineEditor from '../../assets/screenshots/pipeline-editor.png'
+import commandPalette from '../../assets/screenshots/command-palette.png'
+import connections from '../../assets/screenshots/connections.png'
+
+## Browse collections with smart columns
+
+Auto-detects document fields, sorts, hides columns, and scrolls horizontally. Press `/` to open the query bar — filter with `price<20`, `customer:Alice`, regex, arrays and more. Switch to raw BSON JSON or a full aggregation pipeline with `Tab`.
+
+<Image src={documentList} alt="Document list with smart columns and inline query bar" />
+
+## Simple query bar with schema-aware suggestions
+
+Filter and project in a single query string — no separators, no syntax to memorise. Mix conditions freely: `price<20 product:Webcam` narrows to cheap webcams instantly. Field names are autocompleted from the collection's schema as you type.
+
+<Image src={queryBar} alt="Simple query bar open with field suggestions and filtered results" />
+
+## Write aggregation pipelines with live feedback
+
+Press `Ctrl+F` to open the pipeline editor in `$EDITOR` with JSON Schema autocompletion. Results update instantly on save. Press `Ctrl+E` to open a tmux split alongside monq and iterate without leaving the terminal.
+
+<Image src={pipelineEditor} alt="Pipeline editor open in a tmux split alongside live results" />
+
+## Everything at your fingertips via the command palette
+
+`Ctrl+P` opens the palette — switch collections, change themes, open the pipeline editor, navigate databases, and more, all searchable from one place.
+
+<Image src={commandPalette} alt="Command palette with searchable actions and keybinding hints" />
+
+## Saved connections with secret resolution
+
+Define named profiles in `~/.config/monq/config.toml`. Use `uri_cmd` to fetch URIs from Vault, 1Password, or any secret manager — secrets never touch the config file.
+
+<Image src={connections} alt="Saved connection profiles screen on startup" />
 
 ## Features
 
@@ -30,10 +66,7 @@ import { CardGrid, Card } from '@astrojs/starlight/components'
     Use `+field` to include and `-field` to exclude columns directly in the query bar.
   </Card>
   <Card title="Pipeline editor" icon="open-book">
-    Write full aggregation pipelines in `$EDITOR` with JSON Schema autocompletion.
-  </Card>
-  <Card title="Live pipeline reload" icon="rocket">
-    Watch `pipeline.jsonc` for external changes and open a tmux split with `Ctrl+E`.
+    Write full aggregation pipelines in `$EDITOR` with JSON Schema autocompletion and live reload.
   </Card>
   <Card title="Collection tabs" icon="list-format">
     Open multiple collections side by side, switch with `1–9` or `[`/`]`.
@@ -44,11 +77,14 @@ import { CardGrid, Card } from '@astrojs/starlight/components'
   <Card title="Schema-aware suggestions" icon="magnifier">
     Field name autocomplete with dot-notation drill-down, projection-aware.
   </Card>
-  <Card title="Smart columns" icon="bars">
-    Auto-detects document fields, horizontal scroll, sort, column sizing, hide via `-`.
+  <Card title="Remappable keybindings" icon="setting">
+    Remap any action to a different key in `~/.config/monq/config.toml`.
   </Card>
-  <Card title="Database switcher" icon="laptop">
-    Picks database on startup if none in URI; switch anytime via `Ctrl+P`.
+  <Card title="Theme presets" icon="laptop">
+    11 built-in colour themes — Tokyo Night, Catppuccin, Gruvbox, Nord, Dracula and more. Switch live via `Ctrl+P`.
+  </Card>
+  <Card title="Saved connections" icon="rocket">
+    Named profiles in `config.toml` with support for secret-fetching commands via `uri_cmd`.
   </Card>
 </CardGrid>
 

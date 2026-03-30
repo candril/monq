@@ -10,7 +10,6 @@ export default defineConfig({
       description: 'Terminal-based MongoDB browser and query tool. Keyboard-first, zero config.',
       logo: {
         src: './src/assets/logo.png',
-        replacesTitle: true,
       },
       favicon: '/logo.png',
       social: [
@@ -37,6 +36,7 @@ export default defineConfig({
             { label: 'Query Syntax', slug: 'reference/query-syntax' },
             { label: 'Key Bindings', slug: 'reference/key-bindings' },
             { label: 'Pipeline Editor', slug: 'reference/pipeline' },
+            { label: 'Configuration', slug: 'reference/configuration' },
           ],
         },
       ],
