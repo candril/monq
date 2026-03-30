@@ -182,7 +182,7 @@ export function FilterBar({
 }: FilterBarProps) {
   if (!query && !editing) return null
 
-  const badgeLabel = queryMode === "simple" ? "simple" : "BSON"
+  const badgeLabel = queryMode === "simple" ? "󰈲" : "BSON"
   const badgeBg = queryMode === "simple" ? theme.querySimple : theme.queryBson
 
   // Extract projection tokens (+field / -field bare) for display highlighting

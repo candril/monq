@@ -6,7 +6,7 @@ hero:
   image:
     file: ../../assets/logo.png
     alt: monq logo
-  tagline: Terminal-based MongoDB browser. Keyboard-first, zero config. Pass `--uri` and explore.
+  tagline: Browse, query, edit. MongoDB without leaving the terminal.
   actions:
     - text: Get Started
       link: /monq/guide/installation/
@@ -22,6 +22,9 @@ import { CardGrid, Card } from '@astrojs/starlight/components'
 import { Image } from 'astro:assets'
 import documentList from '../../assets/screenshots/document-list.png'
 import queryBar from '../../assets/screenshots/query-bar.png'
+import filterRange from '../../assets/screenshots/filter-range.png'
+import filterCombined from '../../assets/screenshots/filter-combined.png'
+import filterNested from '../../assets/screenshots/filter-nested.png'
 import pipelineEditor from '../../assets/screenshots/pipeline-editor.png'
 import commandPalette from '../../assets/screenshots/command-palette.png'
 import connections from '../../assets/screenshots/connections.png'
@@ -32,11 +35,17 @@ Auto-detects document fields, sorts, hides columns, and scrolls horizontally. Pr
 
 <Image src={documentList} alt="Document list with smart columns and inline query bar" />
 
-## Simple query bar with schema-aware suggestions
+## A filter bar that speaks your language
 
-Filter and project in a single query string — no separators, no syntax to memorise. Mix conditions freely: `price<20 product:Webcam` narrows to cheap webcams instantly. Field names are autocompleted from the collection's schema as you type.
+No query language to learn. Combine conditions freely — `product:Mouse price:10..200 qty>30` filters by exact value, range, and comparison in one line. Field names autocomplete from the live schema as you type.
 
-<Image src={queryBar} alt="Simple query bar open with field suggestions and filtered results" />
+<Image src={filterCombined} alt="Filter bar with combined query: product:Mouse price:10..200 qty>30" />
+
+<Image src={filterNested} alt="Filter bar with nested field query items.color:Black" />
+
+Open the filter bar with `/` and the schema dropdown appears — every field with its type, ready to autocomplete.
+
+<Image src={queryBar} alt="Filter bar open showing schema-aware field suggestions" />
 
 ## Write aggregation pipelines with live feedback
 
