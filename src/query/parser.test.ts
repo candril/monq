@@ -117,6 +117,115 @@ describe("parseSimpleQueryFull", () => {
   })
 })
 
+describe("date coercion in parseSimpleQueryFull", () => {
+  test("date-only string coerced to start-of-day UTC Date", () => {
+    const { filter } = parseSimpleQueryFull("createdAt:2025-01-01", emptySchema)
+    expect(filter).toEqual({ createdAt: new Date("2025-01-01T00:00:00.000Z") })
+  })
+
+  test("ISO datetime string coerced to Date", () => {
+    const { filter } = parseSimpleQueryFull("createdAt:2025-01-01T15:30:00Z", emptySchema)
+    expect(filter).toEqual({ createdAt: new Date("2025-01-01T15:30:00Z") })
+  })
+
+  test("gt operator with date", () => {
+    const { filter } = parseSimpleQueryFull("createdAt>2025-01-01", emptySchema)
+    expect(filter).toEqual({ createdAt: { $gt: new Date("2025-01-01T00:00:00.000Z") } })
+  })
+
+  test("gte operator with datetime", () => {
+    const { filter } = parseSimpleQueryFull("createdAt>=2025-01-01T12:00:00Z", emptySchema)
+    expect(filter).toEqual({ createdAt: { $gte: new Date("2025-01-01T12:00:00Z") } })
+  })
+
+  test("lt operator with date", () => {
+    const { filter } = parseSimpleQueryFull("createdAt<2025-12-31", emptySchema)
+    expect(filter).toEqual({ createdAt: { $lt: new Date("2025-12-31T00:00:00.000Z") } })
+  })
+
+  test("ne operator with date", () => {
+    const { filter } = parseSimpleQueryFull("createdAt!=2025-06-15", emptySchema)
+    expect(filter).toEqual({ createdAt: { $ne: new Date("2025-06-15T00:00:00.000Z") } })
+  })
+
+  test("date range: field:date1..date2 (end-of-day on upper bound)", () => {
+    const { filter } = parseSimpleQueryFull("createdAt:2025-01-01..2025-12-31", emptySchema)
+    expect(filter).toEqual({
+      createdAt: {
+        $gte: new Date("2025-01-01T00:00:00.000Z"),
+        $lte: new Date("2025-12-31T23:59:59.999Z"),
+      },
+    })
+  })
+
+  test("date range: open lower bound (..date)", () => {
+    const { filter } = parseSimpleQueryFull("createdAt:..2025-12-31", emptySchema)
+    expect(filter).toEqual({ createdAt: { $lte: new Date("2025-12-31T23:59:59.999Z") } })
+  })
+
+  test("date range: open upper bound (date..)", () => {
+    const { filter } = parseSimpleQueryFull("createdAt:2025-01-01..", emptySchema)
+    expect(filter).toEqual({ createdAt: { $gte: new Date("2025-01-01T00:00:00.000Z") } })
+  })
+
+  test("relative: now", () => {
+    const before = Date.now()
+    const { filter } = parseSimpleQueryFull("createdAt>now", emptySchema)
+    const after = Date.now()
+    const d = (filter as Record<string, { $gt: Date }>).createdAt.$gt
+    expect(d.getTime()).toBeGreaterThanOrEqual(before)
+    expect(d.getTime()).toBeLessThanOrEqual(after)
+  })
+
+  test("relative: today is start-of-day UTC", () => {
+    const { filter } = parseSimpleQueryFull("createdAt>=today", emptySchema)
+    const d = (filter as Record<string, { $gte: Date }>).createdAt.$gte
+    expect(d.getUTCHours()).toBe(0)
+    expect(d.getUTCMinutes()).toBe(0)
+    expect(d.getUTCSeconds()).toBe(0)
+  })
+
+  test("relative: ago(7d) is ~7 days before now", () => {
+    const before = Date.now()
+    const { filter } = parseSimpleQueryFull("createdAt>ago(7d)", emptySchema)
+    const d = (filter as Record<string, { $gt: Date }>).createdAt.$gt
+    const diff = before - d.getTime()
+    expect(diff).toBeGreaterThanOrEqual(7 * 86_400_000 - 1000)
+    expect(diff).toBeLessThanOrEqual(7 * 86_400_000 + 1000)
+  })
+
+  test("relative: in(7d) is ~7 days from now", () => {
+    const before = Date.now()
+    const { filter } = parseSimpleQueryFull("expiresAt<in(7d)", emptySchema)
+    const d = (filter as Record<string, { $lt: Date }>).expiresAt.$lt
+    const diff = d.getTime() - before
+    expect(diff).toBeGreaterThanOrEqual(7 * 86_400_000 - 1000)
+    expect(diff).toBeLessThanOrEqual(7 * 86_400_000 + 1000)
+  })
+})
+
+describe("number range in parseSimpleQueryFull", () => {
+  test("field:N..M → $gte/$lte", () => {
+    const { filter } = parseSimpleQueryFull("age:18..65", emptySchema)
+    expect(filter).toEqual({ age: { $gte: 18, $lte: 65 } })
+  })
+
+  test("open lower bound: field:..M → $lte", () => {
+    const { filter } = parseSimpleQueryFull("age:..65", emptySchema)
+    expect(filter).toEqual({ age: { $lte: 65 } })
+  })
+
+  test("open upper bound: field:N.. → $gte", () => {
+    const { filter } = parseSimpleQueryFull("age:18..", emptySchema)
+    expect(filter).toEqual({ age: { $gte: 18 } })
+  })
+
+  test("float bounds", () => {
+    const { filter } = parseSimpleQueryFull("price:10.5..99.99", emptySchema)
+    expect(filter).toEqual({ price: { $gte: 10.5, $lte: 99.99 } })
+  })
+})
+
 describe("filterToSimple", () => {
   test("empty filter", () => {
     const { query, lossless } = filterToSimple({})
@@ -162,6 +271,46 @@ describe("filterToSimple", () => {
     const { query } = filterToSimple({ status: { $in: ["open", "closed"] } })
 
     expect(query).toBe("status:[open,closed]")
+  })
+
+  test("Date value (start-of-day) round-trips to YYYY-MM-DD", () => {
+    const { query, lossless } = filterToSimple({ createdAt: new Date("2025-01-01T00:00:00.000Z") })
+
+    expect(query).toBe("createdAt:2025-01-01")
+    expect(lossless).toBe(true)
+  })
+
+  test("Date value with time round-trips to full ISO string", () => {
+    const { query, lossless } = filterToSimple({ createdAt: new Date("2025-01-01T15:30:00.000Z") })
+
+    expect(query).toBe("createdAt:2025-01-01T15:30:00.000Z")
+    expect(lossless).toBe(true)
+  })
+
+  test("$gt with Date round-trips correctly", () => {
+    const { query, lossless } = filterToSimple({ createdAt: { $gt: new Date("2025-01-01T00:00:00.000Z") } })
+
+    expect(query).toBe("createdAt>2025-01-01")
+    expect(lossless).toBe(true)
+  })
+
+  test("date range { $gte, $lte } round-trips to field:d1..d2", () => {
+    const { query, lossless } = filterToSimple({
+      createdAt: {
+        $gte: new Date("2025-01-01T00:00:00.000Z"),
+        $lte: new Date("2025-12-31T23:59:59.999Z"),
+      },
+    })
+
+    expect(query).toBe("createdAt:2025-01-01..2025-12-31")
+    expect(lossless).toBe(true)
+  })
+
+  test("number range { $gte, $lte } round-trips to field:N..M", () => {
+    const { query, lossless } = filterToSimple({ age: { $gte: 18, $lte: 65 } })
+
+    expect(query).toBe("age:18..65")
+    expect(lossless).toBe(true)
   })
 })
 
@@ -241,6 +390,14 @@ describe("simpleToBson", () => {
     const { bsonProjection } = simpleToBson("+Name -State", emptySchema, null, -1, "", "")
 
     expect(JSON.parse(bsonProjection)).toEqual({ Name: 1, State: 0 })
+  })
+
+  test("date value serialised as EJSON $date in bsonFilter", () => {
+    const { bsonFilter } = simpleToBson("createdAt>2025-01-01", emptySchema, null, -1, "", "")
+
+    // EJSON.stringify emits { "$date": { "$numberLong": "..." } } or { "$date": "..." }
+    const parsed = JSON.parse(bsonFilter)
+    expect(parsed).toHaveProperty("createdAt.$gt.$date")
   })
 })
 

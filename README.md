@@ -140,19 +140,28 @@ monq                                        # shows saved connections or URI pro
 Filter and projection live in the same query string — no separator needed.
 
 ```
-Author:Peter                    → { "Author": "Peter" }
-Author:Peter State:Closed       → { "Author": "Peter", "State": "Closed" }
-age>25                          → { "age": { "$gt": 25 } }
-age>=18 age<65                  → { "age": { "$gte": 18, "$lt": 65 } }
-name:/^john/i                   → { "name": { "$regex": "^john", "$options": "i" } }
--status:deleted                 → { "status": { "$ne": "deleted" } }
-email:null                      → { "email": null }
-email:exists                    → { "email": { "$exists": true } }
-tags:[admin,user]               → { "tags": { "$in": ["admin", "user"] } }
--tags:[spam,bot]                → { "tags": { "$nin": ["spam", "bot"] } }
-comments:size:0                 → { "comments": { "$size": 0 } }
-address.city:London             → { "address.city": "London" }
+Author:Peter                     → { "Author": "Peter" }
+Author:Peter State:Closed        → { "Author": "Peter", "State": "Closed" }
+age>25                           → { "age": { "$gt": 25 } }
+age>=18 age<65                   → { "age": { "$gte": 18, "$lt": 65 } }
+age:18..65                       → { "age": { "$gte": 18, "$lte": 65 } }
+age:..65                         → { "age": { "$lte": 65 } }
+name:/^john/i                    → { "name": { "$regex": "^john", "$options": "i" } }
+-status:deleted                  → { "status": { "$ne": "deleted" } }
+email:null                       → { "email": null }
+email:exists                     → { "email": { "$exists": true } }
+tags:[admin,user]                → { "tags": { "$in": ["admin", "user"] } }
+-tags:[spam,bot]                 → { "tags": { "$nin": ["spam", "bot"] } }
+comments:size:0                  → { "comments": { "$size": 0 } }
+address.city:London              → { "address.city": "London" }
+createdAt>2025-01-01             → { "createdAt": { "$gt": ISODate("2025-01-01T00:00:00Z") } }
+createdAt:2025-01-01..2025-12-31 → date range ($gte start-of-day, $lte end-of-day)
+createdAt>ago(7d)                → last 7 days
+createdAt:ago(1m)..today         → last month up to start of today
+expiresAt<in(7d)                 → expires within 7 days
 ```
+
+Date expressions: `YYYY-MM-DD`, `YYYY-MM-DDTHH:MM:SSZ`, `now`, `today`, `ago(Nd/Nw/Nm/Nh)`, `in(Nd/Nw/Nm/Nh)`.
 
 **Projection tokens** (inline, no separator):
 

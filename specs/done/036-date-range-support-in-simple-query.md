@@ -1,20 +1,21 @@
-# Date Support in Simple Query Bar
+# Date & Range Support in Simple Query Bar
 
-**Status**: Draft
+**Status**: Done
 
 ## Description
 
 The simple query bar treats date-like strings as plain strings, so `createdAt>2025-01-01`
 produces a string comparison instead of a proper MongoDB `$gt: Date(...)` filter.
-This spec adds date parsing to `coerceValue`, bidirectional round-trip support in
-`filterToSimple`, and visual feedback in the filter bar so users can see when a value
-was interpreted as a date.
+This spec adds date parsing to `coerceValue`, number range shorthand (`field:N..M`),
+bidirectional round-trip support in `filterToSimple`, and correct EJSON serialisation
+when switching to BSON mode.
 
 ## Out of Scope
 
 - Timezone-aware display (all dates are treated as UTC)
 - Date support in BSON mode (already works via `{ "$date": "..." }`)
 - Date picker UI / calendar widget
+- String range shorthand (alphabetical ordering is rarely useful in practice)
 
 ---
 
@@ -40,7 +41,14 @@ was interpreted as a date.
 
 ### P2 — Should Have
 
-- Range shorthand: `createdAt:2025-01-01..2025-12-31` expands to
+- **Number range shorthand**: `field:N..M` expands to `{ field: { $gte: N, $lte: M } }`
+  - Either bound can be omitted: `field:..M` → `{ $lte: M }`, `field:N..` → `{ $gte: N }`
+  - Both bounds are coerced via `coerceValue` so they become proper numbers
+  - `filterToSimple` collapses a `{ $gte: N, $lte: M }` pair back to `field:N..M` when
+    both values are numbers (and neither bound is missing)
+  - Examples: `age:18..65`, `price:10..50.99`, `score:..100`
+
+- **Date range shorthand**: `createdAt:2025-01-01..2025-12-31` expands to
   `{ createdAt: { $gte: Date("2025-01-01T00:00:00Z"), $lte: Date("2025-12-31T23:59:59.999Z") }}`
   (end of day for the upper bound when the right side is a date-only string)
 - Either or both sides of a range can be a relative expression:
@@ -148,20 +156,23 @@ form which MongoDB's driver round-trips correctly.
 ### Range shorthand (P2)
 
 The tokeniser already splits on whitespace. The `..` range operator is parsed inside the
-`:` value branch:
+`:` value branch. The same syntax handles both number and date ranges:
 
 ```
 field:v1..v2
           ↓
-{ field: { $gte: coerce(v1), $lte: coerce(v2_endOfDay) } }
+{ field: { $gte: coerce(v1), $lte: coerce(v2) } }     (numbers)
+{ field: { $gte: coerce(v1), $lte: endOfDay(v2) } }   (dates, right side gets end-of-day)
 ```
 
-`endOfDay(d: Date)` sets the time to `23:59:59.999Z` when `v2` was a date-only string;
-full datetime strings are used verbatim.
+Either bound may be omitted: `field:..M` → `{ $lte: M }`, `field:N..` → `{ $gte: N }`.
 
-`filterToSimple` collapses a `{ $gte: d1, $lte: d2 }` pair back to `field:d1..d2` only
-when both values are `Date` objects and the lower bound is start-of-day / upper bound is
-end-of-day (i.e. was originally a range shorthand).
+`endOfDay(d: Date)` sets the time to `23:59:59.999Z` only when `v2` was a date-only
+string (no time component); full datetime strings are used verbatim.
+
+`filterToSimple` collapses a `{ $gte: x, $lte: y }` pair back to `field:x..y` when:
+- Both values are numbers, **or**
+- Both values are `Date` objects and the lower bound is start-of-day / upper bound is end-of-day.
 
 ### Relative date expressions (P2)
 
@@ -211,6 +222,10 @@ The relative check runs before the ISO regex check in `coerceValue`.
 
 | Input | Expected filter |
 |-------|----------------|
+| `age:18..65` (P2) | `{ age: { $gte: 18, $lte: 65 } }` |
+| `age:..65` (P2) | `{ age: { $lte: 65 } }` |
+| `age:18..` (P2) | `{ age: { $gte: 18 } }` |
+| Round-trip: `filterToSimple({ age: { $gte: 18, $lte: 65 } })` (P2) | `"age:18..65"` |
 | `createdAt>2025-01-01` | `{ createdAt: { $gt: new Date("2025-01-01T00:00:00.000Z") } }` |
 | `createdAt>=2025-01-01T12:00:00Z` | `{ createdAt: { $gte: new Date("2025-01-01T12:00:00.000Z") } }` |
 | `createdAt<2025-12-31` | `{ createdAt: { $lt: new Date("2025-12-31T00:00:00.000Z") } }` |
@@ -235,7 +250,7 @@ The relative check runs before the ISO regex check in `coerceValue`.
 
 **Modified files:**
 ```
-src/query/parser.ts           # coerceValue: date detection; filterToSimple: Date serialization; range shorthand (P2)
-src/query/parser.test.ts      # new date test cases (table above)
+src/query/parser.ts           # coerceValue: date + relative date detection; filterToSimple: Date/number serialization; range shorthand N..M (P2)
+src/query/parser.test.ts      # new date and number range test cases (table above)
 src/state.ts                  # simpleToBson migration: use EJSON.stringify instead of JSON.stringify
 ```

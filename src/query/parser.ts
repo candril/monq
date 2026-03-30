@@ -23,6 +23,7 @@
 
 import type { Filter, Document } from "mongodb"
 import { ObjectId } from "mongodb"
+import { EJSON } from "bson"
 import { getArrayAncestor, type SchemaMap } from "./schema"
 
 /**
@@ -58,13 +59,87 @@ function setFilterValue(
   }
 }
 
+// --- Date coercion helpers ---
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
+const DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?$/
+const RELATIVE = /^(now|today|(ago|in)\((\d+)(d|w|m|h)\))$/
+
+function coerceRelativeDate(raw: string): Date | null {
+  const m = RELATIVE.exec(raw)
+  if (!m) return null
+  const now = new Date()
+  if (raw === "now") return now
+  if (raw === "today")
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  const direction = m[2] === "ago" ? -1 : 1
+  const n = parseInt(m[3], 10)
+  const unit = m[4]
+  switch (unit) {
+    case "h":
+      return new Date(now.getTime() + direction * n * 3_600_000)
+    case "d":
+      return new Date(now.getTime() + direction * n * 86_400_000)
+    case "w":
+      return new Date(now.getTime() + direction * n * 7 * 86_400_000)
+    case "m": {
+      const d = new Date(now)
+      d.setUTCMonth(d.getUTCMonth() + direction * n)
+      return d
+    }
+  }
+  return null
+}
+
+/** Return true if the date string had no time component (date-only: YYYY-MM-DD) */
+function isDateOnly(raw: string): boolean {
+  return DATE_ONLY.test(raw)
+}
+
+/** Set time to end-of-day UTC on a Date */
+function endOfDay(d: Date): Date {
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999),
+  )
+}
+
+/** Serialise a coerced value back to its simple-query string representation */
+function serializeValue(v: unknown): string {
+  if (v instanceof Date) {
+    const isStartOfDay =
+      v.getUTCHours() === 0 &&
+      v.getUTCMinutes() === 0 &&
+      v.getUTCSeconds() === 0 &&
+      v.getUTCMilliseconds() === 0
+    const isEndOfDay =
+      v.getUTCHours() === 23 &&
+      v.getUTCMinutes() === 59 &&
+      v.getUTCSeconds() === 59 &&
+      v.getUTCMilliseconds() === 999
+    return isStartOfDay || isEndOfDay ? v.toISOString().slice(0, 10) : v.toISOString()
+  }
+  if (v instanceof ObjectId) return `ObjectId(${v.toHexString()})`
+  return String(v)
+}
+
 /** Coerce a string value to its natural type */
-function coerceValue(value: string): string | number | boolean | null | ObjectId {
+function coerceValue(value: string): string | number | boolean | null | ObjectId | Date {
   if (value === "null") return null
   if (value === "true") return true
   if (value === "false") return false
-  const oidMatch = value.match(/^ObjectId\(["']?([0-9a-fA-F]{24})["']?\)$/)
+
+  // Relative date expressions (before numeric check to handle "now", "today" etc.)
+  const relDate = coerceRelativeDate(value)
+  if (relDate) return relDate
+
+  // ObjectId
+  const oidMatch = value.match(/^(?:ObjectId|oid)\(["']?([0-9a-fA-F]{24})["']?\)$/)
   if (oidMatch) return new ObjectId(oidMatch[1])
+
+  // ISO 8601 dates — regex-first to avoid JS date coercion false positives
+  if (DATE_ONLY.test(value)) return new Date(value + "T00:00:00.000Z")
+  if (DATE_TIME.test(value)) return new Date(value)
+
   const num = Number(value)
   if (!isNaN(num) && value.trim() !== "") return num
   if (
@@ -189,6 +264,21 @@ export function parseSimpleQueryFull(input: string, schemaMap?: SchemaMap): Pars
         const inner = rawValue.slice(1, -1)
         const values = inner.split(",").map((v) => coerceValue(v.trim()))
         setFilterValue(filter, field, negated ? { $nin: values } : { $in: values }, schemaMap)
+      } else if (rawValue.includes("..")) {
+        // Range shorthand: field:v1..v2, field:..v2, field:v1..
+        const dotdot = rawValue.indexOf("..")
+        const left = rawValue.slice(0, dotdot)
+        const right = rawValue.slice(dotdot + 2)
+        const lo = left ? coerceValue(left) : null
+        const hiRaw = right ? coerceValue(right) : null
+        // Apply end-of-day to date-only upper bound
+        const hi =
+          hiRaw instanceof Date && isDateOnly(right) ? endOfDay(hiRaw) : hiRaw
+        const range: Record<string, unknown> = {}
+        if (lo !== null) range.$gte = lo
+        if (hi !== null) range.$lte = hi
+        if (Object.keys(range).length > 0)
+          setFilterValue(filter, field, range, schemaMap)
       } else {
         const val = coerceValue(rawValue)
         setFilterValue(filter, field, negated ? { $ne: val } : val, schemaMap)
@@ -231,6 +321,8 @@ export function filterToSimple(filter: Record<string, unknown>): {
 
     if (val === null) {
       tokens.push(`${key}:null`)
+    } else if (val instanceof Date) {
+      tokens.push(`${key}:${serializeValue(val)}`)
     } else if (val instanceof ObjectId) {
       tokens.push(`${key}:ObjectId(${val.toHexString()})`)
     } else if (typeof val === "string") {
@@ -241,8 +333,26 @@ export function filterToSimple(filter: Record<string, unknown>): {
       const ops = val as Record<string, unknown>
       const entries = Object.entries(ops)
 
-      if (entries.length === 1 && opMap[entries[0][0]]) {
-        tokens.push(`${key}${opMap[entries[0][0]]}${entries[0][1]}`)
+      // Number range: { $gte: N, $lte: M } → field:N..M
+      if (
+        entries.length === 2 &&
+        "$gte" in ops &&
+        "$lte" in ops &&
+        typeof ops.$gte === "number" &&
+        typeof ops.$lte === "number"
+      ) {
+        tokens.push(`${key}:${ops.$gte}..${ops.$lte}`)
+      // Date range: { $gte: Date(start-of-day), $lte: Date(end-of-day) } → field:YYYY-MM-DD..YYYY-MM-DD
+      } else if (
+        entries.length === 2 &&
+        "$gte" in ops &&
+        "$lte" in ops &&
+        ops.$gte instanceof Date &&
+        ops.$lte instanceof Date
+      ) {
+        tokens.push(`${key}:${serializeValue(ops.$gte)}..${serializeValue(ops.$lte)}`)
+      } else if (entries.length === 1 && opMap[entries[0][0]]) {
+        tokens.push(`${key}${opMap[entries[0][0]]}${serializeValue(entries[0][1])}`)
       } else if (entries.length === 1 && entries[0][0] === "$size") {
         tokens.push(`${key}:size:${entries[0][1]}`)
       } else if (entries.length === 1 && entries[0][0] === "$in" && Array.isArray(entries[0][1])) {
@@ -300,7 +410,7 @@ export function simpleToBson(
   let bsonFilter = "{\n  \n}"
   try {
     if (Object.keys(migratedFilter).length > 0) {
-      bsonFilter = JSON.stringify(migratedFilter, null, 2)
+      bsonFilter = EJSON.stringify(migratedFilter as Parameters<typeof EJSON.stringify>[0], undefined, 2)
     }
   } catch {
     /* leave as empty placeholder */
