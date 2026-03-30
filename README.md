@@ -1,8 +1,6 @@
-<p align="center">
-  <img src="logo.png" alt="monq" width="180" />
-</p>
+# monq
 
-A terminal-based MongoDB browser and query tool. Keyboard-first, zero config. Pass `--uri` and explore.
+Browse, query, edit. MongoDB without leaving the terminal.
 
 ```
 monq --uri mongodb://localhost:27017/mydb
@@ -12,50 +10,35 @@ monq --uri mongodb://localhost:27017/mydb
 
 ### Browse collections with smart columns
 
-Auto-detects document fields, sorts, hides columns, and scrolls horizontally. Press `/` to open the query bar — filter with `price<20`, `customer:Alice`, regex, arrays and more. Schema-aware field suggestions appear as you type.
+Auto-detects document fields, sorts, hides columns, and scrolls horizontally. Switch to raw BSON JSON or a full aggregation pipeline with `Tab`.
 
-<img src="screenshots/document-list.png" alt="Document list" width="100%" />
+<img src="site/src/assets/screenshots/document-list.png" alt="Document list with smart columns" width="100%" />
 
-### Simple query bar with schema-aware suggestions
+<img src="site/src/assets/screenshots/filter-combined.png" alt="Filter bar with combined query" width="100%" />
 
-Filter and project in a single query string. Mix conditions freely — `price<20 product:Webcam` narrows to cheap webcams instantly. Field names are autocompleted from the collection's schema.
+<img src="site/src/assets/screenshots/query-bar.png" alt="Filter bar open with schema-aware field suggestions" width="100%" />
 
-<img src="screenshots/query-bar.png" alt="Simple query bar with field suggestions" width="100%" />
+<img src="site/src/assets/screenshots/pipeline-editor.png" alt="Pipeline editor open in tmux split with live results" width="100%" />
 
-### Write aggregation pipelines with live feedback
+<img src="site/src/assets/screenshots/command-palette.png" alt="Command palette" width="100%" />
 
-Press `Ctrl+F` to open the pipeline editor in `$EDITOR`. Results update instantly on save. Use `Ctrl+E` to open a tmux split alongside monq and iterate without leaving the terminal.
-
-<img src="screenshots/pipeline-editor.png" alt="Pipeline editor with live results" width="100%" />
-
-### Everything at your fingertips via the command palette
-
-`Ctrl+P` opens the palette — switch collections, change themes, open the pipeline editor, and more, all from one place.
-
-<img src="screenshots/command-palette.png" alt="Command palette" width="100%" />
-
-### Saved connections with secret resolution
-
-Define named profiles in `~/.config/monq/config.toml`. Use `uri_cmd` to fetch URIs from Vault, 1Password, or any secret manager — secrets never touch the config file.
-
-<img src="screenshots/connections.png" alt="Saved connection profiles" width="100%" />
+<img src="site/src/assets/screenshots/connections.png" alt="Saved connection profiles" width="100%" />
 
 ---
 
 ## Features
 
-- **Two query modes** — simple human-readable `Key:Value` syntax or raw BSON JSON
-- **Inline projection** — `+field` to include, `-field` to exclude columns directly in the query bar
-- **Pipeline editor** — write full aggregation pipelines in `$EDITOR` with JSON Schema autocompletion
-- **Live pipeline reload** — watch `pipeline.jsonc` for external changes; open a tmux split with `Ctrl+E`
-- **Collection tabs** — open multiple collections side by side, switch with `1-9` or `[`/`]`
+- **Expressive filter bar** — `field:value`, ranges (`price:10..200`), dates (`createdAt>ago(7d)`), regex, arrays, nested fields, relative expressions
+- **Two query modes** — simple filter bar or raw BSON JSON, switch with `Tab`
+- **Inline projection** — `+field` / `-field` directly in the query bar, no separate step
+- **Pipeline editor** — full aggregation pipelines in `$EDITOR` with JSON Schema autocompletion and live reload
 - **Document editing** — edit single docs or bulk-select and edit in `$EDITOR` as a JSON array
-- **Schema-aware suggestions** — field name autocomplete with dot-notation drill-down, projection-aware
-- **Smart columns** — auto-detects document fields, horizontal scroll, sort, column sizing, hide via `-`
-- **Database switcher** — picks database on startup if none in URI; switch anytime via `Ctrl+P`
-- **Saved connections** — named profiles in `~/.config/monq/config.toml`, supports secret-fetching commands
-- **Theme presets** — 11 built-in themes (Tokyo Night, Catppuccin, Gruvbox, Nord, Dracula, and more), switchable via `Ctrl+P`
-- **Config file** — customise keybindings and colours in `~/.config/monq/config.toml`
+- **Collection tabs** — open multiple collections side by side, switch with `1–9` or `[`/`]`
+- **Schema-aware suggestions** — field name autocomplete with dot-notation drill-down
+- **Smart columns** — auto-detects fields, horizontal scroll, sort, column sizing, hide via `-`
+- **Saved connections** — named profiles with `uri_cmd` for secret-fetching (Vault, 1Password, etc.)
+- **Theme presets** — 11 built-in themes (Tokyo Night, Catppuccin, Gruvbox, Nord, Dracula, and more), switch live via `Ctrl+P`
+- **Remappable keybindings** — customise any action in `~/.config/monq/config.toml`
 
 ## Install
 
