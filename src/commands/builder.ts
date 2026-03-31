@@ -29,6 +29,30 @@ export function buildCommands(state: AppState): Command[] {
     category: "navigation",
   })
 
+  // Database & Collection Management
+  if (state.dbName) {
+    commands.push({
+      id: "manage:create-collection",
+      label: "Create Collection",
+      category: "database",
+    })
+    commands.push({
+      id: "manage:drop-database",
+      label: "Drop Current Database",
+      category: "database",
+    })
+  }
+  if (hasTab) {
+    const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+    if (activeTab) {
+      commands.push({
+        id: "manage:drop-collection",
+        label: `Drop Collection: ${activeTab.collectionName}`,
+        category: "database",
+      })
+    }
+  }
+
   // Document actions (only when viewing documents)
   if (hasDoc) {
     commands.push({

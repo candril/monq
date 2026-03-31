@@ -129,11 +129,10 @@ export function useMongoConnection({ uri, dispatch, dbName, state }: UseMongoCon
     try {
       await createDatabase(newDbName, firstCollection)
       switchDatabase(newDbName)
-      // Update state: set dbName and collections, then open the tab directly —
-      // bypassing the collection picker entirely.
       const collections = await listCollections()
       skipNextDbEffectRef.current = true
-      dispatch({ type: "SET_CONNECTION_INFO", dbName: newDbName, host: state.host })
+      // SELECT_DATABASE clears all old tabs, then we open the new collection
+      dispatch({ type: "SELECT_DATABASE", dbName: newDbName })
       dispatch({ type: "SET_COLLECTIONS", collections })
       dispatch({ type: "OPEN_TAB", collectionName: firstCollection })
       return null

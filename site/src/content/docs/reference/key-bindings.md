@@ -24,16 +24,31 @@ All bindings can be remapped in `~/.config/monq/config.toml`. See [Configuration
 
 ## Database & Collection Management
 
+### Welcome Screen Shortcuts
+
 | Key | Action |
 |-----|--------|
-| `Tab` | Create new database / collection (from welcome screen) |
-| `Ctrl+D` | Drop database / collection (requires typing name to confirm) |
+| `Tab` | Create new database / collection via inline form |
+| `Ctrl+D` | Drop selected database / collection (requires typing name to confirm) |
 
 When on the welcome screen (database or collection picker):
 - **Tab**: Opens an inline form to create a new database or collection
 - **Ctrl+D**: Drops the currently selected database (from database list) or collection (from collection list). For safety, you must type the exact name to confirm.
 
 When viewing an empty collection list, **Ctrl+D** drops the current database instead of trying to drop a collection.
+
+### Command Palette Actions
+
+Press `Ctrl+P` and search for these commands:
+
+| Command | Description |
+|---------|-------------|
+| **Create Database** | Create a new database (prompts for database name and first collection name) |
+| **Create Collection** | Create a new collection in the current database |
+| **Drop Current Database** | Drop the currently active database (requires typing the exact name to confirm) |
+| **Drop Collection: [name]** | Drop the collection in the current tab (requires typing the exact name to confirm) |
+
+All create and drop operations are also available from the command palette, making them accessible at any time without navigating to the welcome screen.
 
 ## Querying
 

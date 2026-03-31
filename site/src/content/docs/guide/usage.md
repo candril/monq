@@ -31,7 +31,9 @@ If no database is included in the URI, monq displays a database picker on startu
 
 ## Managing databases and collections
 
-From the welcome screen (database or collection picker), you can:
+### From the welcome screen
+
+When on the database or collection picker:
 
 - **Tab** — Create a new database or collection via an inline form
 - **Ctrl+D** — Drop the selected database or collection (requires typing the exact name to confirm)
@@ -39,6 +41,15 @@ From the welcome screen (database or collection picker), you can:
 When viewing a collection list:
 - If the list is empty, **Ctrl+D** drops the current database
 - If collections exist, **Ctrl+D** drops the selected collection
+
+### From the command palette
+
+Press **Ctrl+P** to open the command palette and search for:
+
+- **Create Database** — Opens a dialog to create a new database (prompts for database name and first collection name)
+- **Create Collection** — Creates a new collection in the current database
+- **Drop Current Database** — Drops the currently active database (requires typing the exact name)
+- **Drop Collection: [name]** — Drops the collection in the current tab (requires typing the exact name)
 
 All drop operations show a confirmation dialog requiring you to type the exact name before proceeding — there's no accidental deletion.
 

@@ -53,6 +53,11 @@ export interface DropConfirmation {
   resolve: (confirmed: boolean) => void
 }
 
+/** Pending create collection input */
+export interface CreateInput {
+  resolve: (name: string | null) => void
+}
+
 // ============================================================================
 // Views
 // ============================================================================
@@ -258,6 +263,8 @@ export interface AppState {
   bulkQueryDeleteConfirmation: BulkQueryDeleteConfirmation | null
   // Drop confirmation dialog (null = not showing)
   dropConfirmation: DropConfirmation | null
+  // Create input dialog for collections (null = not showing)
+  createInput: CreateInput | null
 
   // Query history (simple mode, newest-first, loaded from disk at startup)
   historyEntries: string[]

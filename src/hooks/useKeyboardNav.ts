@@ -133,8 +133,8 @@ export function useKeyboardNav({
       return
     }
 
-    // app.quit
-    if (matches(key, keymap["app.quit"])) {
+    // app.quit — skip when welcome screen is active (user may be typing in search)
+    if (matches(key, keymap["app.quit"]) && state.activeTabId) {
       stopWatching()
       disconnect().catch(() => {})
       renderer.destroy()

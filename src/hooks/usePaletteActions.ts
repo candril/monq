@@ -19,6 +19,11 @@ import {
 } from "../actions/pipelineWatch"
 import { openEditorForInsert } from "../actions/editMany"
 import { openEditorForQueryUpdate, openEditorForQueryDelete } from "../actions/queryUpdate"
+import {
+  promptCreateCollection,
+  promptDropCollection,
+  promptDropDatabase,
+} from "../actions/database"
 import type { QueryUpdateReady } from "../actions/queryUpdate"
 import type { Filter, Document } from "mongodb"
 import { disconnect, deleteDocument, listDatabases, switchDatabase } from "../providers/mongodb"
@@ -42,6 +47,12 @@ interface UsePaletteActionsOptions {
   configThemeId: string | null
   /** The [theme] token overrides from config.toml. Re-applied over the reset preset. */
   configThemeOverrides: Partial<ThemeConfig>
+  /** Handler to create a collection */
+  onCreateCollection?: (collectionName: string) => Promise<string | null>
+  /** Handler to drop a collection */
+  onDropCollection?: (collectionName: string) => Promise<string | null>
+  /** Handler to drop a database */
+  onDropDatabase?: (dbName: string) => Promise<string | null>
 }
 
 export function usePaletteActions({
@@ -52,6 +63,9 @@ export function usePaletteActions({
   onThemeChange,
   configThemeId,
   configThemeOverrides,
+  onCreateCollection,
+  onDropCollection,
+  onDropDatabase,
 }: UsePaletteActionsOptions) {
   const handleSelect = useCallback(
     (cmd: Command) => {
@@ -626,6 +640,31 @@ export function usePaletteActions({
           dispatch({ type: "SELECT_ALL" })
           break
 
+        case "manage:create-collection": {
+          dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+          setPaletteMode("commands")
+          if (!onCreateCollection) break
+          promptCreateCollection(dispatch, onCreateCollection)
+          break
+        }
+
+        case "manage:drop-collection": {
+          dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+          setPaletteMode("commands")
+          const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+          if (!activeTab || !onDropCollection) break
+          promptDropCollection(dispatch, activeTab.collectionName, onDropCollection)
+          break
+        }
+
+        case "manage:drop-database": {
+          dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+          setPaletteMode("commands")
+          if (!state.dbName || !onDropDatabase) break
+          promptDropDatabase(dispatch, state.dbName, onDropDatabase)
+          break
+        }
+
         case "theme:pick":
           setPaletteMode("themes")
           break
@@ -642,7 +681,18 @@ export function usePaletteActions({
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       }
     },
-    [state, dispatch, renderer, setPaletteMode, onThemeChange, configThemeId, configThemeOverrides],
+    [
+      state,
+      dispatch,
+      renderer,
+      setPaletteMode,
+      onThemeChange,
+      configThemeId,
+      configThemeOverrides,
+      onCreateCollection,
+      onDropCollection,
+      onDropDatabase,
+    ],
   )
 
   return { handleSelect }

@@ -15,6 +15,8 @@ import { BulkEditConfirmDialog } from "./components/BulkEditConfirmDialog"
 import { BulkQueryUpdateConfirmDialog } from "./components/BulkQueryUpdateConfirmDialog"
 import { BulkQueryDeleteConfirmDialog } from "./components/BulkQueryDeleteConfirmDialog"
 import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog"
+import { DropConfirmDialog } from "./components/DropConfirmDialog"
+import { CreateInputDialog } from "./components/CreateInputDialog"
 import { Toast } from "./components/Toast"
 import { Loading } from "./components/Loading"
 import { ErrorView } from "./components/ErrorView"
@@ -189,6 +191,9 @@ export function App({
     onThemeChange: handleThemeChange,
     configThemeId,
     configThemeOverrides,
+    onCreateCollection: handleCreateCollection,
+    onDropCollection: handleDropCollection,
+    onDropDatabase: handleDropDatabase,
   })
 
   const handlePaletteClose = useCallback(() => {
@@ -470,6 +475,34 @@ export function App({
           confirmation={state.bulkQueryDeleteConfirmation}
           focusedIndex={bulkQueryDeleteFocusedIndex}
           awaitingFinalConfirm={bulkQueryDeleteAwaitingFinal}
+        />
+      )}
+
+      {state.dropConfirmation && (
+        <DropConfirmDialog
+          type={state.dropConfirmation.type}
+          name={state.dropConfirmation.name}
+          onConfirm={() => {
+            state.dropConfirmation?.resolve(true)
+            dispatch({ type: "CLEAR_DROP_CONFIRM" })
+          }}
+          onCancel={() => {
+            state.dropConfirmation?.resolve(false)
+            dispatch({ type: "CLEAR_DROP_CONFIRM" })
+          }}
+        />
+      )}
+
+      {state.createInput && (
+        <CreateInputDialog
+          onConfirm={(name) => {
+            state.createInput?.resolve(name)
+            dispatch({ type: "CLEAR_CREATE_INPUT" })
+          }}
+          onCancel={() => {
+            state.createInput?.resolve(null)
+            dispatch({ type: "CLEAR_CREATE_INPUT" })
+          }}
         />
       )}
     </Shell>

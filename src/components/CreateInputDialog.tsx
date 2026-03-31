@@ -1,21 +1,19 @@
 /**
- * Drop confirmation dialog — requires typing the exact name to confirm.
- * Used for dropping collections and databases.
+ * Create input dialog — prompts for a collection name.
+ * Used for creating collections from the command palette.
  */
 
 import { useState } from "react"
 import { useKeyboard } from "@opentui/react"
 import { theme } from "../theme"
 
-interface DropConfirmDialogProps {
-  type: "collection" | "database"
-  name: string
-  onConfirm: () => void
+interface CreateInputDialogProps {
+  onConfirm: (name: string) => void
   onCancel: () => void
 }
 
-export function DropConfirmDialog({ type, name, onConfirm, onCancel }: DropConfirmDialogProps) {
-  const [input, setInput] = useState("")
+export function CreateInputDialog({ onConfirm, onCancel }: CreateInputDialogProps) {
+  const [name, setName] = useState("")
 
   useKeyboard((key) => {
     if (key.name === "escape") {
@@ -23,14 +21,13 @@ export function DropConfirmDialog({ type, name, onConfirm, onCancel }: DropConfi
       return
     }
     if (key.name === "return") {
-      if (input === name) {
-        onConfirm()
-      }
+      if (!name.trim()) return
+      onConfirm(name.trim())
       return
     }
   })
 
-  const canConfirm = input === name
+  const canConfirm = name.trim() !== ""
 
   return (
     <box
@@ -39,7 +36,7 @@ export function DropConfirmDialog({ type, name, onConfirm, onCancel }: DropConfi
       left={0}
       width="100%"
       height="100%"
-      zIndex={200}
+      zIndex={300}
       justifyContent="center"
       alignItems="center"
     >
@@ -54,43 +51,25 @@ export function DropConfirmDialog({ type, name, onConfirm, onCancel }: DropConfi
       <box minWidth={72} maxWidth="90%" flexDirection="column" backgroundColor={theme.modalBg}>
         <box paddingX={2} paddingY={1} backgroundColor={theme.headerBg}>
           <text>
-            <span fg={theme.error}>Drop {type === "collection" ? "Collection" : "Database"}</span>
+            <span fg={theme.primary}>Create Collection</span>
           </text>
         </box>
         <box flexDirection="column" paddingX={2} paddingY={1}>
           <text>
-            <span fg={theme.text}>
-              Are you sure you want to drop {type === "collection" ? "collection" : "database"}{" "}
-            </span>
-            <span fg={theme.error}>
-              <strong>{name}</strong>
-            </span>
-            <span fg={theme.text}>?</span>
+            <span fg={theme.textMuted}>Collection name:</span>
           </text>
-          {type === "database" && (
-            <text>
-              <span fg={theme.warning}>This will delete all collections in this database.</span>
-            </text>
-          )}
-          <box marginTop={1}>
-            <text>
-              <span fg={theme.textMuted}>Type </span>
-              <span fg={theme.text}>{name}</span>
-              <span fg={theme.textMuted}> to confirm:</span>
-            </text>
-          </box>
           <box flexDirection="row" paddingLeft={1}>
             <text>
               <span fg={theme.primary}>{"> "}</span>
             </text>
             <input
-              value={input}
-              onInput={setInput}
+              value={name}
+              onInput={setName}
               focused
               backgroundColor={theme.bg}
               textColor={theme.text}
               cursorColor={theme.primary}
-              width={Math.max(32, name.length + 4)}
+              width={40}
             />
           </box>
         </box>
@@ -103,8 +82,8 @@ export function DropConfirmDialog({ type, name, onConfirm, onCancel }: DropConfi
         >
           <text>
             <span fg={theme.textMuted}>Esc cancel · </span>
-            <span fg={canConfirm ? theme.error : theme.textMuted}>
-              {canConfirm ? "Enter confirm" : "Type name to confirm"}
+            <span fg={canConfirm ? theme.primary : theme.textMuted}>
+              {canConfirm ? "Enter create" : "Enter name to continue"}
             </span>
           </text>
         </box>
