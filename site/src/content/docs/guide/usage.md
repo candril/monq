@@ -37,6 +37,7 @@ When on the database or collection picker:
 
 - **Tab** — Create a new database or collection via an inline form
 - **Ctrl+D** — Drop the selected database or collection (requires typing the exact name to confirm)
+- **Ctrl+R** — Rename the selected collection (step 2 only, pre-fills current name)
 
 When viewing a collection list:
 - If the list is empty, **Ctrl+D** drops the current database
@@ -46,8 +47,8 @@ When viewing a collection list:
 
 Press **Ctrl+P** to open the command palette and search for:
 
-- **Create Database** — Opens a dialog to create a new database (prompts for database name and first collection name)
 - **Create Collection** — Creates a new collection in the current database
+- **Rename Collection: [name]** — Renames the collection in the current tab (pre-fills current name)
 - **Drop Current Database** — Drops the currently active database (requires typing the exact name)
 - **Drop Collection: [name]** — Drops the collection in the current tab (requires typing the exact name)
 

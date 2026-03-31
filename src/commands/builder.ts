@@ -46,6 +46,11 @@ export function buildCommands(state: AppState): Command[] {
     const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
     if (activeTab) {
       commands.push({
+        id: "manage:rename-collection",
+        label: `Rename Collection: ${activeTab.collectionName}`,
+        category: "database",
+      })
+      commands.push({
         id: "manage:drop-collection",
         label: `Drop Collection: ${activeTab.collectionName}`,
         category: "database",

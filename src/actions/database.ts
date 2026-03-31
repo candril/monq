@@ -29,6 +29,31 @@ export function promptCreateCollection(
 }
 
 /**
+ * Show rename collection input dialog.
+ * Pre-filled with the current name.
+ */
+export function promptRenameCollection(
+  dispatch: Dispatch<AppAction>,
+  oldName: string,
+  onRenameCollection: (oldName: string, newName: string) => Promise<string | null>,
+): void {
+  dispatch({
+    type: "SHOW_RENAME_INPUT",
+    input: {
+      type: "collection",
+      oldName,
+      resolve: async (newName) => {
+        if (!newName) return
+        const err = await onRenameCollection(oldName, newName)
+        if (err) {
+          dispatch({ type: "SHOW_MESSAGE", message: err, kind: "error" })
+        }
+      },
+    },
+  })
+}
+
+/**
  * Show drop collection confirmation dialog.
  * Requires typing the exact collection name to confirm.
  */

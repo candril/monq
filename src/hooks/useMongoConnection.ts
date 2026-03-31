@@ -19,6 +19,7 @@ import {
   createDatabase,
   dropCollection,
   dropDatabase,
+  renameCollection,
 } from "../providers/mongodb"
 
 interface UseMongoConnectionOptions {
@@ -185,5 +186,29 @@ export function useMongoConnection({ uri, dispatch, dbName, state }: UseMongoCon
     }
   }
 
-  return { handleCreateCollection, handleCreateDatabase, handleDropCollection, handleDropDatabase }
+  async function handleRenameCollection(oldName: string, newName: string): Promise<string | null> {
+    try {
+      await renameCollection(oldName, newName)
+      const collections = await listCollections()
+      dispatch({ type: "SET_COLLECTIONS", collections })
+      // Update any open tabs that reference the old name
+      dispatch({ type: "RENAME_COLLECTION_TABS", oldName, newName })
+      dispatch({
+        type: "SHOW_MESSAGE",
+        message: `Renamed: ${oldName} → ${newName}`,
+        kind: "success",
+      })
+      return null
+    } catch (err) {
+      return (err as Error).message
+    }
+  }
+
+  return {
+    handleCreateCollection,
+    handleCreateDatabase,
+    handleDropCollection,
+    handleDropDatabase,
+    handleRenameCollection,
+  }
 }

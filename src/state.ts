@@ -128,6 +128,9 @@ export type AppAction =
   | { type: "CLEAR_DROP_CONFIRM" }
   | { type: "SHOW_CREATE_INPUT"; input: import("./types").CreateInput }
   | { type: "CLEAR_CREATE_INPUT" }
+  | { type: "SHOW_RENAME_INPUT"; input: import("./types").RenameInput }
+  | { type: "CLEAR_RENAME_INPUT" }
+  | { type: "RENAME_COLLECTION_TABS"; oldName: string; newName: string }
   // History
   | { type: "LOAD_HISTORY"; entries: string[] }
   | { type: "APPEND_HISTORY_ENTRY"; entry: string }
@@ -201,6 +204,7 @@ export function createInitialState(): AppState {
     bulkQueryDeleteConfirmation: null,
     dropConfirmation: null,
     createInput: null,
+    renameInput: null,
     historyEntries: [],
     historyPickerOpen: false,
   }
@@ -1240,6 +1244,21 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "CLEAR_CREATE_INPUT":
       return { ...state, createInput: null }
+
+    case "SHOW_RENAME_INPUT":
+      return { ...state, renameInput: action.input }
+
+    case "CLEAR_RENAME_INPUT":
+      return { ...state, renameInput: null }
+
+    case "RENAME_COLLECTION_TABS":
+      // Update all tabs that reference the old collection name
+      return {
+        ...state,
+        tabs: state.tabs.map((t) =>
+          t.collectionName === action.oldName ? { ...t, collectionName: action.newName } : t,
+        ),
+      }
 
     case "START_PIPELINE_WATCH":
       return { ...state, pipelineWatching: true }

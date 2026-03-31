@@ -178,6 +178,11 @@ export async function createDatabase(dbName: string, firstCollection: string): P
   await client.db(dbName).createCollection(firstCollection)
 }
 
+/** Rename a collection in the active database */
+export async function renameCollection(oldName: string, newName: string): Promise<void> {
+  await getDb().collection(oldName).rename(newName)
+}
+
 /** Drop a collection from the active database */
 export async function dropCollection(collectionName: string): Promise<void> {
   await getDb().dropCollection(collectionName)

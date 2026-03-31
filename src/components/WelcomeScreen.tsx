@@ -19,6 +19,7 @@ import { useKeyboard, useRenderer } from "@opentui/react"
 import { fuzzyFilter } from "../utils/fuzzy"
 import { theme } from "../theme"
 import { DropConfirmDialog } from "./DropConfirmDialog"
+import { RenameInputDialog } from "./RenameInputDialog"
 
 const MIN_LIST_HEIGHT = 10
 
@@ -53,6 +54,8 @@ interface WelcomeScreenProps {
   onDropCollection: (collectionName: string) => Promise<string | null>
   /** Called to drop a database; returns an error string or null on success */
   onDropDatabase: (dbName: string) => Promise<string | null>
+  /** Called to rename a collection; returns an error string or null on success */
+  onRenameCollection: (oldName: string, newName: string) => Promise<string | null>
 }
 
 type CreateStep = "idle" | "name" | "first-collection" | "creating"
@@ -73,6 +76,7 @@ export function WelcomeScreen({
   onCreateCollection,
   onDropCollection,
   onDropDatabase,
+  onRenameCollection,
 }: WelcomeScreenProps) {
   const renderer = useRenderer()
   const [query, setQuery] = useState("")
@@ -87,6 +91,10 @@ export function WelcomeScreen({
   // Drop flow state
   const [showDropConfirm, setShowDropConfirm] = useState(false)
   const [dropTargetName, setDropTargetName] = useState("")
+
+  // Rename flow state
+  const [showRename, setShowRename] = useState(false)
+  const [renameTargetName, setRenameTargetName] = useState("")
 
   const items = step === 1 ? databases : collections
   const onSelect = step === 1 ? onSelectDatabase : onSelectCollection
@@ -111,8 +119,8 @@ export function WelcomeScreen({
   const isCreating = createStep !== "idle"
 
   useKeyboard((key) => {
-    // Don't handle keys when drop confirm is showing — let the dialog handle them
-    if (showDropConfirm) return
+    // Don't handle keys when dialogs are showing — let them handle input
+    if (showDropConfirm || showRename) return
 
     // ── Create flow ──────────────────────────────────────────────────────────
     if (createStep === "name") {
@@ -230,6 +238,15 @@ export function WelcomeScreen({
       }
       return
     }
+    // Rename collection (Ctrl-R) — only on step 2 with collections
+    if (key.ctrl && key.name === "r" && step === 2) {
+      const item = filtered[safeCursor]
+      if (item && !isEmpty) {
+        setRenameTargetName(item)
+        setShowRename(true)
+      }
+      return
+    }
     // Backspace on empty → go back one level
     if (key.name === "backspace" && !query) {
       if (step === 2) {
@@ -266,6 +283,7 @@ export function WelcomeScreen({
     if (!isLoading && (!isEmpty || (step === 2 && isEmpty))) {
       hintParts.push(step === 2 && isEmpty ? "Ctrl-D  drop database" : "Ctrl-D  drop")
     }
+    if (!isLoading && !isEmpty && step === 2) hintParts.push("Ctrl-R  rename")
     if (!isLoading) hintParts.push("Tab  new")
     if (step === 2 || onBackToUri) hintParts.push("⌫  back")
     hintParts.push("Esc  quit")
@@ -464,6 +482,23 @@ export function WelcomeScreen({
             <span fg={theme.textMuted}>{hint}</span>
           </text>
         </box>
+      )}
+
+      {/* Rename dialog */}
+      {showRename && (
+        <RenameInputDialog
+          type="collection"
+          oldName={renameTargetName}
+          onConfirm={async (renamedTo) => {
+            setShowRename(false)
+            await onRenameCollection(renameTargetName, renamedTo)
+            setRenameTargetName("")
+          }}
+          onCancel={() => {
+            setShowRename(false)
+            setRenameTargetName("")
+          }}
+        />
       )}
 
       {/* Drop confirmation dialog */}

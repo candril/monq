@@ -30,10 +30,12 @@ All bindings can be remapped in `~/.config/monq/config.toml`. See [Configuration
 |-----|--------|
 | `Tab` | Create new database / collection via inline form |
 | `Ctrl+D` | Drop selected database / collection (requires typing name to confirm) |
+| `Ctrl+R` | Rename selected collection (step 2 only) |
 
 When on the welcome screen (database or collection picker):
 - **Tab**: Opens an inline form to create a new database or collection
 - **Ctrl+D**: Drops the currently selected database (from database list) or collection (from collection list). For safety, you must type the exact name to confirm.
+- **Ctrl+R**: Renames the selected collection (only available on step 2, the collection list). Pre-fills the current name for easy editing.
 
 When viewing an empty collection list, **Ctrl+D** drops the current database instead of trying to drop a collection.
 
@@ -43,12 +45,12 @@ Press `Ctrl+P` and search for these commands:
 
 | Command | Description |
 |---------|-------------|
-| **Create Database** | Create a new database (prompts for database name and first collection name) |
 | **Create Collection** | Create a new collection in the current database |
+| **Rename Collection: [name]** | Rename the collection in the current tab |
 | **Drop Current Database** | Drop the currently active database (requires typing the exact name to confirm) |
 | **Drop Collection: [name]** | Drop the collection in the current tab (requires typing the exact name to confirm) |
 
-All create and drop operations are also available from the command palette, making them accessible at any time without navigating to the welcome screen.
+These operations are also available from the command palette, making them accessible at any time without navigating to the welcome screen.
 
 ## Querying
 

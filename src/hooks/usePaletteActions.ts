@@ -21,6 +21,7 @@ import { openEditorForInsert } from "../actions/editMany"
 import { openEditorForQueryUpdate, openEditorForQueryDelete } from "../actions/queryUpdate"
 import {
   promptCreateCollection,
+  promptRenameCollection,
   promptDropCollection,
   promptDropDatabase,
 } from "../actions/database"
@@ -49,6 +50,8 @@ interface UsePaletteActionsOptions {
   configThemeOverrides: Partial<ThemeConfig>
   /** Handler to create a collection */
   onCreateCollection?: (collectionName: string) => Promise<string | null>
+  /** Handler to rename a collection */
+  onRenameCollection?: (oldName: string, newName: string) => Promise<string | null>
   /** Handler to drop a collection */
   onDropCollection?: (collectionName: string) => Promise<string | null>
   /** Handler to drop a database */
@@ -64,6 +67,7 @@ export function usePaletteActions({
   configThemeId,
   configThemeOverrides,
   onCreateCollection,
+  onRenameCollection,
   onDropCollection,
   onDropDatabase,
 }: UsePaletteActionsOptions) {
@@ -648,6 +652,15 @@ export function usePaletteActions({
           break
         }
 
+        case "manage:rename-collection": {
+          dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+          setPaletteMode("commands")
+          const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+          if (!activeTab || !onRenameCollection) break
+          promptRenameCollection(dispatch, activeTab.collectionName, onRenameCollection)
+          break
+        }
+
         case "manage:drop-collection": {
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
           setPaletteMode("commands")
@@ -690,6 +703,7 @@ export function usePaletteActions({
       configThemeId,
       configThemeOverrides,
       onCreateCollection,
+      onRenameCollection,
       onDropCollection,
       onDropDatabase,
     ],

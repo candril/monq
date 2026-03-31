@@ -17,6 +17,7 @@ import { BulkQueryDeleteConfirmDialog } from "./components/BulkQueryDeleteConfir
 import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog"
 import { DropConfirmDialog } from "./components/DropConfirmDialog"
 import { CreateInputDialog } from "./components/CreateInputDialog"
+import { RenameInputDialog } from "./components/RenameInputDialog"
 import { Toast } from "./components/Toast"
 import { Loading } from "./components/Loading"
 import { ErrorView } from "./components/ErrorView"
@@ -128,8 +129,13 @@ export function App({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const { handleCreateCollection, handleCreateDatabase, handleDropCollection, handleDropDatabase } =
-    useMongoConnection({ uri, dispatch, dbName: state.dbName, state })
+  const {
+    handleCreateCollection,
+    handleCreateDatabase,
+    handleDropCollection,
+    handleDropDatabase,
+    handleRenameCollection,
+  } = useMongoConnection({ uri, dispatch, dbName: state.dbName, state })
   const {
     pipelineFocusedIndex,
     bulkEditFocusedIndex,
@@ -192,6 +198,7 @@ export function App({
     configThemeId,
     configThemeOverrides,
     onCreateCollection: handleCreateCollection,
+    onRenameCollection: handleRenameCollection,
     onDropCollection: handleDropCollection,
     onDropDatabase: handleDropDatabase,
   })
@@ -331,6 +338,7 @@ export function App({
             onCreateCollection={handleCreateCollection}
             onDropCollection={handleDropCollection}
             onDropDatabase={handleDropDatabase}
+            onRenameCollection={handleRenameCollection}
           />
         ) : activeTab ? (
           <box
@@ -489,6 +497,21 @@ export function App({
           onCancel={() => {
             state.dropConfirmation?.resolve(false)
             dispatch({ type: "CLEAR_DROP_CONFIRM" })
+          }}
+        />
+      )}
+
+      {state.renameInput && (
+        <RenameInputDialog
+          type={state.renameInput.type}
+          oldName={state.renameInput.oldName}
+          onConfirm={(newName) => {
+            state.renameInput?.resolve(newName)
+            dispatch({ type: "CLEAR_RENAME_INPUT" })
+          }}
+          onCancel={() => {
+            state.renameInput?.resolve(null)
+            dispatch({ type: "CLEAR_RENAME_INPUT" })
           }}
         />
       )}

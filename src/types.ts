@@ -58,6 +58,13 @@ export interface CreateInput {
   resolve: (name: string | null) => void
 }
 
+/** Pending rename input */
+export interface RenameInput {
+  type: "collection"
+  oldName: string
+  resolve: (newName: string | null) => void
+}
+
 // ============================================================================
 // Views
 // ============================================================================
@@ -265,6 +272,8 @@ export interface AppState {
   dropConfirmation: DropConfirmation | null
   // Create input dialog for collections (null = not showing)
   createInput: CreateInput | null
+  // Rename input dialog (null = not showing)
+  renameInput: RenameInput | null
 
   // Query history (simple mode, newest-first, loaded from disk at startup)
   historyEntries: string[]

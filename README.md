@@ -117,8 +117,9 @@ monq                                        # shows saved connections or URI pro
 |-------------|--------|
 | `Tab` (welcome screen) | Create new database / collection via inline form |
 | `Ctrl+D` (welcome screen) | Drop selected database / collection (requires typing name to confirm) |
-| `Ctrl+P` → **Create Database** | Create a new database (prompts for name and first collection) |
+| `Ctrl+R` (welcome screen, step 2) | Rename selected collection |
 | `Ctrl+P` → **Create Collection** | Create a new collection in the current database |
+| `Ctrl+P` → **Rename Collection** | Rename the collection in the current tab |
 | `Ctrl+P` → **Drop Current Database** | Drop the active database (requires typing exact name) |
 | `Ctrl+P` → **Drop Collection: [name]** | Drop the collection in current tab (requires typing exact name) |
 
