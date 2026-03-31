@@ -10,19 +10,39 @@ monq --uri mongodb://localhost:27017/mydb
 
 ### Browse collections with smart columns
 
-Auto-detects document fields, sorts, hides columns, and scrolls horizontally. Switch to raw BSON JSON or a full aggregation pipeline with `Tab`.
+Auto-detects document fields, sorts, hides columns, and scrolls horizontally. Press `/` to open the query bar — filter with `price<20`, `customer:Alice`, regex, arrays and more. Switch to raw BSON JSON or a full aggregation pipeline with `Tab`.
 
-<img src="site/src/assets/screenshots/document-list.png" alt="Document list with smart columns" width="100%" />
+<img src="site/src/assets/screenshots/document-list.png" alt="Document list with smart columns and inline query bar" width="100%" />
 
-<img src="site/src/assets/screenshots/filter-combined.png" alt="Filter bar with combined query" width="100%" />
+### A filter bar that speaks your language
 
-<img src="site/src/assets/screenshots/query-bar.png" alt="Filter bar open with schema-aware field suggestions" width="100%" />
+No query language to learn. Combine conditions freely — `product:Mouse price:10..200 qty>30` filters by exact value, range, and comparison in one line. Field names autocomplete from the live schema as you type.
 
-<img src="site/src/assets/screenshots/pipeline-editor.png" alt="Pipeline editor open in tmux split with live results" width="100%" />
+<img src="site/src/assets/screenshots/filter-combined.png" alt="Filter bar with combined query: product:Mouse price:10..200 qty>30" width="100%" />
 
-<img src="site/src/assets/screenshots/command-palette.png" alt="Command palette" width="100%" />
+<img src="site/src/assets/screenshots/filter-nested.png" alt="Filter bar with nested field query items.color:Black" width="100%" />
 
-<img src="site/src/assets/screenshots/connections.png" alt="Saved connection profiles" width="100%" />
+Open the filter bar with `/` and the schema dropdown appears — every field with its type, ready to autocomplete.
+
+<img src="site/src/assets/screenshots/query-bar.png" alt="Filter bar open showing schema-aware field suggestions" width="100%" />
+
+### Write aggregation pipelines with live feedback
+
+Press `Ctrl+F` to open the pipeline editor in `$EDITOR` with JSON Schema autocompletion. Results update instantly on save. Press `Ctrl+E` to open a tmux split alongside monq and iterate without leaving the terminal.
+
+<img src="site/src/assets/screenshots/pipeline-editor.png" alt="Pipeline editor open in a tmux split alongside live results" width="100%" />
+
+### Everything at your fingertips via the command palette
+
+`Ctrl+P` opens the palette — switch collections, change themes, open the pipeline editor, navigate databases, and more, all searchable from one place.
+
+<img src="site/src/assets/screenshots/command-palette.png" alt="Command palette with searchable actions and keybinding hints" width="100%" />
+
+### Saved connections with secret resolution
+
+Define named profiles in `~/.config/monq/config.toml`. Use `uri_cmd` to fetch URIs from Vault, 1Password, or any secret manager — secrets never touch the config file.
+
+<img src="site/src/assets/screenshots/connections.png" alt="Saved connection profiles screen on startup" width="100%" />
 
 ---
 
