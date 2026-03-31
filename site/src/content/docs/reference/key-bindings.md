@@ -22,6 +22,19 @@ All bindings can be remapped in `~/.config/monq/config.toml`. See [Configuration
 | `Ctrl+P` | Command palette |
 | `q` | Quit |
 
+## Database & Collection Management
+
+| Key | Action |
+|-----|--------|
+| `Tab` | Create new database / collection (from welcome screen) |
+| `Ctrl+D` | Drop database / collection (requires typing name to confirm) |
+
+When on the welcome screen (database or collection picker):
+- **Tab**: Opens an inline form to create a new database or collection
+- **Ctrl+D**: Drops the currently selected database (from database list) or collection (from collection list). For safety, you must type the exact name to confirm.
+
+When viewing an empty collection list, **Ctrl+D** drops the current database instead of trying to drop a collection.
+
 ## Querying
 
 | Key | Action |

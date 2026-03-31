@@ -46,6 +46,13 @@ export interface BulkQueryDeleteConfirmation {
   resolve: (confirmed: boolean) => void
 }
 
+/** Pending drop confirmation (collection or database) */
+export interface DropConfirmation {
+  type: "collection" | "database"
+  name: string
+  resolve: (confirmed: boolean) => void
+}
+
 // ============================================================================
 // Views
 // ============================================================================
@@ -249,6 +256,8 @@ export interface AppState {
   bulkQueryUpdateConfirmation: BulkQueryUpdateConfirmation | null
   // Bulk query delete confirmation dialog (null = not showing)
   bulkQueryDeleteConfirmation: BulkQueryDeleteConfirmation | null
+  // Drop confirmation dialog (null = not showing)
+  dropConfirmation: DropConfirmation | null
 
   // Query history (simple mode, newest-first, loaded from disk at startup)
   historyEntries: string[]

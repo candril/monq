@@ -98,9 +98,7 @@ function isDateOnly(raw: string): boolean {
 
 /** Set time to end-of-day UTC on a Date */
 function endOfDay(d: Date): Date {
-  return new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999),
-  )
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999))
 }
 
 /** Serialise a coerced value back to its simple-query string representation */
@@ -272,13 +270,11 @@ export function parseSimpleQueryFull(input: string, schemaMap?: SchemaMap): Pars
         const lo = left ? coerceValue(left) : null
         const hiRaw = right ? coerceValue(right) : null
         // Apply end-of-day to date-only upper bound
-        const hi =
-          hiRaw instanceof Date && isDateOnly(right) ? endOfDay(hiRaw) : hiRaw
+        const hi = hiRaw instanceof Date && isDateOnly(right) ? endOfDay(hiRaw) : hiRaw
         const range: Record<string, unknown> = {}
         if (lo !== null) range.$gte = lo
         if (hi !== null) range.$lte = hi
-        if (Object.keys(range).length > 0)
-          setFilterValue(filter, field, range, schemaMap)
+        if (Object.keys(range).length > 0) setFilterValue(filter, field, range, schemaMap)
       } else {
         const val = coerceValue(rawValue)
         setFilterValue(filter, field, negated ? { $ne: val } : val, schemaMap)
@@ -342,7 +338,7 @@ export function filterToSimple(filter: Record<string, unknown>): {
         typeof ops.$lte === "number"
       ) {
         tokens.push(`${key}:${ops.$gte}..${ops.$lte}`)
-      // Date range: { $gte: Date(start-of-day), $lte: Date(end-of-day) } → field:YYYY-MM-DD..YYYY-MM-DD
+        // Date range: { $gte: Date(start-of-day), $lte: Date(end-of-day) } → field:YYYY-MM-DD..YYYY-MM-DD
       } else if (
         entries.length === 2 &&
         "$gte" in ops &&
@@ -410,7 +406,11 @@ export function simpleToBson(
   let bsonFilter = "{\n  \n}"
   try {
     if (Object.keys(migratedFilter).length > 0) {
-      bsonFilter = EJSON.stringify(migratedFilter as Parameters<typeof EJSON.stringify>[0], undefined, 2)
+      bsonFilter = EJSON.stringify(
+        migratedFilter as Parameters<typeof EJSON.stringify>[0],
+        undefined,
+        2,
+      )
     }
   } catch {
     /* leave as empty placeholder */

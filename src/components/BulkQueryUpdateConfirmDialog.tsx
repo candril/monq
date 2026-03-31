@@ -25,7 +25,10 @@ export function BulkQueryUpdateConfirmDialog({
       <ConfirmDialog
         title="Bulk Update — Final Confirmation"
         lines={[
-          { text: `Empty filter — ALL ${matchedCount} documents in "${collectionName}" will be updated.`, danger: true },
+          {
+            text: `Empty filter — ALL ${matchedCount} documents in "${collectionName}" will be updated.`,
+            danger: true,
+          },
           { text: `update  ${summarise(update)}`, dim: true },
           { text: "" },
           { text: "This cannot be undone.", danger: true },

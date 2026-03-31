@@ -33,7 +33,12 @@ interface UseKeyboardNavOptions {
   keymap: Keymap
 }
 
-export function useKeyboardNav({ state, dispatch, docListScrollRef, keymap }: UseKeyboardNavOptions) {
+export function useKeyboardNav({
+  state,
+  dispatch,
+  docListScrollRef,
+  keymap,
+}: UseKeyboardNavOptions) {
   const renderer = useRenderer()
   const {
     handleKey: handleDialogKey,
@@ -447,5 +452,13 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef, keymap }: Us
     }
   })
 
-  return { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex, bulkQueryUpdateFocusedIndex, bulkQueryUpdateAwaitingFinal, bulkQueryDeleteFocusedIndex, bulkQueryDeleteAwaitingFinal }
+  return {
+    pipelineFocusedIndex,
+    bulkEditFocusedIndex,
+    deleteFocusedIndex,
+    bulkQueryUpdateFocusedIndex,
+    bulkQueryUpdateAwaitingFinal,
+    bulkQueryDeleteFocusedIndex,
+    bulkQueryDeleteAwaitingFinal,
+  }
 }

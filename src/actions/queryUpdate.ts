@@ -149,7 +149,8 @@ function generateUpdateSchema(collectionName: string, schemaMap?: SchemaMap): ob
       },
       $currentDate: {
         type: "object",
-        description: "Set field to current date. Use true or { $type: 'date' } or { $type: 'timestamp' }.",
+        description:
+          "Set field to current date. Use true or { $type: 'date' } or { $type: 'timestamp' }.",
         additionalProperties: {
           oneOf: [
             { type: "boolean" },
@@ -254,7 +255,12 @@ function isUpdateEmpty(update: Document): boolean {
   if (keys.length === 0) return true
   return keys.every((k) => {
     const v = update[k]
-    return v !== null && typeof v === "object" && !Array.isArray(v) && Object.keys(v as object).length === 0
+    return (
+      v !== null &&
+      typeof v === "object" &&
+      !Array.isArray(v) &&
+      Object.keys(v as object).length === 0
+    )
   })
 }
 
@@ -370,11 +376,7 @@ export async function openEditorForQueryUpdate(
       break
     } catch (err) {
       const next = await openEditorWithError(tmpFile, content, (err as Error).message)
-      if (
-        !next ||
-        stripComments(stripErrorComment(next)) === "" ||
-        next.trim() === content.trim()
-      )
+      if (!next || stripComments(stripErrorComment(next)) === "" || next.trim() === content.trim())
         return { cancelled: true }
       content = next
     }
@@ -502,11 +504,7 @@ export async function openEditorForQueryDelete(
       break
     } catch (err) {
       const next = await openEditorWithError(tmpFile, content, (err as Error).message)
-      if (
-        !next ||
-        stripComments(stripErrorComment(next)) === "" ||
-        next.trim() === content.trim()
-      )
+      if (!next || stripComments(stripErrorComment(next)) === "" || next.trim() === content.trim())
         return { cancelled: true }
       content = next
     }

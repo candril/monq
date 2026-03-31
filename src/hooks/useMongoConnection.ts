@@ -17,6 +17,8 @@ import {
   switchDatabase,
   createCollection,
   createDatabase,
+  dropCollection,
+  dropDatabase,
 } from "../providers/mongodb"
 
 interface UseMongoConnectionOptions {
@@ -140,5 +142,49 @@ export function useMongoConnection({ uri, dispatch, dbName, state }: UseMongoCon
     }
   }
 
-  return { handleCreateCollection, handleCreateDatabase }
+  async function handleDropCollection(collectionName: string): Promise<string | null> {
+    try {
+      await dropCollection(collectionName)
+      const collections = await listCollections()
+      dispatch({ type: "SET_COLLECTIONS", collections })
+      // Close any tabs for this collection
+      const tabsToClose = state.tabs.filter((t) => t.collectionName === collectionName)
+      for (const tab of tabsToClose) {
+        dispatch({ type: "CLOSE_TAB", tabId: tab.id })
+      }
+      dispatch({
+        type: "SHOW_MESSAGE",
+        message: `Dropped collection: ${collectionName}`,
+        kind: "success",
+      })
+      return null
+    } catch (err) {
+      return (err as Error).message
+    }
+  }
+
+  async function handleDropDatabase(targetDbName: string): Promise<string | null> {
+    try {
+      await dropDatabase(targetDbName)
+      // Always reload the database list
+      const databases = await listDatabases()
+      dispatch({ type: "SET_DATABASES", databases })
+
+      // If we dropped the active database, go back to step 1 (database picker)
+      if (targetDbName === dbName) {
+        dispatch({ type: "RESET_DATABASE" })
+      }
+
+      dispatch({
+        type: "SHOW_MESSAGE",
+        message: `Dropped database: ${targetDbName}`,
+        kind: "success",
+      })
+      return null
+    } catch (err) {
+      return (err as Error).message
+    }
+  }
+
+  return { handleCreateCollection, handleCreateDatabase, handleDropCollection, handleDropDatabase }
 }

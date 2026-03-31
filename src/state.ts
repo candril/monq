@@ -124,6 +124,8 @@ export type AppAction =
   | { type: "CLEAR_BULK_QUERY_UPDATE_CONFIRM" }
   | { type: "SHOW_BULK_QUERY_DELETE_CONFIRM"; confirmation: BulkQueryDeleteConfirmation }
   | { type: "CLEAR_BULK_QUERY_DELETE_CONFIRM" }
+  | { type: "SHOW_DROP_CONFIRM"; confirmation: import("./types").DropConfirmation }
+  | { type: "CLEAR_DROP_CONFIRM" }
   // History
   | { type: "LOAD_HISTORY"; entries: string[] }
   | { type: "APPEND_HISTORY_ENTRY"; entry: string }
@@ -195,6 +197,7 @@ export function createInitialState(): AppState {
     deleteConfirmation: null,
     bulkQueryUpdateConfirmation: null,
     bulkQueryDeleteConfirmation: null,
+    dropConfirmation: null,
     historyEntries: [],
     historyPickerOpen: false,
   }
@@ -1222,6 +1225,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "CLEAR_BULK_QUERY_DELETE_CONFIRM":
       return { ...state, bulkQueryDeleteConfirmation: null }
+
+    case "SHOW_DROP_CONFIRM":
+      return { ...state, dropConfirmation: action.confirmation }
+
+    case "CLEAR_DROP_CONFIRM":
+      return { ...state, dropConfirmation: null }
 
     case "START_PIPELINE_WATCH":
       return { ...state, pipelineWatching: true }

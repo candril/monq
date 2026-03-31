@@ -140,16 +140,19 @@ export function ConnectionScreen({ profiles, onConnect }: ConnectionScreenProps)
   const error = resolveError ?? uriError
 
   const title = mode === "uri" ? "Custom URI" : "connections"
-  const hint = mode === "uri"
-    ? "Enter connect  ·  Tab list  ·  Esc quit"
-    : "↑↓ navigate  ·  Enter connect  ·  Tab URI  ·  Esc quit"
+  const hint =
+    mode === "uri"
+      ? "Enter connect  ·  Tab list  ·  Esc quit"
+      : "↑↓ navigate  ·  Enter connect  ·  Tab URI  ·  Esc quit"
 
   return (
     <box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
       {/* Title */}
       <box marginBottom={1} flexDirection="column" alignItems="center">
         <text>
-          <span fg={theme.primary}><strong>monq</strong></span>
+          <span fg={theme.primary}>
+            <strong>monq</strong>
+          </span>
           <span fg={theme.textDim}> — {title}</span>
         </text>
         <text>
@@ -236,11 +239,7 @@ export function ConnectionScreen({ profiles, onConnect }: ConnectionScreenProps)
       {/* Error / hint row */}
       <box marginTop={1}>
         <text>
-          {error ? (
-            <span fg={theme.error}>{error}</span>
-          ) : (
-            <span fg={theme.textMuted}>{hint}</span>
-          )}
+          {error ? <span fg={theme.error}>{error}</span> : <span fg={theme.textMuted}>{hint}</span>}
         </text>
       </box>
     </box>

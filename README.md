@@ -111,6 +111,13 @@ monq                                        # shows saved connections or URI pro
 | `Ctrl+P` | Command palette |
 | `q` | Quit |
 
+### Database & Collection Management
+
+| Key | Action |
+|-----|--------|
+| `Tab` | Create new database / collection (from welcome screen) |
+| `Ctrl+D` | Drop database / collection (requires typing name to confirm) |
+
 ### Querying
 
 | Key | Action |

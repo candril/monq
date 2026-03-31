@@ -25,7 +25,10 @@ export function BulkQueryDeleteConfirmDialog({
       <ConfirmDialog
         title="Bulk Delete — Final Confirmation"
         lines={[
-          { text: `Empty filter — ALL ${matchedCount} documents in "${collectionName}" will be deleted.`, danger: true },
+          {
+            text: `Empty filter — ALL ${matchedCount} documents in "${collectionName}" will be deleted.`,
+            danger: true,
+          },
           { text: "" },
           { text: "This cannot be undone.", danger: true },
         ]}

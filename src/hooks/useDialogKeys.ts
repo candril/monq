@@ -204,11 +204,20 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
           },
           { key: "c", exec: cancel },
         ]
-        if (key.name === "escape") { cancel(); return true }
-        if (key.name === "return") { if (bulkQueryUpdateFocusedIndex >= 0) finalOpts[bulkQueryUpdateFocusedIndex]?.exec() }
-        else if (key.name === "h" || key.name === "left") setBulkQueryUpdateFocusedIndex((i) => Math.max(-1, i - 1))
-        else if (key.name === "l" || key.name === "right") setBulkQueryUpdateFocusedIndex((i) => Math.min(finalOpts.length - 1, i + 1))
-        else { const m = finalOpts.findIndex((o) => o.key === key.name); if (m !== -1) setBulkQueryUpdateFocusedIndex(m) }
+        if (key.name === "escape") {
+          cancel()
+          return true
+        }
+        if (key.name === "return") {
+          if (bulkQueryUpdateFocusedIndex >= 0) finalOpts[bulkQueryUpdateFocusedIndex]?.exec()
+        } else if (key.name === "h" || key.name === "left")
+          setBulkQueryUpdateFocusedIndex((i) => Math.max(-1, i - 1))
+        else if (key.name === "l" || key.name === "right")
+          setBulkQueryUpdateFocusedIndex((i) => Math.min(finalOpts.length - 1, i + 1))
+        else {
+          const m = finalOpts.findIndex((o) => o.key === key.name)
+          if (m !== -1) setBulkQueryUpdateFocusedIndex(m)
+        }
         return true
       }
       // First stage
@@ -229,11 +238,18 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
         },
         { key: "c", exec: cancel },
       ]
-      if (key.name === "escape") { cancel() }
-      else if (key.name === "return") { if (bulkQueryUpdateFocusedIndex >= 0) opts[bulkQueryUpdateFocusedIndex]?.exec() }
-      else if (key.name === "h" || key.name === "left") setBulkQueryUpdateFocusedIndex((i) => Math.max(-1, i - 1))
-      else if (key.name === "l" || key.name === "right") setBulkQueryUpdateFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
-      else { const match = opts.findIndex((o) => o.key === key.name); if (match !== -1) setBulkQueryUpdateFocusedIndex(match) }
+      if (key.name === "escape") {
+        cancel()
+      } else if (key.name === "return") {
+        if (bulkQueryUpdateFocusedIndex >= 0) opts[bulkQueryUpdateFocusedIndex]?.exec()
+      } else if (key.name === "h" || key.name === "left")
+        setBulkQueryUpdateFocusedIndex((i) => Math.max(-1, i - 1))
+      else if (key.name === "l" || key.name === "right")
+        setBulkQueryUpdateFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
+      else {
+        const match = opts.findIndex((o) => o.key === key.name)
+        if (match !== -1) setBulkQueryUpdateFocusedIndex(match)
+      }
       return true
     }
 
@@ -260,11 +276,20 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
           },
           { key: "c", exec: cancel },
         ]
-        if (key.name === "escape") { cancel(); return true }
-        if (key.name === "return") { if (bulkQueryDeleteFocusedIndex >= 0) finalOpts[bulkQueryDeleteFocusedIndex]?.exec() }
-        else if (key.name === "h" || key.name === "left") setBulkQueryDeleteFocusedIndex((i) => Math.max(-1, i - 1))
-        else if (key.name === "l" || key.name === "right") setBulkQueryDeleteFocusedIndex((i) => Math.min(finalOpts.length - 1, i + 1))
-        else { const m = finalOpts.findIndex((o) => o.key === key.name); if (m !== -1) setBulkQueryDeleteFocusedIndex(m) }
+        if (key.name === "escape") {
+          cancel()
+          return true
+        }
+        if (key.name === "return") {
+          if (bulkQueryDeleteFocusedIndex >= 0) finalOpts[bulkQueryDeleteFocusedIndex]?.exec()
+        } else if (key.name === "h" || key.name === "left")
+          setBulkQueryDeleteFocusedIndex((i) => Math.max(-1, i - 1))
+        else if (key.name === "l" || key.name === "right")
+          setBulkQueryDeleteFocusedIndex((i) => Math.min(finalOpts.length - 1, i + 1))
+        else {
+          const m = finalOpts.findIndex((o) => o.key === key.name)
+          if (m !== -1) setBulkQueryDeleteFocusedIndex(m)
+        }
         return true
       }
       // First stage
@@ -285,11 +310,18 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
         },
         { key: "c", exec: cancel },
       ]
-      if (key.name === "escape") { cancel() }
-      else if (key.name === "return") { if (bulkQueryDeleteFocusedIndex >= 0) opts[bulkQueryDeleteFocusedIndex]?.exec() }
-      else if (key.name === "h" || key.name === "left") setBulkQueryDeleteFocusedIndex((i) => Math.max(-1, i - 1))
-      else if (key.name === "l" || key.name === "right") setBulkQueryDeleteFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
-      else { const m = opts.findIndex((o) => o.key === key.name); if (m !== -1) setBulkQueryDeleteFocusedIndex(m) }
+      if (key.name === "escape") {
+        cancel()
+      } else if (key.name === "return") {
+        if (bulkQueryDeleteFocusedIndex >= 0) opts[bulkQueryDeleteFocusedIndex]?.exec()
+      } else if (key.name === "h" || key.name === "left")
+        setBulkQueryDeleteFocusedIndex((i) => Math.max(-1, i - 1))
+      else if (key.name === "l" || key.name === "right")
+        setBulkQueryDeleteFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
+      else {
+        const m = opts.findIndex((o) => o.key === key.name)
+        if (m !== -1) setBulkQueryDeleteFocusedIndex(m)
+      }
       return true
     }
 

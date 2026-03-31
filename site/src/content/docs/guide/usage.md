@@ -29,6 +29,19 @@ monq
 
 If no database is included in the URI, monq displays a database picker on startup. You can also switch databases at any time with `Ctrl+P`.
 
+## Managing databases and collections
+
+From the welcome screen (database or collection picker), you can:
+
+- **Tab** — Create a new database or collection via an inline form
+- **Ctrl+D** — Drop the selected database or collection (requires typing the exact name to confirm)
+
+When viewing a collection list:
+- If the list is empty, **Ctrl+D** drops the current database
+- If collections exist, **Ctrl+D** drops the selected collection
+
+All drop operations show a confirmation dialog requiring you to type the exact name before proceeding — there's no accidental deletion.
+
 ## Saved connections
 
 If you have [saved connection profiles](/monq/reference/configuration/#connections) in `~/.config/monq/config.toml`, monq shows a connection picker on startup instead of the URI prompt. Type to fuzzy-filter the list, then press `Enter` to connect.

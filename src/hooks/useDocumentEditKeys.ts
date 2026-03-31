@@ -25,7 +25,12 @@ interface UseDocumentEditKeysOptions {
   keymap: Keymap
 }
 
-export function useDocumentEditKeys({ state, dispatch, renderer, keymap }: UseDocumentEditKeysOptions) {
+export function useDocumentEditKeys({
+  state,
+  dispatch,
+  renderer,
+  keymap,
+}: UseDocumentEditKeysOptions) {
   function handleKey(key: { name: string; ctrl?: boolean; shift?: boolean }): boolean {
     if (state.view !== "documents") return false
     if (state.commandPaletteVisible) return false
@@ -183,11 +188,16 @@ export function useDocumentEditKeys({ state, dispatch, renderer, keymap }: UseDo
         .then((outcome) => {
           renderer.resume()
           if (outcome.cancelled) return
-          if ('emptyUpdate' in outcome && outcome.emptyUpdate) {
-            dispatch({ type: "SHOW_MESSAGE", message: "Nothing to update — add fields to $set (or another operator)", kind: "info" })
+          if ("emptyUpdate" in outcome && outcome.emptyUpdate) {
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: "Nothing to update — add fields to $set (or another operator)",
+              kind: "info",
+            })
             return
           }
-          const { filter, update, upsert, matchedCount, apply, collectionName } = outcome as import("../actions/queryUpdate").QueryUpdateReady
+          const { filter, update, upsert, matchedCount, apply, collectionName } =
+            outcome as import("../actions/queryUpdate").QueryUpdateReady
           dispatch({
             type: "SHOW_BULK_QUERY_UPDATE_CONFIRM",
             confirmation: {
@@ -215,10 +225,8 @@ export function useDocumentEditKeys({ state, dispatch, renderer, keymap }: UseDo
                     })
                   } else {
                     const parts: string[] = []
-                    if (result.modifiedCount > 0)
-                      parts.push(`Updated ${result.modifiedCount}`)
-                    if (result.upsertedCount > 0)
-                      parts.push(`Upserted ${result.upsertedCount}`)
+                    if (result.modifiedCount > 0) parts.push(`Updated ${result.modifiedCount}`)
+                    if (result.upsertedCount > 0) parts.push(`Upserted ${result.upsertedCount}`)
                     parts.push(`/ matched ${result.matchedCount}`)
                     dispatch({
                       type: "SHOW_MESSAGE",

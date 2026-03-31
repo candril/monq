@@ -288,7 +288,9 @@ describe("filterToSimple", () => {
   })
 
   test("$gt with Date round-trips correctly", () => {
-    const { query, lossless } = filterToSimple({ createdAt: { $gt: new Date("2025-01-01T00:00:00.000Z") } })
+    const { query, lossless } = filterToSimple({
+      createdAt: { $gt: new Date("2025-01-01T00:00:00.000Z") },
+    })
 
     expect(query).toBe("createdAt>2025-01-01")
     expect(lossless).toBe(true)

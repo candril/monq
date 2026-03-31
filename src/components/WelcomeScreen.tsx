@@ -18,6 +18,7 @@ import { useState, useMemo, useEffect } from "react"
 import { useKeyboard, useRenderer } from "@opentui/react"
 import { fuzzyFilter } from "../utils/fuzzy"
 import { theme } from "../theme"
+import { DropConfirmDialog } from "./DropConfirmDialog"
 
 const MIN_LIST_HEIGHT = 10
 
@@ -48,6 +49,10 @@ interface WelcomeScreenProps {
   onCreateDatabase: (dbName: string, firstCollection: string) => Promise<string | null>
   /** Called to create a new collection; returns an error string or null on success */
   onCreateCollection: (collectionName: string) => Promise<string | null>
+  /** Called to drop a collection; returns an error string or null on success */
+  onDropCollection: (collectionName: string) => Promise<string | null>
+  /** Called to drop a database; returns an error string or null on success */
+  onDropDatabase: (dbName: string) => Promise<string | null>
 }
 
 type CreateStep = "idle" | "name" | "first-collection" | "creating"
@@ -66,6 +71,8 @@ export function WelcomeScreen({
   onBackToUri,
   onCreateDatabase,
   onCreateCollection,
+  onDropCollection,
+  onDropDatabase,
 }: WelcomeScreenProps) {
   const renderer = useRenderer()
   const [query, setQuery] = useState("")
@@ -76,6 +83,10 @@ export function WelcomeScreen({
   const [newName, setNewName] = useState("")
   const [firstCollection, setFirstCollection] = useState("")
   const [createError, setCreateError] = useState<string | null>(null)
+
+  // Drop flow state
+  const [showDropConfirm, setShowDropConfirm] = useState(false)
+  const [dropTargetName, setDropTargetName] = useState("")
 
   const items = step === 1 ? databases : collections
   const onSelect = step === 1 ? onSelectDatabase : onSelectCollection
@@ -100,6 +111,9 @@ export function WelcomeScreen({
   const isCreating = createStep !== "idle"
 
   useKeyboard((key) => {
+    // Don't handle keys when drop confirm is showing — let the dialog handle them
+    if (showDropConfirm) return
+
     // ── Create flow ──────────────────────────────────────────────────────────
     if (createStep === "name") {
       if (key.name === "escape" || (key.name === "backspace" && !newName)) {
@@ -191,6 +205,31 @@ export function WelcomeScreen({
       setCreateError(null)
       return
     }
+    // Drop database / collection (Ctrl-D)
+    if (key.ctrl && key.name === "d") {
+      if (step === 1) {
+        // Step 1: drop the selected database
+        const item = filtered[safeCursor]
+        if (item && !isEmpty) {
+          setDropTargetName(item)
+          setShowDropConfirm(true)
+        }
+      } else {
+        // Step 2: if no collections, offer to drop the current database
+        // otherwise drop the selected collection
+        if (isEmpty || filtered.length === 0) {
+          setDropTargetName(dbName)
+          setShowDropConfirm(true)
+        } else {
+          const item = filtered[safeCursor]
+          if (item) {
+            setDropTargetName(item)
+            setShowDropConfirm(true)
+          }
+        }
+      }
+      return
+    }
     // Backspace on empty → go back one level
     if (key.name === "backspace" && !query) {
       if (step === 2) {
@@ -223,6 +262,10 @@ export function WelcomeScreen({
 
   const hintParts: string[] = []
   if (!isCreating) {
+    // Show "Ctrl-D drop" when there are items to drop, OR on step 2 when empty (to drop the db)
+    if (!isLoading && (!isEmpty || (step === 2 && isEmpty))) {
+      hintParts.push(step === 2 && isEmpty ? "Ctrl-D  drop database" : "Ctrl-D  drop")
+    }
     if (!isLoading) hintParts.push("Tab  new")
     if (step === 2 || onBackToUri) hintParts.push("⌫  back")
     hintParts.push("Esc  quit")
@@ -252,7 +295,7 @@ export function WelcomeScreen({
 
       {/* Create flow — inline input(s) */}
       {isCreating && (
-        <box minWidth={36} flexDirection="column" marginBottom={1}>
+        <box minWidth={36} flexDirection="column" marginBottom={2}>
           {createStep !== "first-collection" && (
             <>
               <text>
@@ -260,7 +303,7 @@ export function WelcomeScreen({
                   {step === 1 ? "New database name" : "New collection name"}
                 </span>
               </text>
-              <box flexDirection="row" paddingLeft={1} marginTop={0}>
+              <box flexDirection="row" paddingLeft={1} marginTop={1}>
                 <text>
                   <span fg={theme.primary}>{"> "}</span>
                 </text>
@@ -285,10 +328,12 @@ export function WelcomeScreen({
                 <span fg={theme.textMuted}>Database: </span>
                 <span fg={theme.text}>{newName}</span>
               </text>
-              <text>
-                <span fg={theme.textMuted}>{"First collection name (Enter for 'default')"}</span>
-              </text>
-              <box flexDirection="row" paddingLeft={1} marginTop={0}>
+              <box marginTop={1}>
+                <text>
+                  <span fg={theme.textMuted}>{"First collection name (Enter for 'default')"}</span>
+                </text>
+              </box>
+              <box flexDirection="row" paddingLeft={1} marginTop={1}>
                 <text>
                   <span fg={theme.primary}>{"> "}</span>
                 </text>
@@ -310,22 +355,28 @@ export function WelcomeScreen({
             </>
           )}
           {createStep === "creating" && (
-            <text>
-              <span fg={theme.textMuted}>Creating...</span>
-            </text>
+            <box marginTop={1}>
+              <text>
+                <span fg={theme.textMuted}>Creating...</span>
+              </text>
+            </box>
           )}
           {createError && (
-            <text>
-              <span fg={theme.error}>{createError}</span>
-            </text>
+            <box marginTop={1}>
+              <text>
+                <span fg={theme.error}>{createError}</span>
+              </text>
+            </box>
           )}
-          <text>
-            <span fg={theme.textMuted}>
-              {createStep === "first-collection"
-                ? "Enter confirm  ·  Esc back"
-                : "Enter confirm  ·  Esc cancel"}
-            </span>
-          </text>
+          <box marginTop={2}>
+            <text>
+              <span fg={theme.textMuted}>
+                {createStep === "first-collection"
+                  ? "Enter confirm  ·  Esc back"
+                  : "Enter confirm  ·  Esc cancel"}
+              </span>
+            </text>
+          </box>
         </box>
       )}
 
@@ -413,6 +464,28 @@ export function WelcomeScreen({
             <span fg={theme.textMuted}>{hint}</span>
           </text>
         </box>
+      )}
+
+      {/* Drop confirmation dialog */}
+      {showDropConfirm && (
+        <DropConfirmDialog
+          type={step === 1 || dropTargetName === dbName ? "database" : "collection"}
+          name={dropTargetName}
+          onConfirm={async () => {
+            setShowDropConfirm(false)
+            // If dropping current database (either from step 1 or step 2 when empty)
+            if (step === 1 || dropTargetName === dbName) {
+              await onDropDatabase(dropTargetName)
+            } else {
+              await onDropCollection(dropTargetName)
+            }
+            setDropTargetName("")
+          }}
+          onCancel={() => {
+            setShowDropConfirm(false)
+            setDropTargetName("")
+          }}
+        />
       )}
     </box>
   )

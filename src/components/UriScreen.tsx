@@ -42,7 +42,9 @@ export function UriScreen({ onConnect }: UriScreenProps) {
       {/* Title */}
       <box marginBottom={1} flexDirection="column" alignItems="center">
         <text>
-          <span fg={theme.primary}><strong>monq</strong></span>
+          <span fg={theme.primary}>
+            <strong>monq</strong>
+          </span>
           <span fg={theme.textDim}> — connect</span>
         </text>
       </box>
@@ -86,7 +88,7 @@ export function UriScreen({ onConnect }: UriScreenProps) {
           {error ? (
             <span fg={theme.error}>{error}</span>
           ) : (
-            <span fg={theme.textMuted}>Enter to connect  ·  Esc to quit</span>
+            <span fg={theme.textMuted}>Enter to connect · Esc to quit</span>
           )}
         </text>
       </box>

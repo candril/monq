@@ -178,6 +178,17 @@ export async function createDatabase(dbName: string, firstCollection: string): P
   await client.db(dbName).createCollection(firstCollection)
 }
 
+/** Drop a collection from the active database */
+export async function dropCollection(collectionName: string): Promise<void> {
+  await getDb().dropCollection(collectionName)
+}
+
+/** Drop a database */
+export async function dropDatabase(dbName: string): Promise<void> {
+  if (!client) throw new Error("Not connected")
+  await client.db(dbName).dropDatabase()
+}
+
 /** Replace a document by its original _id */
 export async function replaceDocument(
   collectionName: string,

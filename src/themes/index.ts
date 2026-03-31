@@ -282,13 +282,13 @@ const rosePine: Theme = {
   text: "#e0def4",
   textDim: "#6e6a86",
   textMuted: "#403d52",
-  primary: "#c4a7e7",   // iris
-  secondary: "#ebbcba",  // rose
-  success: "#31748f",    // pine
-  warning: "#f6c177",    // gold
-  error: "#eb6f92",      // love
+  primary: "#c4a7e7", // iris
+  secondary: "#ebbcba", // rose
+  success: "#31748f", // pine
+  warning: "#f6c177", // gold
+  error: "#eb6f92", // love
   border: "#403d52",
-  jsonKey: "#9ccfd8",    // foam
+  jsonKey: "#9ccfd8", // foam
   jsonString: "#31748f",
   jsonNumber: "#f6c177",
   jsonBoolean: "#c4a7e7",
@@ -346,13 +346,13 @@ const rosePineDawn: Theme = {
   text: "#575279",
   textDim: "#9893a5",
   textMuted: "#cecacd",
-  primary: "#907aa9",   // iris
-  secondary: "#d7827e",  // rose
-  success: "#286983",    // pine
-  warning: "#ea9d34",    // gold
-  error: "#b4637a",      // love
+  primary: "#907aa9", // iris
+  secondary: "#d7827e", // rose
+  success: "#286983", // pine
+  warning: "#ea9d34", // gold
+  error: "#b4637a", // love
   border: "#dfdad9",
-  jsonKey: "#56949f",    // foam
+  jsonKey: "#56949f", // foam
   jsonString: "#286983",
   jsonNumber: "#ea9d34",
   jsonBoolean: "#907aa9",

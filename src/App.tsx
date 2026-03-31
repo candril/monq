@@ -123,11 +123,20 @@ export function App({
       message: configWarnings[0],
       kind: "warning",
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const { handleCreateCollection, handleCreateDatabase } = useMongoConnection({ uri, dispatch, dbName: state.dbName, state })
-  const { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex, bulkQueryUpdateFocusedIndex, bulkQueryUpdateAwaitingFinal, bulkQueryDeleteFocusedIndex, bulkQueryDeleteAwaitingFinal } = useKeyboardNav({
+  const { handleCreateCollection, handleCreateDatabase, handleDropCollection, handleDropDatabase } =
+    useMongoConnection({ uri, dispatch, dbName: state.dbName, state })
+  const {
+    pipelineFocusedIndex,
+    bulkEditFocusedIndex,
+    deleteFocusedIndex,
+    bulkQueryUpdateFocusedIndex,
+    bulkQueryUpdateAwaitingFinal,
+    bulkQueryDeleteFocusedIndex,
+    bulkQueryDeleteAwaitingFinal,
+  } = useKeyboardNav({
     state,
     dispatch,
     docListScrollRef,
@@ -153,20 +162,24 @@ export function App({
   }, [])
 
   // Live preview: apply theme as cursor moves over presets, revert on null (close/escape)
-  const handleThemeHighlight = useCallback((presetId: string | null) => {
-    // null = closed/escaped → revert to base
-    // "reset" = hovering Reset entry → preview the config/default theme
-    const id = presetId === null
-      ? previewBaseThemeId.current
-      : presetId === "reset"
-        ? (configThemeId ?? "tokyo-night")
-        : presetId
-    const preset = findPreset(id)
-    if (preset) {
-      setTheme(buildTheme({ ...preset.theme, ...configThemeOverrides }))
-      setThemeVersion((v) => v + 1)
-    }
-  }, [configThemeId, configThemeOverrides])
+  const handleThemeHighlight = useCallback(
+    (presetId: string | null) => {
+      // null = closed/escaped → revert to base
+      // "reset" = hovering Reset entry → preview the config/default theme
+      const id =
+        presetId === null
+          ? previewBaseThemeId.current
+          : presetId === "reset"
+            ? (configThemeId ?? "tokyo-night")
+            : presetId
+      const preset = findPreset(id)
+      if (preset) {
+        setTheme(buildTheme({ ...preset.theme, ...configThemeOverrides }))
+        setThemeVersion((v) => v + 1)
+      }
+    },
+    [configThemeId, configThemeOverrides],
+  )
 
   const { handleSelect: handlePaletteSelect } = usePaletteActions({
     state,
@@ -192,10 +205,7 @@ export function App({
   }, [paletteMode])
 
   // Build theme commands list (re-computed when active theme changes)
-  const themeCommands = useMemo(
-    () => buildThemeCommands(activeThemeId),
-    [activeThemeId],
-  )
+  const themeCommands = useMemo(() => buildThemeCommands(activeThemeId), [activeThemeId])
 
   // Palette visible for in-app Ctrl+P commands only (startup flow uses WelcomeScreen)
   const paletteVisible =
@@ -314,6 +324,8 @@ export function App({
             onBackToUri={onBackToUri}
             onCreateDatabase={handleCreateDatabase}
             onCreateCollection={handleCreateCollection}
+            onDropCollection={handleDropCollection}
+            onDropDatabase={handleDropDatabase}
           />
         ) : activeTab ? (
           <box
@@ -413,7 +425,11 @@ export function App({
         commands={effectiveCommands}
         onSelect={handlePaletteSelect}
         onClose={handlePaletteClose}
-        onHighlight={paletteMode === "themes" ? (cmd) => handleThemeHighlight(cmd ? cmd.id.slice(6) : null) : undefined}
+        onHighlight={
+          paletteMode === "themes"
+            ? (cmd) => handleThemeHighlight(cmd ? cmd.id.slice(6) : null)
+            : undefined
+        }
         placeholder={effectivePlaceholder}
       />
 

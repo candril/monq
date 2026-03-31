@@ -99,9 +99,7 @@ export function validateConfig(config: UserConfig): string[] {
         continue
       }
       if (!HEX_RE.test(value)) {
-        warnings.push(
-          `config: [theme] "${key}" = "${value}" is not a valid hex colour — ignored`,
-        )
+        warnings.push(`config: [theme] "${key}" = "${value}" is not a valid hex colour — ignored`)
       }
     }
   }
@@ -116,9 +114,7 @@ export function validateConfig(config: UserConfig): string[] {
       const combos = Array.isArray(value) ? value : [value]
       for (const combo of combos) {
         if (typeof combo !== "string") {
-          warnings.push(
-            `config: [keys] "${action}" contains a non-string value — ignored`,
-          )
+          warnings.push(`config: [keys] "${action}" contains a non-string value — ignored`)
           continue
         }
         if (combo !== "" && !isValidCombo(combo)) {

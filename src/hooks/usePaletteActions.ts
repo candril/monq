@@ -416,11 +416,16 @@ export function usePaletteActions({
             .then((outcome) => {
               renderer.resume()
               if (outcome.cancelled) return
-              if ('emptyUpdate' in outcome && outcome.emptyUpdate) {
-                dispatch({ type: "SHOW_MESSAGE", message: "Nothing to update — add fields to $set (or another operator)", kind: "info" })
+              if ("emptyUpdate" in outcome && outcome.emptyUpdate) {
+                dispatch({
+                  type: "SHOW_MESSAGE",
+                  message: "Nothing to update — add fields to $set (or another operator)",
+                  kind: "info",
+                })
                 return
               }
-              const { filter, update, upsert, matchedCount, apply, collectionName } = outcome as QueryUpdateReady
+              const { filter, update, upsert, matchedCount, apply, collectionName } =
+                outcome as QueryUpdateReady
               dispatch({
                 type: "SHOW_BULK_QUERY_UPDATE_CONFIRM",
                 confirmation: {
@@ -435,19 +440,35 @@ export function usePaletteActions({
                     try {
                       const result = await apply()
                       if (result.matchedCount === 0) {
-                        dispatch({ type: "SHOW_MESSAGE", message: "No documents matched", kind: "warning" })
+                        dispatch({
+                          type: "SHOW_MESSAGE",
+                          message: "No documents matched",
+                          kind: "warning",
+                        })
                       } else if (result.modifiedCount === 0 && result.upsertedCount === 0) {
-                        dispatch({ type: "SHOW_MESSAGE", message: "No documents modified", kind: "info" })
+                        dispatch({
+                          type: "SHOW_MESSAGE",
+                          message: "No documents modified",
+                          kind: "info",
+                        })
                       } else {
                         const parts: string[] = []
                         if (result.modifiedCount > 0) parts.push(`Updated ${result.modifiedCount}`)
                         if (result.upsertedCount > 0) parts.push(`Upserted ${result.upsertedCount}`)
                         parts.push(`/ matched ${result.matchedCount}`)
-                        dispatch({ type: "SHOW_MESSAGE", message: parts.join(" "), kind: "success" })
+                        dispatch({
+                          type: "SHOW_MESSAGE",
+                          message: parts.join(" "),
+                          kind: "success",
+                        })
                       }
                       dispatch({ type: "RELOAD_DOCUMENTS" })
                     } catch (err) {
-                      dispatch({ type: "SHOW_MESSAGE", message: `Update failed: ${(err as Error).message}`, kind: "error" })
+                      dispatch({
+                        type: "SHOW_MESSAGE",
+                        message: `Update failed: ${(err as Error).message}`,
+                        kind: "error",
+                      })
                     }
                   },
                 },
@@ -455,7 +476,11 @@ export function usePaletteActions({
             })
             .catch((err: Error) => {
               renderer.resume()
-              dispatch({ type: "SHOW_MESSAGE", message: `Bulk update failed: ${err.message}`, kind: "error" })
+              dispatch({
+                type: "SHOW_MESSAGE",
+                message: `Bulk update failed: ${err.message}`,
+                kind: "error",
+              })
             })
           break
         }
@@ -505,7 +530,11 @@ export function usePaletteActions({
                       })
                       dispatch({ type: "RELOAD_DOCUMENTS" })
                     } catch (err) {
-                      dispatch({ type: "SHOW_MESSAGE", message: `Delete failed: ${(err as Error).message}`, kind: "error" })
+                      dispatch({
+                        type: "SHOW_MESSAGE",
+                        message: `Delete failed: ${(err as Error).message}`,
+                        kind: "error",
+                      })
                     }
                   },
                 },
@@ -513,7 +542,11 @@ export function usePaletteActions({
             })
             .catch((err: Error) => {
               renderer.resume()
-              dispatch({ type: "SHOW_MESSAGE", message: `Bulk delete failed: ${err.message}`, kind: "error" })
+              dispatch({
+                type: "SHOW_MESSAGE",
+                message: `Bulk delete failed: ${err.message}`,
+                kind: "error",
+              })
             })
           break
         }

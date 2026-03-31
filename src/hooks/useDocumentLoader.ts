@@ -18,9 +18,10 @@ import { classifyPipeline, extractFindParts } from "../query/pipeline"
  * _id must always be fetched so edit/delete commands can find the document.
  * Returns the sanitized projection and whether _id was suppressed.
  */
-function sanitizeProjection(
-  projection: Record<string, 0 | 1> | undefined,
-): { projection: Record<string, 0 | 1> | undefined; idHidden: boolean } {
+function sanitizeProjection(projection: Record<string, 0 | 1> | undefined): {
+  projection: Record<string, 0 | 1> | undefined
+  idHidden: boolean
+} {
   if (!projection) return { projection, idHidden: false }
   if (!("_id" in projection) || projection["_id"] !== 0) {
     return { projection, idHidden: false }
