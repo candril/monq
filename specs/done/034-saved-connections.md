@@ -1,6 +1,6 @@
 # Saved Connection Profiles
 
-**Status**: In Progress
+**Status**: Done
 
 ## Description
 
@@ -35,22 +35,6 @@ resolves to one, so secrets never touch the config file.
   `ConnectionScreen` is skipped entirely (existing behaviour preserved).
 - **Zero-config fallback** — if no `[connections]` entries exist (or the file
   doesn't exist), go straight to the existing `UriScreen`.
-
-### P2 — Should Have
-
-- **`--connections` flag** — force `ConnectionScreen` even when `--uri` is
-  supplied, useful for scripting / aliases.
-- **Highlight last-used connection** — persist the last-selected profile key
-  to `~/.local/share/monq/last-connection` and pre-select it on next launch.
-- **Integrate with spec 033** — share the same `config.toml` file; the
-  `[connections.*]` section coexists with `[theme]` and `[keys]`.
-
-### P3 — Nice to Have
-
-- **In-TUI "open config" shortcut** — press `e` on a profile to open the
-  config file in `$EDITOR` at the relevant line.
-- **Connection labels / tags** — optional `tags = ["prod", "eu"]` field;
-  shown in the list and filterable.
 
 ---
 

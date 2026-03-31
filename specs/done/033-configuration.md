@@ -1,6 +1,6 @@
 # Configuration System
 
-**Status**: In Progress
+**Status**: Done
 
 ## Description
 
@@ -24,17 +24,6 @@ An optional TOML configuration file that lets users customise keybindings and th
 - **Theme customisation** — a `[theme]` section accepts hex colour overrides for every token in `src/theme.ts`. Unset tokens fall back to the built-in Tokyo Night defaults.
 - **Keybinding remapping** — a `[keys]` section maps action names to one or more key combos. The full action catalogue is listed below. Any unset action keeps its default binding.
 - **Validation with helpful errors** — unknown keys, malformed hex colours, or unrecognised action names are reported as startup warnings in the toast system (not fatal errors).
-
-### P2 — Should Have
-
-- **Built-in theme presets** — ship two named presets (`tokyo-night` (default) and `catppuccin-mocha`) selectable via `theme = "catppuccin-mocha"` at the top level of the config. A `[theme]` override section always wins over the preset.
-- **`monq --print-config`** flag — prints the effective merged config as valid TOML to stdout and exits, so users have a starting point for their own file.
-- **`monq --config <path>`** flag — load config from an explicit path instead of the XDG default.
-
-### P3 — Nice to Have
-
-- **`monq --check-config`** — validate config and report errors without starting the UI.
-- **Config reload on `SIGHUP`** — re-read config and redraw without restarting the process.
 
 ---
 
