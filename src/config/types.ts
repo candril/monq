@@ -95,6 +95,7 @@ export type ActionName =
   | "filter_bar.toggle"
   | "palette.open"
   | "index.open"
+  | "explain.run"
   | "app.quit"
 
 /** Raw user-supplied keys config — each action maps to a string or string[]. */

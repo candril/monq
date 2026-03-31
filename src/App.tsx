@@ -27,6 +27,7 @@ import { FilterSuggestions } from "./components/FilterSuggestions"
 import { HistoryPicker } from "./components/HistoryPicker"
 import { CommandPalette } from "./components/CommandPalette"
 import { IndexCreateConfirmDialog } from "./components/IndexCreateConfirmDialog"
+import { ExplainPreview } from "./components/ExplainPreview"
 import { WelcomeScreen } from "./components/WelcomeScreen"
 import { TabBar } from "./components/TabBar"
 import { appReducer, createInitialState } from "./state"
@@ -369,7 +370,17 @@ export function App({
           </box>
         ) : null}
 
-        {activeTab && (
+        {activeTab && state.previewMode === "explain" && (
+          <ExplainPreview
+            result={state.explainResult}
+            loading={state.explainLoading}
+            position={state.previewPosition}
+            scrollOffset={state.previewScrollOffset}
+            collectionName={activeTab.collectionName}
+          />
+        )}
+
+        {activeTab && state.previewMode === "document" && (
           <DocumentPreview
             document={selectedDoc}
             position={state.previewPosition}

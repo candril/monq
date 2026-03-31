@@ -75,6 +75,9 @@ export type View = "collections" | "documents"
 /** Preview panel position */
 export type PreviewPosition = "right" | "bottom" | null
 
+/** Preview content mode */
+export type PreviewMode = "document" | "explain"
+
 /** Query mode */
 export type QueryMode = "simple" | "bson"
 
@@ -274,7 +277,10 @@ export interface AppState {
 
   // Preview
   previewPosition: PreviewPosition
+  previewMode: PreviewMode
   previewScrollOffset: number
+  explainResult: Document | null
+  explainLoading: boolean
 
   // Command palette
   commandPaletteVisible: boolean
