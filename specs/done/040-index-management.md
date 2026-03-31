@@ -1,6 +1,6 @@
 # Index Management
 
-**Status**: Draft
+**Status**: Done
 
 ## Description
 

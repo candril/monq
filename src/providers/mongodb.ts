@@ -2,8 +2,8 @@
  * MongoDB connection and query provider
  */
 
-import { MongoClient, type Db, type Document, type Filter, type UpdateFilter } from "mongodb"
-import type { CollectionInfo } from "../types"
+import { MongoClient, type Db, type Document, type Filter, type UpdateFilter, type IndexSpecification, type CreateIndexesOptions } from "mongodb"
+import type { CollectionInfo, IndexInfo } from "../types"
 
 let client: MongoClient | null = null
 let activeDb: string | null = null
@@ -165,6 +165,29 @@ export async function deleteManyDocuments(
   const collection = getDb().collection(collectionName)
   const result = await collection.deleteMany(filter)
   return { deletedCount: result.deletedCount }
+}
+
+/** List all indexes on a collection */
+export async function listIndexes(collectionName: string): Promise<IndexInfo[]> {
+  const collection = getDb().collection(collectionName)
+  const indexes = await collection.listIndexes().toArray()
+  return indexes as IndexInfo[]
+}
+
+/** Create an index on a collection */
+export async function createIndex(
+  collectionName: string,
+  keySpec: IndexSpecification,
+  options: CreateIndexesOptions = {},
+): Promise<string> {
+  const collection = getDb().collection(collectionName)
+  return collection.createIndex(keySpec, options)
+}
+
+/** Drop an index by name */
+export async function dropIndex(collectionName: string, indexName: string): Promise<void> {
+  const collection = getDb().collection(collectionName)
+  await collection.dropIndex(indexName)
 }
 
 /** Replace a document by its original _id */

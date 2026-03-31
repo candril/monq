@@ -12,6 +12,7 @@ import type {
   CollectionInfo,
   DeleteConfirmation,
   DetectedColumn,
+  IndexCreateConfirmation,
   QueryMode,
   SelectionMode,
   Tab,
@@ -125,6 +126,9 @@ export type AppAction =
   | { type: "APPEND_HISTORY_ENTRY"; entry: string }
   | { type: "OPEN_HISTORY_PICKER" }
   | { type: "CLOSE_HISTORY_PICKER" }
+  // Index create confirmation
+  | { type: "SHOW_INDEX_CREATE_CONFIRM"; confirmation: IndexCreateConfirmation }
+  | { type: "CLEAR_INDEX_CREATE_CONFIRM" }
 
 // ============================================================================
 // Helpers
@@ -192,6 +196,7 @@ export function createInitialState(): AppState {
     bulkQueryDeleteConfirmation: null,
     historyEntries: [],
     historyPickerOpen: false,
+    indexCreateConfirmation: null,
   }
 }
 
@@ -1232,6 +1237,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "CLOSE_HISTORY_PICKER":
       return { ...state, historyPickerOpen: false }
+
+    case "SHOW_INDEX_CREATE_CONFIRM":
+      return { ...state, indexCreateConfirmation: action.confirmation }
+
+    case "CLEAR_INDEX_CREATE_CONFIRM":
+      return { ...state, indexCreateConfirmation: null }
 
     default:
       return state

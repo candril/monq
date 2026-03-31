@@ -58,6 +58,7 @@ const DEFAULT_BINDINGS: Record<ActionName, string[]> = {
   "tab.switch_9": ["9"],
   "filter_bar.toggle": ["shift+f"],
   "palette.open": ["ctrl+p"],
+  "index.open": ["shift+i"],
   "app.quit": ["q"],
 }
 

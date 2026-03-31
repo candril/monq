@@ -23,6 +23,7 @@ import { DocumentPreview } from "./components/DocumentPreview"
 import { FilterSuggestions } from "./components/FilterSuggestions"
 import { HistoryPicker } from "./components/HistoryPicker"
 import { CommandPalette } from "./components/CommandPalette"
+import { IndexCreateConfirmDialog } from "./components/IndexCreateConfirmDialog"
 import { WelcomeScreen } from "./components/WelcomeScreen"
 import { TabBar } from "./components/TabBar"
 import { appReducer, createInitialState } from "./state"
@@ -127,7 +128,7 @@ export function App({
   }, [])
 
   useMongoConnection({ uri, dispatch, dbName: state.dbName })
-  const { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex, bulkQueryUpdateFocusedIndex, bulkQueryUpdateAwaitingFinal, bulkQueryDeleteFocusedIndex, bulkQueryDeleteAwaitingFinal } = useKeyboardNav({
+  const { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex, bulkQueryUpdateFocusedIndex, bulkQueryUpdateAwaitingFinal, bulkQueryDeleteFocusedIndex, bulkQueryDeleteAwaitingFinal, indexCreateFocusedIndex } = useKeyboardNav({
     state,
     dispatch,
     docListScrollRef,
@@ -450,6 +451,13 @@ export function App({
           confirmation={state.bulkQueryDeleteConfirmation}
           focusedIndex={bulkQueryDeleteFocusedIndex}
           awaitingFinalConfirm={bulkQueryDeleteAwaitingFinal}
+        />
+      )}
+
+      {state.indexCreateConfirmation && (
+        <IndexCreateConfirmDialog
+          confirmation={state.indexCreateConfirmation}
+          focusedIndex={indexCreateFocusedIndex}
         />
       )}
     </Shell>

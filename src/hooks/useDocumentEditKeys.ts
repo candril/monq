@@ -14,6 +14,7 @@ import type { EditManyResult } from "../actions/editMany"
 import { deleteDocument } from "../providers/mongodb"
 import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../actions/editMany"
 import { openEditorForQueryUpdate, openEditorForQueryDelete } from "../actions/queryUpdate"
+import { openEditorForIndexes } from "../actions/index"
 import { parseSimpleQueryFull, parseBsonQuery } from "../query/parser"
 import type { Filter } from "mongodb"
 import type { Document } from "mongodb"
@@ -313,6 +314,48 @@ export function useDocumentEditKeys({ state, dispatch, renderer, keymap }: UseDo
             message: `Bulk delete failed: ${err.message}`,
             kind: "error",
           })
+        })
+      return true
+    }
+
+    // index.open: open index editor
+    if (matches(key, keymap["index.open"])) {
+      const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+      if (!activeTab) return true
+      renderer.suspend()
+      openEditorForIndexes(activeTab.collectionName, state.dbName, state.schemaMap)
+        .then((outcome) => {
+          renderer.resume()
+          if (outcome.cancelled) return
+          const { toCreate, toDrop, toReplace, apply } = outcome
+          dispatch({
+            type: "SHOW_INDEX_CREATE_CONFIRM",
+            confirmation: {
+              toCreate,
+              toDrop,
+              toReplace,
+              resolve: async (confirmed) => {
+                if (!confirmed) return
+                const result = await apply()
+                if (result.errors.length > 0) {
+                  dispatch({ type: "SHOW_MESSAGE", message: result.errors[0], kind: "error" })
+                } else {
+                  const parts: string[] = []
+                  if (result.created > 0) parts.push(`Created ${result.created}`)
+                  if (result.dropped > 0) parts.push(`Dropped ${result.dropped}`)
+                  dispatch({
+                    type: "SHOW_MESSAGE",
+                    message: parts.join(", ") || "No changes",
+                    kind: "success",
+                  })
+                }
+              },
+            },
+          })
+        })
+        .catch((err: Error) => {
+          renderer.resume()
+          dispatch({ type: "SHOW_MESSAGE", message: `Index editor failed: ${err.message}`, kind: "error" })
         })
       return true
     }

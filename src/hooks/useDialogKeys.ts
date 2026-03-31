@@ -23,6 +23,7 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
   const [bulkQueryUpdateAwaitingFinal, setBulkQueryUpdateAwaitingFinal] = useState(false)
   const [bulkQueryDeleteFocusedIndex, setBulkQueryDeleteFocusedIndex] = useState(-1)
   const [bulkQueryDeleteAwaitingFinal, setBulkQueryDeleteAwaitingFinal] = useState(false)
+  const [indexCreateFocusedIndex, setIndexCreateFocusedIndex] = useState(-1)
 
   function handleKey(key: { name: string; ctrl?: boolean; shift?: boolean }): boolean {
     // Pipeline→simple confirmation dialog
@@ -293,6 +294,33 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
       return true
     }
 
+    // Index create confirmation dialog
+    if (state.indexCreateConfirmation) {
+      const { resolve } = state.indexCreateConfirmation
+      const cancel = () => {
+        dispatch({ type: "CLEAR_INDEX_CREATE_CONFIRM" })
+        setIndexCreateFocusedIndex(-1)
+        resolve(false)
+      }
+      const opts = [
+        { key: "c", exec: cancel },
+        {
+          key: "a",
+          exec: () => {
+            dispatch({ type: "CLEAR_INDEX_CREATE_CONFIRM" })
+            setIndexCreateFocusedIndex(-1)
+            resolve(true)
+          },
+        },
+      ]
+      if (key.name === "escape") { cancel() }
+      else if (key.name === "return") { if (indexCreateFocusedIndex >= 0) opts[indexCreateFocusedIndex]?.exec() }
+      else if (key.name === "h" || key.name === "left") setIndexCreateFocusedIndex((i) => Math.max(-1, i - 1))
+      else if (key.name === "l" || key.name === "right") setIndexCreateFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
+      else { const m = opts.findIndex((o) => o.key === key.name); if (m !== -1) setIndexCreateFocusedIndex(m) }
+      return true
+    }
+
     return false
   }
 
@@ -305,5 +333,6 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
     bulkQueryUpdateAwaitingFinal,
     bulkQueryDeleteFocusedIndex,
     bulkQueryDeleteAwaitingFinal,
+    indexCreateFocusedIndex,
   }
 }
