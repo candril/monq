@@ -20,7 +20,9 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
   const [bulkEditFocusedIndex, setBulkEditFocusedIndex] = useState(-1)
   const [deleteFocusedIndex, setDeleteFocusedIndex] = useState(-1)
   const [bulkQueryUpdateFocusedIndex, setBulkQueryUpdateFocusedIndex] = useState(-1)
+  const [bulkQueryUpdateAwaitingFinal, setBulkQueryUpdateAwaitingFinal] = useState(false)
   const [bulkQueryDeleteFocusedIndex, setBulkQueryDeleteFocusedIndex] = useState(-1)
+  const [bulkQueryDeleteAwaitingFinal, setBulkQueryDeleteAwaitingFinal] = useState(false)
 
   function handleKey(key: { name: string; ctrl?: boolean; shift?: boolean }): boolean {
     // Pipeline→simple confirmation dialog
@@ -181,77 +183,113 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
 
     // Bulk query update confirmation dialog
     if (state.bulkQueryUpdateConfirmation) {
-      const { resolve } = state.bulkQueryUpdateConfirmation
+      const { resolve, emptyFilter } = state.bulkQueryUpdateConfirmation
+      const cancel = () => {
+        dispatch({ type: "CLEAR_BULK_QUERY_UPDATE_CONFIRM" })
+        setBulkQueryUpdateFocusedIndex(-1)
+        setBulkQueryUpdateAwaitingFinal(false)
+        resolve(false)
+      }
+      // Second stage: empty filter final confirm (y / c)
+      if (bulkQueryUpdateAwaitingFinal) {
+        const finalOpts = [
+          {
+            key: "y",
+            exec: () => {
+              dispatch({ type: "CLEAR_BULK_QUERY_UPDATE_CONFIRM" })
+              setBulkQueryUpdateFocusedIndex(-1)
+              setBulkQueryUpdateAwaitingFinal(false)
+              resolve(true)
+            },
+          },
+          { key: "c", exec: cancel },
+        ]
+        if (key.name === "escape") { cancel(); return true }
+        if (key.name === "return") { if (bulkQueryUpdateFocusedIndex >= 0) finalOpts[bulkQueryUpdateFocusedIndex]?.exec() }
+        else if (key.name === "h" || key.name === "left") setBulkQueryUpdateFocusedIndex((i) => Math.max(-1, i - 1))
+        else if (key.name === "l" || key.name === "right") setBulkQueryUpdateFocusedIndex((i) => Math.min(finalOpts.length - 1, i + 1))
+        else { const m = finalOpts.findIndex((o) => o.key === key.name); if (m !== -1) setBulkQueryUpdateFocusedIndex(m) }
+        return true
+      }
+      // First stage
       const opts = [
         {
           key: "a",
           exec: () => {
-            dispatch({ type: "CLEAR_BULK_QUERY_UPDATE_CONFIRM" })
-            setBulkQueryUpdateFocusedIndex(-1)
-            resolve(true)
+            if (emptyFilter) {
+              // Escalate to second confirm
+              setBulkQueryUpdateFocusedIndex(-1)
+              setBulkQueryUpdateAwaitingFinal(true)
+            } else {
+              dispatch({ type: "CLEAR_BULK_QUERY_UPDATE_CONFIRM" })
+              setBulkQueryUpdateFocusedIndex(-1)
+              resolve(true)
+            }
           },
         },
-        {
-          key: "c",
-          exec: () => {
-            dispatch({ type: "CLEAR_BULK_QUERY_UPDATE_CONFIRM" })
-            setBulkQueryUpdateFocusedIndex(-1)
-            resolve(false)
-          },
-        },
+        { key: "c", exec: cancel },
       ]
-      if (key.name === "escape") {
-        dispatch({ type: "CLEAR_BULK_QUERY_UPDATE_CONFIRM" })
-        setBulkQueryUpdateFocusedIndex(-1)
-        resolve(false)
-      } else if (key.name === "return") {
-        if (bulkQueryUpdateFocusedIndex >= 0) opts[bulkQueryUpdateFocusedIndex]?.exec()
-      } else if (key.name === "h" || key.name === "left") {
-        setBulkQueryUpdateFocusedIndex((i) => Math.max(-1, i - 1))
-      } else if (key.name === "l" || key.name === "right") {
-        setBulkQueryUpdateFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
-      } else {
-        const match = opts.findIndex((o) => o.key === key.name)
-        if (match !== -1) setBulkQueryUpdateFocusedIndex(match)
-      }
+      if (key.name === "escape") { cancel() }
+      else if (key.name === "return") { if (bulkQueryUpdateFocusedIndex >= 0) opts[bulkQueryUpdateFocusedIndex]?.exec() }
+      else if (key.name === "h" || key.name === "left") setBulkQueryUpdateFocusedIndex((i) => Math.max(-1, i - 1))
+      else if (key.name === "l" || key.name === "right") setBulkQueryUpdateFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
+      else { const match = opts.findIndex((o) => o.key === key.name); if (match !== -1) setBulkQueryUpdateFocusedIndex(match) }
       return true
     }
 
     // Bulk query delete confirmation dialog
     if (state.bulkQueryDeleteConfirmation) {
-      const { resolve } = state.bulkQueryDeleteConfirmation
+      const { resolve, emptyFilter } = state.bulkQueryDeleteConfirmation
+      const cancel = () => {
+        dispatch({ type: "CLEAR_BULK_QUERY_DELETE_CONFIRM" })
+        setBulkQueryDeleteFocusedIndex(-1)
+        setBulkQueryDeleteAwaitingFinal(false)
+        resolve(false)
+      }
+      // Second stage: empty filter final confirm (y / c)
+      if (bulkQueryDeleteAwaitingFinal) {
+        const finalOpts = [
+          {
+            key: "y",
+            exec: () => {
+              dispatch({ type: "CLEAR_BULK_QUERY_DELETE_CONFIRM" })
+              setBulkQueryDeleteFocusedIndex(-1)
+              setBulkQueryDeleteAwaitingFinal(false)
+              resolve(true)
+            },
+          },
+          { key: "c", exec: cancel },
+        ]
+        if (key.name === "escape") { cancel(); return true }
+        if (key.name === "return") { if (bulkQueryDeleteFocusedIndex >= 0) finalOpts[bulkQueryDeleteFocusedIndex]?.exec() }
+        else if (key.name === "h" || key.name === "left") setBulkQueryDeleteFocusedIndex((i) => Math.max(-1, i - 1))
+        else if (key.name === "l" || key.name === "right") setBulkQueryDeleteFocusedIndex((i) => Math.min(finalOpts.length - 1, i + 1))
+        else { const m = finalOpts.findIndex((o) => o.key === key.name); if (m !== -1) setBulkQueryDeleteFocusedIndex(m) }
+        return true
+      }
+      // First stage
       const opts = [
         {
           key: "d",
           exec: () => {
-            dispatch({ type: "CLEAR_BULK_QUERY_DELETE_CONFIRM" })
-            setBulkQueryDeleteFocusedIndex(-1)
-            resolve(true)
+            if (emptyFilter) {
+              // Escalate to second confirm
+              setBulkQueryDeleteFocusedIndex(-1)
+              setBulkQueryDeleteAwaitingFinal(true)
+            } else {
+              dispatch({ type: "CLEAR_BULK_QUERY_DELETE_CONFIRM" })
+              setBulkQueryDeleteFocusedIndex(-1)
+              resolve(true)
+            }
           },
         },
-        {
-          key: "c",
-          exec: () => {
-            dispatch({ type: "CLEAR_BULK_QUERY_DELETE_CONFIRM" })
-            setBulkQueryDeleteFocusedIndex(-1)
-            resolve(false)
-          },
-        },
+        { key: "c", exec: cancel },
       ]
-      if (key.name === "escape") {
-        dispatch({ type: "CLEAR_BULK_QUERY_DELETE_CONFIRM" })
-        setBulkQueryDeleteFocusedIndex(-1)
-        resolve(false)
-      } else if (key.name === "return") {
-        if (bulkQueryDeleteFocusedIndex >= 0) opts[bulkQueryDeleteFocusedIndex]?.exec()
-      } else if (key.name === "h" || key.name === "left") {
-        setBulkQueryDeleteFocusedIndex((i) => Math.max(-1, i - 1))
-      } else if (key.name === "l" || key.name === "right") {
-        setBulkQueryDeleteFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
-      } else {
-        const match = opts.findIndex((o) => o.key === key.name)
-        if (match !== -1) setBulkQueryDeleteFocusedIndex(match)
-      }
+      if (key.name === "escape") { cancel() }
+      else if (key.name === "return") { if (bulkQueryDeleteFocusedIndex >= 0) opts[bulkQueryDeleteFocusedIndex]?.exec() }
+      else if (key.name === "h" || key.name === "left") setBulkQueryDeleteFocusedIndex((i) => Math.max(-1, i - 1))
+      else if (key.name === "l" || key.name === "right") setBulkQueryDeleteFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
+      else { const m = opts.findIndex((o) => o.key === key.name); if (m !== -1) setBulkQueryDeleteFocusedIndex(m) }
       return true
     }
 
@@ -264,6 +302,8 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
     bulkEditFocusedIndex,
     deleteFocusedIndex,
     bulkQueryUpdateFocusedIndex,
+    bulkQueryUpdateAwaitingFinal,
     bulkQueryDeleteFocusedIndex,
+    bulkQueryDeleteAwaitingFinal,
   }
 }

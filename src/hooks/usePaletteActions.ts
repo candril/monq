@@ -429,6 +429,7 @@ export function usePaletteActions({
                   update,
                   upsert,
                   matchedCount,
+                  emptyFilter: Object.keys(filter).length === 0,
                   resolve: async (confirmed) => {
                     if (!confirmed) return
                     try {
@@ -492,6 +493,7 @@ export function usePaletteActions({
                   collectionName,
                   filter,
                   matchedCount,
+                  emptyFilter: Object.keys(filter).length === 0,
                   resolve: async (confirmed) => {
                     if (!confirmed) return
                     try {

@@ -5,6 +5,7 @@ import type { BulkQueryUpdateConfirmation } from "../types"
 interface BulkQueryUpdateConfirmDialogProps {
   confirmation: BulkQueryUpdateConfirmation
   focusedIndex: number
+  awaitingFinalConfirm?: boolean
 }
 
 function summarise(obj: object): string {
@@ -15,8 +16,28 @@ function summarise(obj: object): string {
 export function BulkQueryUpdateConfirmDialog({
   confirmation,
   focusedIndex,
+  awaitingFinalConfirm,
 }: BulkQueryUpdateConfirmDialogProps) {
-  const { filter, update, upsert, matchedCount } = confirmation
+  const { filter, update, upsert, matchedCount, collectionName } = confirmation
+
+  if (awaitingFinalConfirm) {
+    return (
+      <ConfirmDialog
+        title="Bulk Update — Final Confirmation"
+        lines={[
+          { text: `Empty filter — ALL ${matchedCount} documents in "${collectionName}" will be updated.`, danger: true },
+          { text: `update  ${summarise(update)}`, dim: true },
+          { text: "" },
+          { text: "This cannot be undone.", danger: true },
+        ]}
+        options={[
+          { key: "y", label: `yes, update ALL ${matchedCount}`, color: theme.error },
+          { key: "c", label: "cancel", color: theme.textMuted },
+        ]}
+        focusedIndex={focusedIndex}
+      />
+    )
+  }
 
   const lines = [
     { text: `filter  ${summarise(filter)}`, dim: true },

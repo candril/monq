@@ -127,7 +127,7 @@ export function App({
   }, [])
 
   useMongoConnection({ uri, dispatch, dbName: state.dbName })
-  const { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex, bulkQueryUpdateFocusedIndex, bulkQueryDeleteFocusedIndex } = useKeyboardNav({
+  const { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex, bulkQueryUpdateFocusedIndex, bulkQueryUpdateAwaitingFinal, bulkQueryDeleteFocusedIndex, bulkQueryDeleteAwaitingFinal } = useKeyboardNav({
     state,
     dispatch,
     docListScrollRef,
@@ -441,6 +441,7 @@ export function App({
         <BulkQueryUpdateConfirmDialog
           confirmation={state.bulkQueryUpdateConfirmation}
           focusedIndex={bulkQueryUpdateFocusedIndex}
+          awaitingFinalConfirm={bulkQueryUpdateAwaitingFinal}
         />
       )}
 
@@ -448,6 +449,7 @@ export function App({
         <BulkQueryDeleteConfirmDialog
           confirmation={state.bulkQueryDeleteConfirmation}
           focusedIndex={bulkQueryDeleteFocusedIndex}
+          awaitingFinalConfirm={bulkQueryDeleteAwaitingFinal}
         />
       )}
     </Shell>

@@ -5,6 +5,7 @@ import type { BulkQueryDeleteConfirmation } from "../types"
 interface BulkQueryDeleteConfirmDialogProps {
   confirmation: BulkQueryDeleteConfirmation
   focusedIndex: number
+  awaitingFinalConfirm?: boolean
 }
 
 function summarise(obj: object): string {
@@ -15,8 +16,27 @@ function summarise(obj: object): string {
 export function BulkQueryDeleteConfirmDialog({
   confirmation,
   focusedIndex,
+  awaitingFinalConfirm,
 }: BulkQueryDeleteConfirmDialogProps) {
-  const { filter, matchedCount } = confirmation
+  const { filter, matchedCount, collectionName } = confirmation
+
+  if (awaitingFinalConfirm) {
+    return (
+      <ConfirmDialog
+        title="Bulk Delete — Final Confirmation"
+        lines={[
+          { text: `Empty filter — ALL ${matchedCount} documents in "${collectionName}" will be deleted.`, danger: true },
+          { text: "" },
+          { text: "This cannot be undone.", danger: true },
+        ]}
+        options={[
+          { key: "y", label: `yes, delete ALL ${matchedCount}`, color: theme.error },
+          { key: "c", label: "cancel", color: theme.textMuted },
+        ]}
+        focusedIndex={focusedIndex}
+      />
+    )
+  }
 
   const lines = [
     { text: `filter  ${summarise(filter)}`, dim: true },

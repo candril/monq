@@ -33,6 +33,7 @@ export interface BulkQueryUpdateConfirmation {
   update: import("mongodb").Document
   upsert: boolean
   matchedCount: number
+  emptyFilter: boolean
   resolve: (confirmed: boolean) => void
 }
 
@@ -41,6 +42,7 @@ export interface BulkQueryDeleteConfirmation {
   collectionName: string
   filter: import("mongodb").Document
   matchedCount: number
+  emptyFilter: boolean
   resolve: (confirmed: boolean) => void
 }
 
