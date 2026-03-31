@@ -1,6 +1,6 @@
 /**
- * Bulk query update — open $EDITOR with a filter+update JSONC template,
- * parse the result, count matching documents, and run updateMany.
+ * Bulk query update / delete — open $EDITOR with a filter template,
+ * count matching documents, and run updateMany or deleteMany.
  */
 
 import { tmpdir } from "os"
@@ -8,7 +8,7 @@ import { join } from "path"
 import { mkdir } from "fs/promises"
 import JSON5 from "json5"
 import type { Document, Filter } from "mongodb"
-import { updateManyDocuments, countDocuments } from "../providers/mongodb"
+import { updateManyDocuments, countDocuments, deleteManyDocuments } from "../providers/mongodb"
 import { getEditor, ERROR_COMMENT_RE } from "../utils/editor"
 import type { SchemaMap } from "../query/schema"
 
@@ -22,13 +22,53 @@ async function getTempDir(collectionName: string): Promise<string> {
 
 // ── Update operator JSON Schema ───────────────────────────────────────────────
 
+/** Convert a schemaMap field type to a JSON Schema value schema. */
+function fieldTypeToSchema(path: string, schemaMap: SchemaMap): object {
+  const info = schemaMap.get(path)
+  if (!info) return {}
+  switch (info.type) {
+    case "string":
+      return { type: "string" }
+    case "number":
+      return { type: "number" }
+    case "boolean":
+      return { type: "boolean" }
+    case "null":
+      return { type: "null" }
+    case "objectid":
+    case "date":
+      return { type: "object" }
+    case "mixed":
+      return {}
+    case "object":
+    case "array":
+      return {}
+  }
+}
+
 function generateUpdateSchema(collectionName: string, schemaMap?: SchemaMap): object {
-  // Build filter properties from schemaMap field names
+  // All known field paths (including dot-notation) with type info
+  const setProperties: Record<string, object> = {}
+  const unsetProperties: Record<string, object> = {}
+  const incProperties: Record<string, object> = {}
   const filterProperties: Record<string, object> = {}
+
   if (schemaMap) {
     for (const path of schemaMap.keys()) {
-      if (path.includes(".")) continue
-      filterProperties[path] = {}
+      const typeSchema = fieldTypeToSchema(path, schemaMap)
+      // $set: every field with its value type
+      setProperties[path] = { ...typeSchema, description: `Set ${path}` }
+      // $unset: every field, value must be ""
+      unsetProperties[path] = { type: "string", const: "", description: `Unset ${path}` }
+      // $inc: only numeric fields
+      const info = schemaMap.get(path)
+      if (info?.type === "number") {
+        incProperties[path] = { type: "number", description: `Increment ${path}` }
+      }
+      // filter: top-level only
+      if (!path.includes(".")) {
+        filterProperties[path] = typeSchema
+      }
     }
   }
 
@@ -43,6 +83,7 @@ function generateUpdateSchema(collectionName: string, schemaMap?: SchemaMap): ob
         description:
           "Set field values. Keys support dot-notation and the positional operator " +
           '("array.$.field") to update the element matched by $elemMatch in the filter.',
+        properties: setProperties,
         additionalProperties: anyValue,
         examples: [
           { status: "active" },
@@ -54,12 +95,14 @@ function generateUpdateSchema(collectionName: string, schemaMap?: SchemaMap): ob
         type: "object",
         description:
           'Remove fields. Use "" as the value. Supports dot-notation and positional "array.$.field".',
+        properties: unsetProperties,
         additionalProperties: { type: "string", const: "" },
         examples: [{ obsoleteField: "" }, { "tags.$.tmp": "" }],
       },
       $inc: {
         type: "object",
         description: "Increment numeric fields by the given amount (negative to decrement).",
+        properties: incProperties,
         additionalProperties: { type: "number" },
         examples: [{ score: 1 }, { views: -1 }],
       },
@@ -122,6 +165,7 @@ function generateUpdateSchema(collectionName: string, schemaMap?: SchemaMap): ob
         type: "object",
         description:
           "Set fields only when upserting creates a new document (ignored on matched updates).",
+        properties: setProperties,
         additionalProperties: anyValue,
         examples: [{ createdAt: { $date: "2024-01-01T00:00:00Z" } }],
       },
@@ -204,6 +248,16 @@ export interface ParsedQueryUpdate {
   upsert: boolean
 }
 
+/** Returns true if every operator in the update object is an empty {} */
+function isUpdateEmpty(update: Document): boolean {
+  const keys = Object.keys(update)
+  if (keys.length === 0) return true
+  return keys.every((k) => {
+    const v = update[k]
+    return v !== null && typeof v === "object" && !Array.isArray(v) && Object.keys(v as object).length === 0
+  })
+}
+
 function parseTemplate(json: string): ParsedQueryUpdate {
   const clean = stripComments(json)
   const raw = JSON5.parse(clean) as Record<string, unknown>
@@ -246,6 +300,11 @@ export interface QueryUpdateResult {
   cancelled: true
 }
 
+export interface QueryUpdateEmpty {
+  cancelled: false
+  emptyUpdate: true
+}
+
 export interface QueryUpdateReady {
   cancelled: false
   collectionName: string
@@ -261,7 +320,7 @@ export async function openEditorForQueryUpdate(
   dbName: string,
   activeFilter: Filter<Document>,
   schemaMap?: SchemaMap,
-): Promise<QueryUpdateResult | QueryUpdateReady> {
+): Promise<QueryUpdateResult | QueryUpdateEmpty | QueryUpdateReady> {
   const dir = await getTempDir(collectionName)
   const tmpFile = join(dir, "update.jsonc")
   const schemaFile = join(dir, "update-schema.json")
@@ -323,6 +382,9 @@ export async function openEditorForQueryUpdate(
 
   const { filter, update, upsert } = parsed
 
+  // Bail out early if the update has no actual field operations
+  if (isUpdateEmpty(update)) return { cancelled: false, emptyUpdate: true }
+
   // Count matching documents before showing confirm dialog
   const matchedCount = await countDocuments(collectionName, filter)
 
@@ -334,5 +396,129 @@ export async function openEditorForQueryUpdate(
     upsert,
     matchedCount,
     apply: () => updateManyDocuments(collectionName, filter, update, { upsert }),
+  }
+}
+
+// ── Bulk query delete ─────────────────────────────────────────────────────────
+
+function buildDeleteHeader(collectionName: string, dbName: string): string {
+  return [
+    `// Monq — bulk delete · ${collectionName} @ ${dbName}`,
+    `// Edit "filter", then save (:wq) to preview and confirm. Quit without saving (:q!) to cancel.`,
+    `//`,
+    `// All documents matching the filter will be PERMANENTLY DELETED.`,
+    `//`,
+    ``,
+  ].join("\n")
+}
+
+function generateFilterSchema(collectionName: string, schemaMap?: SchemaMap): object {
+  const filterProperties: Record<string, object> = {}
+  if (schemaMap) {
+    for (const path of schemaMap.keys()) {
+      if (path.includes(".")) continue
+      filterProperties[path] = {}
+    }
+  }
+  return {
+    $schema: "http://json-schema.org/draft-07/schema",
+    title: `Monq bulk delete — ${collectionName}`,
+    type: "object",
+    required: ["filter"],
+    properties: {
+      $schema: { type: "string" },
+      filter: {
+        type: "object",
+        description: "MongoDB filter — all documents matching this will be deleted.",
+        properties: filterProperties,
+        additionalProperties: true,
+      },
+    },
+    additionalProperties: false,
+  }
+}
+
+export interface QueryDeleteResult {
+  cancelled: true
+}
+
+export interface QueryDeleteReady {
+  cancelled: false
+  collectionName: string
+  filter: Filter<Document>
+  matchedCount: number
+  apply: () => Promise<{ deletedCount: number }>
+}
+
+export async function openEditorForQueryDelete(
+  collectionName: string,
+  dbName: string,
+  activeFilter: Filter<Document>,
+  schemaMap?: SchemaMap,
+): Promise<QueryDeleteResult | QueryDeleteReady> {
+  const dir = await getTempDir(collectionName)
+  const tmpFile = join(dir, "delete.jsonc")
+  const schemaFile = join(dir, "delete-schema.json")
+
+  await Bun.write(
+    schemaFile,
+    JSON.stringify(generateFilterSchema(collectionName, schemaMap), null, 2),
+  )
+
+  const templateObj = {
+    $schema: schemaFile,
+    filter: activeFilter,
+  }
+  const body = JSON.stringify(templateObj, null, 2)
+  const header = buildDeleteHeader(collectionName, dbName)
+
+  await Bun.write(tmpFile, header + body)
+
+  const editor = getEditor()
+  const proc = Bun.spawn([editor, tmpFile], {
+    stdin: "inherit",
+    stdout: "inherit",
+    stderr: "inherit",
+  })
+  await proc.exited
+  if (proc.exitCode !== 0) return { cancelled: true }
+
+  let content: string
+  try {
+    content = await Bun.file(tmpFile).text()
+  } catch {
+    return { cancelled: true }
+  }
+
+  // Parse loop with error retry
+  let filter: Filter<Document>
+  while (true) {
+    const clean = stripComments(stripErrorComment(content))
+    if (clean === "") return { cancelled: true }
+    try {
+      const raw = JSON5.parse(clean) as Record<string, unknown>
+      if (typeof raw !== "object" || raw === null) throw new Error("Expected a JSON object")
+      filter = (raw.filter ?? {}) as Filter<Document>
+      break
+    } catch (err) {
+      const next = await openEditorWithError(tmpFile, content, (err as Error).message)
+      if (
+        !next ||
+        stripComments(stripErrorComment(next)) === "" ||
+        next.trim() === content.trim()
+      )
+        return { cancelled: true }
+      content = next
+    }
+  }
+
+  const matchedCount = await countDocuments(collectionName, filter)
+
+  return {
+    cancelled: false,
+    collectionName,
+    filter,
+    matchedCount,
+    apply: () => deleteManyDocuments(collectionName, filter),
   }
 }

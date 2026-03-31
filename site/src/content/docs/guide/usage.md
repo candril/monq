@@ -70,9 +70,13 @@ Open multiple collections at once with `t` (clone tab) or by switching after `Ct
 - `i` — insert a new document
 - `Shift+D` — delete selected documents (with confirmation)
 
-## Bulk update via query
+## Bulk update / delete via query
 
-`Ctrl+U` opens a JSONC template in `$EDITOR` with three keys:
+Open via `Ctrl+P` → **Bulk Update (query)** or **Bulk Delete (query)**.
+
+### Bulk Update
+
+Opens a JSONC template in `$EDITOR` pre-populated with the active filter:
 
 ```jsonc
 {
@@ -82,11 +86,23 @@ Open multiple collections at once with `t` (clone tab) or by switching after `Ct
 }
 ```
 
-Edit the `update` expression using any MongoDB update operator (`$set`, `$unset`, `$inc`, `$push`, etc.). The full operator vocabulary is available via autocomplete if your editor has a JSON Language Server. After saving, monq shows a confirm dialog with the number of matched documents before writing anything.
+Edit the `update` expression using any MongoDB update operator (`$set`, `$unset`, `$inc`, `$push`, etc.). If your editor has a JSON Language Server, field names and operators autocomplete from the live collection schema. After saving, monq counts matching documents and shows a confirm dialog before writing anything.
 
 Positional array updates are supported — use `"array.$.field"` in `$set` to update the element matched by `$elemMatch` in the filter.
 
 Set `"upsert": true` to insert a new document if no documents match. Use `$setOnInsert` to set fields only on insert.
+
+### Bulk Delete
+
+Opens a JSONC template with just a filter:
+
+```jsonc
+{
+  "filter": { /* pre-populated from your active query */ }
+}
+```
+
+After saving, monq shows how many documents match and asks for confirmation before deleting.
 
 ## Themes
 

@@ -1,0 +1,46 @@
+import { ConfirmDialog } from "./ConfirmDialog"
+import { theme } from "../theme"
+import type { BulkQueryDeleteConfirmation } from "../types"
+
+interface BulkQueryDeleteConfirmDialogProps {
+  confirmation: BulkQueryDeleteConfirmation
+  focusedIndex: number
+}
+
+function summarise(obj: object): string {
+  const s = JSON.stringify(obj)
+  return s.length > 60 ? s.slice(0, 57) + "…" : s
+}
+
+export function BulkQueryDeleteConfirmDialog({
+  confirmation,
+  focusedIndex,
+}: BulkQueryDeleteConfirmDialogProps) {
+  const { filter, matchedCount } = confirmation
+
+  const lines = [
+    { text: `filter  ${summarise(filter)}`, dim: true },
+    { text: "" },
+    {
+      text:
+        matchedCount === 0
+          ? "No documents match the filter."
+          : `${matchedCount} document${matchedCount === 1 ? "" : "s"} will be PERMANENTLY DELETED.`,
+      danger: matchedCount > 0,
+    },
+  ]
+
+  const options = [
+    { key: "d", label: `delete ${matchedCount}`, color: theme.error },
+    { key: "c", label: "cancel", color: theme.textMuted },
+  ]
+
+  return (
+    <ConfirmDialog
+      title="Bulk Delete — Confirm"
+      lines={lines}
+      options={options}
+      focusedIndex={focusedIndex}
+    />
+  )
+}

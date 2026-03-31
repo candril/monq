@@ -53,6 +53,7 @@ Define named profiles in `~/.config/monq/config.toml`. Use `uri_cmd` to fetch UR
 - **Inline projection** — `+field` / `-field` directly in the query bar, no separate step
 - **Pipeline editor** — full aggregation pipelines in `$EDITOR` with JSON Schema autocompletion and live reload
 - **Document editing** — edit single docs or bulk-select and edit in `$EDITOR` as a JSON array
+- **Bulk update / delete via query** — run `updateMany` or `deleteMany` with a filter you write in `$EDITOR`; shows matched count before applying
 - **Collection tabs** — open multiple collections side by side, switch with `1–9` or `[`/`]`
 - **Schema-aware suggestions** — field name autocomplete with dot-notation drill-down
 - **Smart columns** — auto-detects fields, horizontal scroll, sort, column sizing, hide via `-`

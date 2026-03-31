@@ -20,6 +20,7 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
   const [bulkEditFocusedIndex, setBulkEditFocusedIndex] = useState(-1)
   const [deleteFocusedIndex, setDeleteFocusedIndex] = useState(-1)
   const [bulkQueryUpdateFocusedIndex, setBulkQueryUpdateFocusedIndex] = useState(-1)
+  const [bulkQueryDeleteFocusedIndex, setBulkQueryDeleteFocusedIndex] = useState(-1)
 
   function handleKey(key: { name: string; ctrl?: boolean; shift?: boolean }): boolean {
     // Pipeline→simple confirmation dialog
@@ -216,6 +217,44 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
       return true
     }
 
+    // Bulk query delete confirmation dialog
+    if (state.bulkQueryDeleteConfirmation) {
+      const { resolve } = state.bulkQueryDeleteConfirmation
+      const opts = [
+        {
+          key: "d",
+          exec: () => {
+            dispatch({ type: "CLEAR_BULK_QUERY_DELETE_CONFIRM" })
+            setBulkQueryDeleteFocusedIndex(-1)
+            resolve(true)
+          },
+        },
+        {
+          key: "c",
+          exec: () => {
+            dispatch({ type: "CLEAR_BULK_QUERY_DELETE_CONFIRM" })
+            setBulkQueryDeleteFocusedIndex(-1)
+            resolve(false)
+          },
+        },
+      ]
+      if (key.name === "escape") {
+        dispatch({ type: "CLEAR_BULK_QUERY_DELETE_CONFIRM" })
+        setBulkQueryDeleteFocusedIndex(-1)
+        resolve(false)
+      } else if (key.name === "return") {
+        if (bulkQueryDeleteFocusedIndex >= 0) opts[bulkQueryDeleteFocusedIndex]?.exec()
+      } else if (key.name === "h" || key.name === "left") {
+        setBulkQueryDeleteFocusedIndex((i) => Math.max(-1, i - 1))
+      } else if (key.name === "l" || key.name === "right") {
+        setBulkQueryDeleteFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
+      } else {
+        const match = opts.findIndex((o) => o.key === key.name)
+        if (match !== -1) setBulkQueryDeleteFocusedIndex(match)
+      }
+      return true
+    }
+
     return false
   }
 
@@ -225,5 +264,6 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
     bulkEditFocusedIndex,
     deleteFocusedIndex,
     bulkQueryUpdateFocusedIndex,
+    bulkQueryDeleteFocusedIndex,
   }
 }

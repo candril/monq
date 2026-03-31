@@ -41,6 +41,7 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef, keymap }: Us
     bulkEditFocusedIndex,
     deleteFocusedIndex,
     bulkQueryUpdateFocusedIndex,
+    bulkQueryDeleteFocusedIndex,
   } = useDialogKeys({ state, dispatch })
   const { handleKey: handlePipelineKey } = usePipelineKeys({ state, dispatch, renderer, keymap })
   const { handleKey: handleEditKey } = useDocumentEditKeys({ state, dispatch, renderer, keymap })
@@ -444,5 +445,5 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef, keymap }: Us
     }
   })
 
-  return { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex, bulkQueryUpdateFocusedIndex }
+  return { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex, bulkQueryUpdateFocusedIndex, bulkQueryDeleteFocusedIndex }
 }

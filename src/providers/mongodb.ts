@@ -157,6 +157,16 @@ export async function countDocuments(
   return collection.countDocuments(filter)
 }
 
+/** Delete all documents matching a filter */
+export async function deleteManyDocuments(
+  collectionName: string,
+  filter: Filter<Document>,
+): Promise<{ deletedCount: number }> {
+  const collection = getDb().collection(collectionName)
+  const result = await collection.deleteMany(filter)
+  return { deletedCount: result.deletedCount }
+}
+
 /** Replace a document by its original _id */
 export async function replaceDocument(
   collectionName: string,

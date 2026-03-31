@@ -64,6 +64,7 @@ export type ActionName =
   | "doc.insert"
   | "doc.delete"
   | "doc.bulk_query_update"
+  | "doc.bulk_query_delete"
   | "doc.yank_cell"
   | "doc.yank_document"
   | "preview.toggle"

@@ -18,7 +18,8 @@ import {
   openTmuxSplit,
 } from "../actions/pipelineWatch"
 import { openEditorForInsert } from "../actions/editMany"
-import { openEditorForQueryUpdate } from "../actions/queryUpdate"
+import { openEditorForQueryUpdate, openEditorForQueryDelete } from "../actions/queryUpdate"
+import type { QueryUpdateReady } from "../actions/queryUpdate"
 import type { Filter, Document } from "mongodb"
 import { disconnect, deleteDocument, listDatabases, switchDatabase } from "../providers/mongodb"
 import { switchConnection } from "../navigation"
@@ -415,7 +416,11 @@ export function usePaletteActions({
             .then((outcome) => {
               renderer.resume()
               if (outcome.cancelled) return
-              const { filter, update, upsert, matchedCount, apply, collectionName } = outcome
+              if ('emptyUpdate' in outcome && outcome.emptyUpdate) {
+                dispatch({ type: "SHOW_MESSAGE", message: "Nothing to update — add fields to $set (or another operator)", kind: "info" })
+                return
+              }
+              const { filter, update, upsert, matchedCount, apply, collectionName } = outcome as QueryUpdateReady
               dispatch({
                 type: "SHOW_BULK_QUERY_UPDATE_CONFIRM",
                 confirmation: {
@@ -450,6 +455,63 @@ export function usePaletteActions({
             .catch((err: Error) => {
               renderer.resume()
               dispatch({ type: "SHOW_MESSAGE", message: `Bulk update failed: ${err.message}`, kind: "error" })
+            })
+          break
+        }
+
+        case "doc:bulk-query-delete": {
+          dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+          const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+          if (!activeTab) break
+          let activeFilter: Filter<Document> = {}
+          try {
+            if (state.queryInput.trim()) {
+              if (state.queryMode === "bson") {
+                activeFilter = parseBsonQuery(state.queryInput)
+              } else {
+                activeFilter = parseSimpleQueryFull(state.queryInput, state.schemaMap).filter
+              }
+            }
+          } catch {
+            // use empty filter
+          }
+          renderer.suspend()
+          openEditorForQueryDelete(
+            activeTab.collectionName,
+            state.dbName,
+            activeFilter,
+            state.schemaMap,
+          )
+            .then((outcome) => {
+              renderer.resume()
+              if (outcome.cancelled) return
+              const { filter, matchedCount, apply, collectionName } = outcome
+              dispatch({
+                type: "SHOW_BULK_QUERY_DELETE_CONFIRM",
+                confirmation: {
+                  collectionName,
+                  filter,
+                  matchedCount,
+                  resolve: async (confirmed) => {
+                    if (!confirmed) return
+                    try {
+                      const result = await apply()
+                      dispatch({
+                        type: "SHOW_MESSAGE",
+                        message: `Deleted ${result.deletedCount} document${result.deletedCount === 1 ? "" : "s"}`,
+                        kind: result.deletedCount > 0 ? "success" : "info",
+                      })
+                      dispatch({ type: "RELOAD_DOCUMENTS" })
+                    } catch (err) {
+                      dispatch({ type: "SHOW_MESSAGE", message: `Delete failed: ${(err as Error).message}`, kind: "error" })
+                    }
+                  },
+                },
+              })
+            })
+            .catch((err: Error) => {
+              renderer.resume()
+              dispatch({ type: "SHOW_MESSAGE", message: `Bulk delete failed: ${err.message}`, kind: "error" })
             })
           break
         }

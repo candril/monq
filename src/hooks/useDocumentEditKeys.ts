@@ -13,7 +13,7 @@ import { matches } from "../utils/keymap"
 import type { EditManyResult } from "../actions/editMany"
 import { deleteDocument } from "../providers/mongodb"
 import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../actions/editMany"
-import { openEditorForQueryUpdate } from "../actions/queryUpdate"
+import { openEditorForQueryUpdate, openEditorForQueryDelete } from "../actions/queryUpdate"
 import { parseSimpleQueryFull, parseBsonQuery } from "../query/parser"
 import type { Filter } from "mongodb"
 import type { Document } from "mongodb"
@@ -28,6 +28,8 @@ interface UseDocumentEditKeysOptions {
 export function useDocumentEditKeys({ state, dispatch, renderer, keymap }: UseDocumentEditKeysOptions) {
   function handleKey(key: { name: string; ctrl?: boolean; shift?: boolean }): boolean {
     if (state.view !== "documents") return false
+    if (state.commandPaletteVisible) return false
+    if (state.queryVisible) return false
 
     // doc.edit: edit document(s)
     if (matches(key, keymap["doc.edit"])) {
@@ -181,7 +183,11 @@ export function useDocumentEditKeys({ state, dispatch, renderer, keymap }: UseDo
         .then((outcome) => {
           renderer.resume()
           if (outcome.cancelled) return
-          const { filter, update, upsert, matchedCount, apply, collectionName } = outcome
+          if ('emptyUpdate' in outcome && outcome.emptyUpdate) {
+            dispatch({ type: "SHOW_MESSAGE", message: "Nothing to update — add fields to $set (or another operator)", kind: "info" })
+            return
+          }
+          const { filter, update, upsert, matchedCount, apply, collectionName } = outcome as import("../actions/queryUpdate").QueryUpdateReady
           dispatch({
             type: "SHOW_BULK_QUERY_UPDATE_CONFIRM",
             confirmation: {
@@ -236,6 +242,73 @@ export function useDocumentEditKeys({ state, dispatch, renderer, keymap }: UseDo
           dispatch({
             type: "SHOW_MESSAGE",
             message: `Bulk update failed: ${err.message}`,
+            kind: "error",
+          })
+        })
+      return true
+    }
+
+    // doc.bulk_query_delete: open $EDITOR for deleteMany
+    if (matches(key, keymap["doc.bulk_query_delete"])) {
+      const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+      if (!activeTab) return true
+
+      let activeFilter: Filter<Document> = {}
+      try {
+        if (state.queryInput.trim()) {
+          if (state.queryMode === "bson") {
+            activeFilter = parseBsonQuery(state.queryInput)
+          } else {
+            activeFilter = parseSimpleQueryFull(state.queryInput, state.schemaMap).filter
+          }
+        }
+      } catch {
+        // use empty filter
+      }
+
+      renderer.suspend()
+      openEditorForQueryDelete(
+        activeTab.collectionName,
+        state.dbName,
+        activeFilter,
+        state.schemaMap,
+      )
+        .then((outcome) => {
+          renderer.resume()
+          if (outcome.cancelled) return
+          const { filter, matchedCount, apply, collectionName } = outcome
+          dispatch({
+            type: "SHOW_BULK_QUERY_DELETE_CONFIRM",
+            confirmation: {
+              collectionName,
+              filter,
+              matchedCount,
+              resolve: async (confirmed) => {
+                if (!confirmed) return
+                try {
+                  const result = await apply()
+                  dispatch({
+                    type: "SHOW_MESSAGE",
+                    message: `Deleted ${result.deletedCount} document${result.deletedCount === 1 ? "" : "s"}`,
+                    kind: result.deletedCount > 0 ? "success" : "info",
+                  })
+                  dispatch({ type: "RELOAD_DOCUMENTS" })
+                } catch (err) {
+                  dispatch({
+                    type: "SHOW_MESSAGE",
+                    message: `Delete failed: ${(err as Error).message}`,
+                    kind: "error",
+                  })
+                }
+              },
+            },
+          })
+        })
+        .catch((err: Error) => {
+          renderer.resume()
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Bulk delete failed: ${err.message}`,
             kind: "error",
           })
         })

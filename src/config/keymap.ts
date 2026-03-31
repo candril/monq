@@ -27,7 +27,8 @@ const DEFAULT_BINDINGS: Record<ActionName, string[]> = {
   "doc.edit": ["e"],
   "doc.insert": ["i"],
   "doc.delete": ["shift+d"],
-  "doc.bulk_query_update": ["ctrl+u"],
+  "doc.bulk_query_update": [], // no default binding — use command palette
+  "doc.bulk_query_delete": [], // no default binding — use command palette
   "doc.yank_cell": ["y"],
   "doc.yank_document": ["shift+y"],
   "preview.toggle": ["p"],
