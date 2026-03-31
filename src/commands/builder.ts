@@ -51,12 +51,12 @@ export function buildCommands(state: AppState): Command[] {
     })
     commands.push({
       id: "doc:bulk-query-update",
-      label: "Bulk Update (query)",
+      label: "Bulk Update",
       category: "document",
     })
     commands.push({
       id: "doc:bulk-query-delete",
-      label: "Bulk Delete (query)",
+      label: "Bulk Delete",
       category: "document",
     })
     commands.push({

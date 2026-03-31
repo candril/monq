@@ -49,6 +49,8 @@ All remappable actions:
 | `doc.edit` | `e` | Edit document in `$EDITOR` |
 | `doc.insert` | `i` | Insert new document |
 | `doc.delete` | `D` | Delete selected document(s) |
+| `doc.bulk_query_update` | _(none)_ | Bulk update via MongoDB query (`updateMany`) |
+| `doc.bulk_query_delete` | _(none)_ | Bulk delete via MongoDB query (`deleteMany`) |
 | `doc.yank_cell` | `y` | Copy cell to clipboard |
 | `doc.yank_document` | `Y` | Copy full document JSON to clipboard |
 | `preview.toggle` | `p` | Toggle preview panel |
