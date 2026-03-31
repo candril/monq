@@ -2,7 +2,7 @@
  * MongoDB connection and query provider
  */
 
-import { MongoClient, type Db, type Document, type Filter } from "mongodb"
+import { MongoClient, type Db, type Document, type Filter, type UpdateFilter } from "mongodb"
 import type { CollectionInfo } from "../types"
 
 let client: MongoClient | null = null
@@ -130,6 +130,31 @@ export async function insertDocument(collectionName: string, doc: Document): Pro
 export async function deleteDocument(collectionName: string, id: unknown): Promise<void> {
   const collection = getDb().collection(collectionName)
   await collection.deleteOne({ _id: id as Document["_id"] })
+}
+
+/** Run updateMany with an update operator expression */
+export async function updateManyDocuments(
+  collectionName: string,
+  filter: Filter<Document>,
+  update: UpdateFilter<Document> | Document,
+  options: { upsert?: boolean } = {},
+): Promise<{ matchedCount: number; modifiedCount: number; upsertedCount: number }> {
+  const collection = getDb().collection(collectionName)
+  const result = await collection.updateMany(filter, update, { upsert: options.upsert ?? false })
+  return {
+    matchedCount: result.matchedCount,
+    modifiedCount: result.modifiedCount,
+    upsertedCount: result.upsertedCount,
+  }
+}
+
+/** Count documents matching a filter (exact count) */
+export async function countDocuments(
+  collectionName: string,
+  filter: Filter<Document>,
+): Promise<number> {
+  const collection = getDb().collection(collectionName)
+  return collection.countDocuments(filter)
 }
 
 /** Replace a document by its original _id */

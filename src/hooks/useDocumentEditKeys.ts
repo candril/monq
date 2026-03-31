@@ -13,6 +13,10 @@ import { matches } from "../utils/keymap"
 import type { EditManyResult } from "../actions/editMany"
 import { deleteDocument } from "../providers/mongodb"
 import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../actions/editMany"
+import { openEditorForQueryUpdate } from "../actions/queryUpdate"
+import { parseSimpleQueryFull, parseBsonQuery } from "../query/parser"
+import type { Filter } from "mongodb"
+import type { Document } from "mongodb"
 
 interface UseDocumentEditKeysOptions {
   state: AppState
@@ -145,6 +149,96 @@ export function useDocumentEditKeys({ state, dispatch, renderer, keymap }: UseDo
           },
         },
       })
+      return true
+    }
+
+    // doc.bulk_query_update: open $EDITOR for updateMany
+    if (matches(key, keymap["doc.bulk_query_update"])) {
+      const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+      if (!activeTab) return true
+
+      // Derive the active filter from query state
+      let activeFilter: Filter<Document> = {}
+      try {
+        if (state.queryInput.trim()) {
+          if (state.queryMode === "bson") {
+            activeFilter = parseBsonQuery(state.queryInput)
+          } else {
+            activeFilter = parseSimpleQueryFull(state.queryInput, state.schemaMap).filter
+          }
+        }
+      } catch {
+        // Invalid query — use empty filter
+      }
+
+      renderer.suspend()
+      openEditorForQueryUpdate(
+        activeTab.collectionName,
+        state.dbName,
+        activeFilter,
+        state.schemaMap,
+      )
+        .then((outcome) => {
+          renderer.resume()
+          if (outcome.cancelled) return
+          const { filter, update, upsert, matchedCount, apply, collectionName } = outcome
+          dispatch({
+            type: "SHOW_BULK_QUERY_UPDATE_CONFIRM",
+            confirmation: {
+              collectionName,
+              filter,
+              update,
+              upsert,
+              matchedCount,
+              resolve: async (confirmed) => {
+                if (!confirmed) return
+                try {
+                  const result = await apply()
+                  if (result.matchedCount === 0) {
+                    dispatch({
+                      type: "SHOW_MESSAGE",
+                      message: "No documents matched",
+                      kind: "warning",
+                    })
+                  } else if (result.modifiedCount === 0 && result.upsertedCount === 0) {
+                    dispatch({
+                      type: "SHOW_MESSAGE",
+                      message: "No documents modified",
+                      kind: "info",
+                    })
+                  } else {
+                    const parts: string[] = []
+                    if (result.modifiedCount > 0)
+                      parts.push(`Updated ${result.modifiedCount}`)
+                    if (result.upsertedCount > 0)
+                      parts.push(`Upserted ${result.upsertedCount}`)
+                    parts.push(`/ matched ${result.matchedCount}`)
+                    dispatch({
+                      type: "SHOW_MESSAGE",
+                      message: parts.join(" "),
+                      kind: "success",
+                    })
+                  }
+                  dispatch({ type: "RELOAD_DOCUMENTS" })
+                } catch (err) {
+                  dispatch({
+                    type: "SHOW_MESSAGE",
+                    message: `Update failed: ${(err as Error).message}`,
+                    kind: "error",
+                  })
+                }
+              },
+            },
+          })
+        })
+        .catch((err: Error) => {
+          renderer.resume()
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Bulk update failed: ${err.message}`,
+            kind: "error",
+          })
+        })
       return true
     }
 

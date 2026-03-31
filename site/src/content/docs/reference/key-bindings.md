@@ -44,6 +44,7 @@ All bindings can be remapped in `~/.config/monq/config.toml`. See [Configuration
 | `p` / `P` | Toggle / cycle preview pane |
 | `e` | Edit document in `$EDITOR` |
 | `i` | Insert new document |
+| `Ctrl+U` | Bulk update via MongoDB query (`updateMany`) |
 | `v` | Enter / freeze selection mode |
 | `Space` | Toggle row selection |
 | `o` | Jump cursor to selection end |

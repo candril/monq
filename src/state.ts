@@ -7,6 +7,7 @@ import type {
   AppState,
   BsonSection,
   BulkEditConfirmation,
+  BulkQueryUpdateConfirmation,
   CollectionInfo,
   DeleteConfirmation,
   DetectedColumn,
@@ -114,6 +115,8 @@ export type AppAction =
   | { type: "CLEAR_BULK_EDIT_CONFIRM" }
   | { type: "SHOW_DELETE_CONFIRM"; confirmation: DeleteConfirmation }
   | { type: "CLEAR_DELETE_CONFIRM" }
+  | { type: "SHOW_BULK_QUERY_UPDATE_CONFIRM"; confirmation: BulkQueryUpdateConfirmation }
+  | { type: "CLEAR_BULK_QUERY_UPDATE_CONFIRM" }
   // History
   | { type: "LOAD_HISTORY"; entries: string[] }
   | { type: "APPEND_HISTORY_ENTRY"; entry: string }
@@ -182,6 +185,7 @@ export function createInitialState(): AppState {
     selectionAnchor: null,
     bulkEditConfirmation: null,
     deleteConfirmation: null,
+    bulkQueryUpdateConfirmation: null,
     historyEntries: [],
     historyPickerOpen: false,
   }
@@ -1187,6 +1191,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "CLEAR_DELETE_CONFIRM":
       return { ...state, deleteConfirmation: null }
+
+    case "SHOW_BULK_QUERY_UPDATE_CONFIRM":
+      return { ...state, bulkQueryUpdateConfirmation: action.confirmation }
+
+    case "CLEAR_BULK_QUERY_UPDATE_CONFIRM":
+      return { ...state, bulkQueryUpdateConfirmation: null }
 
     case "START_PIPELINE_WATCH":
       return { ...state, pipelineWatching: true }

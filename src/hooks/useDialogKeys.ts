@@ -19,6 +19,7 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
   const [pipelineFocusedIndex, setPipelineFocusedIndex] = useState(-1)
   const [bulkEditFocusedIndex, setBulkEditFocusedIndex] = useState(-1)
   const [deleteFocusedIndex, setDeleteFocusedIndex] = useState(-1)
+  const [bulkQueryUpdateFocusedIndex, setBulkQueryUpdateFocusedIndex] = useState(-1)
 
   function handleKey(key: { name: string; ctrl?: boolean; shift?: boolean }): boolean {
     // Pipeline→simple confirmation dialog
@@ -177,8 +178,52 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
       return true
     }
 
+    // Bulk query update confirmation dialog
+    if (state.bulkQueryUpdateConfirmation) {
+      const { resolve } = state.bulkQueryUpdateConfirmation
+      const opts = [
+        {
+          key: "a",
+          exec: () => {
+            dispatch({ type: "CLEAR_BULK_QUERY_UPDATE_CONFIRM" })
+            setBulkQueryUpdateFocusedIndex(-1)
+            resolve(true)
+          },
+        },
+        {
+          key: "c",
+          exec: () => {
+            dispatch({ type: "CLEAR_BULK_QUERY_UPDATE_CONFIRM" })
+            setBulkQueryUpdateFocusedIndex(-1)
+            resolve(false)
+          },
+        },
+      ]
+      if (key.name === "escape") {
+        dispatch({ type: "CLEAR_BULK_QUERY_UPDATE_CONFIRM" })
+        setBulkQueryUpdateFocusedIndex(-1)
+        resolve(false)
+      } else if (key.name === "return") {
+        if (bulkQueryUpdateFocusedIndex >= 0) opts[bulkQueryUpdateFocusedIndex]?.exec()
+      } else if (key.name === "h" || key.name === "left") {
+        setBulkQueryUpdateFocusedIndex((i) => Math.max(-1, i - 1))
+      } else if (key.name === "l" || key.name === "right") {
+        setBulkQueryUpdateFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
+      } else {
+        const match = opts.findIndex((o) => o.key === key.name)
+        if (match !== -1) setBulkQueryUpdateFocusedIndex(match)
+      }
+      return true
+    }
+
     return false
   }
 
-  return { handleKey, pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex }
+  return {
+    handleKey,
+    pipelineFocusedIndex,
+    bulkEditFocusedIndex,
+    deleteFocusedIndex,
+    bulkQueryUpdateFocusedIndex,
+  }
 }

@@ -26,6 +26,16 @@ export interface DeleteConfirmation {
   resolve: (confirmed: boolean) => void
 }
 
+/** Pending bulk query update confirmation */
+export interface BulkQueryUpdateConfirmation {
+  collectionName: string
+  filter: import("mongodb").Document
+  update: import("mongodb").Document
+  upsert: boolean
+  matchedCount: number
+  resolve: (confirmed: boolean) => void
+}
+
 // ============================================================================
 // Views
 // ============================================================================
@@ -223,6 +233,8 @@ export interface AppState {
   bulkEditConfirmation: BulkEditConfirmation | null
   // Delete confirmation dialog (null = not showing)
   deleteConfirmation: DeleteConfirmation | null
+  // Bulk query update confirmation dialog (null = not showing)
+  bulkQueryUpdateConfirmation: BulkQueryUpdateConfirmation | null
 
   // Query history (simple mode, newest-first, loaded from disk at startup)
   historyEntries: string[]

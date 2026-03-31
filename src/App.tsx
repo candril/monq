@@ -12,6 +12,7 @@ import { FilterBar } from "./components/FilterBar"
 import { PipelineBar } from "./components/PipelineBar"
 import { PipelineConfirmDialog } from "./components/PipelineConfirmDialog"
 import { BulkEditConfirmDialog } from "./components/BulkEditConfirmDialog"
+import { BulkQueryUpdateConfirmDialog } from "./components/BulkQueryUpdateConfirmDialog"
 import { DeleteConfirmDialog } from "./components/DeleteConfirmDialog"
 import { Toast } from "./components/Toast"
 import { Loading } from "./components/Loading"
@@ -125,7 +126,7 @@ export function App({
   }, [])
 
   useMongoConnection({ uri, dispatch, dbName: state.dbName })
-  const { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex } = useKeyboardNav({
+  const { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex, bulkQueryUpdateFocusedIndex } = useKeyboardNav({
     state,
     dispatch,
     docListScrollRef,
@@ -432,6 +433,13 @@ export function App({
         <DeleteConfirmDialog
           confirmation={state.deleteConfirmation}
           focusedIndex={deleteFocusedIndex}
+        />
+      )}
+
+      {state.bulkQueryUpdateConfirmation && (
+        <BulkQueryUpdateConfirmDialog
+          confirmation={state.bulkQueryUpdateConfirmation}
+          focusedIndex={bulkQueryUpdateFocusedIndex}
         />
       )}
     </Shell>

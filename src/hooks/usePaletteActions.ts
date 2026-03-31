@@ -18,12 +18,14 @@ import {
   openTmuxSplit,
 } from "../actions/pipelineWatch"
 import { openEditorForInsert } from "../actions/editMany"
+import { openEditorForQueryUpdate } from "../actions/queryUpdate"
+import type { Filter, Document } from "mongodb"
 import { disconnect, deleteDocument, listDatabases, switchDatabase } from "../providers/mongodb"
 import { switchConnection } from "../navigation"
 import { serializeDocument } from "../utils/document"
 import { getNestedValue } from "../utils/format"
 import { copyToClipboard } from "../utils/clipboard"
-import { parseSimpleQueryFull, projectionToSimple } from "../query/parser"
+import { parseSimpleQueryFull, parseBsonQuery, projectionToSimple } from "../query/parser"
 import { findPreset } from "../themes/index"
 import { setTheme, buildTheme } from "../theme"
 import { saveStateTheme, clearStateTheme } from "../state/theme"
@@ -387,6 +389,71 @@ export function usePaletteActions({
           })
           break
         }
+        case "doc:bulk-query-update": {
+          dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+          const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+          if (!activeTab) break
+          let activeFilter: Filter<Document> = {}
+          try {
+            if (state.queryInput.trim()) {
+              if (state.queryMode === "bson") {
+                activeFilter = parseBsonQuery(state.queryInput)
+              } else {
+                activeFilter = parseSimpleQueryFull(state.queryInput, state.schemaMap).filter
+              }
+            }
+          } catch {
+            // use empty filter
+          }
+          renderer.suspend()
+          openEditorForQueryUpdate(
+            activeTab.collectionName,
+            state.dbName,
+            activeFilter,
+            state.schemaMap,
+          )
+            .then((outcome) => {
+              renderer.resume()
+              if (outcome.cancelled) return
+              const { filter, update, upsert, matchedCount, apply, collectionName } = outcome
+              dispatch({
+                type: "SHOW_BULK_QUERY_UPDATE_CONFIRM",
+                confirmation: {
+                  collectionName,
+                  filter,
+                  update,
+                  upsert,
+                  matchedCount,
+                  resolve: async (confirmed) => {
+                    if (!confirmed) return
+                    try {
+                      const result = await apply()
+                      if (result.matchedCount === 0) {
+                        dispatch({ type: "SHOW_MESSAGE", message: "No documents matched", kind: "warning" })
+                      } else if (result.modifiedCount === 0 && result.upsertedCount === 0) {
+                        dispatch({ type: "SHOW_MESSAGE", message: "No documents modified", kind: "info" })
+                      } else {
+                        const parts: string[] = []
+                        if (result.modifiedCount > 0) parts.push(`Updated ${result.modifiedCount}`)
+                        if (result.upsertedCount > 0) parts.push(`Upserted ${result.upsertedCount}`)
+                        parts.push(`/ matched ${result.matchedCount}`)
+                        dispatch({ type: "SHOW_MESSAGE", message: parts.join(" "), kind: "success" })
+                      }
+                      dispatch({ type: "RELOAD_DOCUMENTS" })
+                    } catch (err) {
+                      dispatch({ type: "SHOW_MESSAGE", message: `Update failed: ${(err as Error).message}`, kind: "error" })
+                    }
+                  },
+                },
+              })
+            })
+            .catch((err: Error) => {
+              renderer.resume()
+              dispatch({ type: "SHOW_MESSAGE", message: `Bulk update failed: ${err.message}`, kind: "error" })
+            })
+          break
+        }
+
         case "doc:copy-cell": {
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
           const doc = state.documents[state.selectedIndex]

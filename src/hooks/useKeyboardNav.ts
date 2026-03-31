@@ -40,6 +40,7 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef, keymap }: Us
     pipelineFocusedIndex,
     bulkEditFocusedIndex,
     deleteFocusedIndex,
+    bulkQueryUpdateFocusedIndex,
   } = useDialogKeys({ state, dispatch })
   const { handleKey: handlePipelineKey } = usePipelineKeys({ state, dispatch, renderer, keymap })
   const { handleKey: handleEditKey } = useDocumentEditKeys({ state, dispatch, renderer, keymap })
@@ -55,6 +56,9 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef, keymap }: Us
       dispatch({ type: "OPEN_COMMAND_PALETTE" })
       return
     }
+
+    // Edit keys (e/i/D/Ctrl+U) — checked before nav so Ctrl+U can override nav.half_page_up
+    if (handleEditKey(key)) return
 
     // nav.half_page_down / nav.half_page_up: half-page scroll
     if (matches(key, keymap["nav.half_page_down"]) || matches(key, keymap["nav.half_page_up"])) {
@@ -202,9 +206,6 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef, keymap }: Us
       dispatch({ type: "TOGGLE_FILTER_BAR" })
       return
     }
-
-    // Edit/insert/delete keys
-    if (handleEditKey(key)) return
 
     // Document navigation
     if (matches(key, keymap["nav.down"])) {
@@ -443,5 +444,5 @@ export function useKeyboardNav({ state, dispatch, docListScrollRef, keymap }: Us
     }
   })
 
-  return { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex }
+  return { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex, bulkQueryUpdateFocusedIndex }
 }

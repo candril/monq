@@ -70,6 +70,24 @@ Open multiple collections at once with `t` (clone tab) or by switching after `Ct
 - `i` — insert a new document
 - `Shift+D` — delete selected documents (with confirmation)
 
+## Bulk update via query
+
+`Ctrl+U` opens a JSONC template in `$EDITOR` with three keys:
+
+```jsonc
+{
+  "filter": { /* pre-populated from your active query */ },
+  "update": { "$set": {} },
+  "upsert": false
+}
+```
+
+Edit the `update` expression using any MongoDB update operator (`$set`, `$unset`, `$inc`, `$push`, etc.). The full operator vocabulary is available via autocomplete if your editor has a JSON Language Server. After saving, monq shows a confirm dialog with the number of matched documents before writing anything.
+
+Positional array updates are supported — use `"array.$.field"` in `$set` to update the element matched by `$elemMatch` in the filter.
+
+Set `"upsert": true` to insert a new document if no documents match. Use `$setOnInsert` to set fields only on insert.
+
 ## Themes
 
 Switch between the 11 built-in colour themes at any time via the command palette (`Ctrl+P` → search "theme"). The selected theme is persisted across sessions.

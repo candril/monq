@@ -50,6 +50,12 @@ export function buildCommands(state: AppState): Command[] {
       shortcut: "Shift+D",
     })
     commands.push({
+      id: "doc:bulk-query-update",
+      label: "Bulk Update (query)",
+      category: "document",
+      shortcut: "Ctrl+U",
+    })
+    commands.push({
       id: "doc:copy-cell",
       label: "Copy Cell Value",
       category: "document",
