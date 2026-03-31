@@ -19,6 +19,9 @@ import {
 } from "../actions/pipelineWatch"
 import { openEditorForInsert } from "../actions/editMany"
 import { openEditorForQueryUpdate, openEditorForQueryDelete } from "../actions/queryUpdate"
+import { openExplainInEditor } from "../actions/explain"
+import { explainFind, explainAggregate } from "../providers/mongodb"
+import { resolveCurrentQuery } from "../utils/query"
 import {
   promptCreateCollection,
   promptRenameCollection,
@@ -186,6 +189,50 @@ export function usePaletteActions({
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
           dispatch({ type: "CYCLE_PREVIEW_POSITION" })
           break
+        case "view:explain": {
+          dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+          const activeTabExplain = state.tabs.find((t) => t.id === state.activeTabId)
+          if (!activeTabExplain) break
+          if (state.previewPosition && state.previewMode === "explain") {
+            dispatch({ type: "TOGGLE_PREVIEW" })
+            break
+          }
+          if (!state.previewPosition) dispatch({ type: "TOGGLE_PREVIEW" })
+          dispatch({ type: "SET_PREVIEW_MODE", mode: "explain" })
+          dispatch({ type: "SET_EXPLAIN_LOADING", loading: true })
+          const query = resolveCurrentQuery(state)
+          const explainPromise =
+            query.mode === "aggregate"
+              ? explainAggregate(activeTabExplain.collectionName, query.pipeline)
+              : explainFind(activeTabExplain.collectionName, query.filter, { sort: query.sort, projection: query.projection })
+          explainPromise
+            .then((result) => dispatch({ type: "SET_EXPLAIN_RESULT", result }))
+            .catch((err: Error) => {
+              dispatch({ type: "SET_EXPLAIN_LOADING", loading: false })
+              dispatch({ type: "SHOW_MESSAGE", message: `Explain failed: ${err.message}`, kind: "error" })
+              dispatch({ type: "SET_PREVIEW_MODE", mode: "document" })
+            })
+          break
+        }
+        case "view:explain-raw": {
+          dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+          const activeTabRaw = state.tabs.find((t) => t.id === state.activeTabId)
+          if (!activeTabRaw) break
+          const rawQuery = resolveCurrentQuery(state)
+          renderer.suspend()
+          const rawPromise =
+            rawQuery.mode === "aggregate"
+              ? explainAggregate(activeTabRaw.collectionName, rawQuery.pipeline)
+              : explainFind(activeTabRaw.collectionName, rawQuery.filter, { sort: rawQuery.sort, projection: rawQuery.projection })
+          rawPromise
+            .then((result) => openExplainInEditor(activeTabRaw.collectionName, result))
+            .then(() => renderer.resume())
+            .catch((err: Error) => {
+              renderer.resume()
+              dispatch({ type: "SHOW_MESSAGE", message: `Explain failed: ${err.message}`, kind: "error" })
+            })
+          break
+        }
         case "view:toggle-filter-bar":
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
           dispatch({ type: "TOGGLE_FILTER_BAR" })

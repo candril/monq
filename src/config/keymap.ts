@@ -60,6 +60,7 @@ const DEFAULT_BINDINGS: Record<ActionName, string[]> = {
   "palette.open": ["ctrl+p"],
   "index.open": ["shift+i"],
   "explain.run": ["x"],
+  "explain.raw": ["shift+x"],
   "app.quit": ["q"],
 }
 

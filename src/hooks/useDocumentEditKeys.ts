@@ -17,6 +17,7 @@ import { openEditorForQueryUpdate, openEditorForQueryDelete } from "../actions/q
 import { openEditorForIndexes } from "../actions/index"
 import { explainFind, explainAggregate } from "../providers/mongodb"
 import { resolveCurrentQuery } from "../utils/query"
+import { openExplainInEditor } from "../actions/explain"
 import { parseSimpleQueryFull, parseBsonQuery } from "../query/parser"
 import type { Filter } from "mongodb"
 import type { Document } from "mongodb"
@@ -406,6 +407,35 @@ export function useDocumentEditKeys({
           dispatch({ type: "SET_EXPLAIN_LOADING", loading: false })
           dispatch({ type: "SHOW_MESSAGE", message: `Explain failed: ${err.message}`, kind: "error" })
           dispatch({ type: "SET_PREVIEW_MODE", mode: "document" })
+        })
+
+      return true
+    }
+
+    // explain.raw: open full explain JSON in $EDITOR
+    if (matches(key, keymap["explain.raw"])) {
+      const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+      if (!activeTab) return true
+
+      const query = resolveCurrentQuery(state)
+      renderer.suspend()
+
+      const promise =
+        query.mode === "aggregate"
+          ? explainAggregate(activeTab.collectionName, query.pipeline)
+          : explainFind(activeTab.collectionName, query.filter, {
+              sort: query.sort,
+              projection: query.projection,
+            })
+
+      promise
+        .then((result) => openExplainInEditor(activeTab.collectionName, result))
+        .then(() => {
+          renderer.resume()
+        })
+        .catch((err: Error) => {
+          renderer.resume()
+          dispatch({ type: "SHOW_MESSAGE", message: `Explain failed: ${err.message}`, kind: "error" })
         })
 
       return true
