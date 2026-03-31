@@ -126,7 +126,7 @@ export function App({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  useMongoConnection({ uri, dispatch, dbName: state.dbName })
+  const { handleCreateCollection, handleCreateDatabase } = useMongoConnection({ uri, dispatch, dbName: state.dbName, state })
   const { pipelineFocusedIndex, bulkEditFocusedIndex, deleteFocusedIndex, bulkQueryUpdateFocusedIndex, bulkQueryUpdateAwaitingFinal, bulkQueryDeleteFocusedIndex, bulkQueryDeleteAwaitingFinal } = useKeyboardNav({
     state,
     dispatch,
@@ -306,10 +306,14 @@ export function App({
             collections={state.collections.map((c) => c.name)}
             dbName={state.dbName}
             host={state.host}
+            databasesLoading={state.databasesLoading}
+            collectionsLoading={state.collectionsLoading}
             onSelectDatabase={handleSelectDatabase}
             onSelectCollection={handleSelectCollection}
             onBack={handleWelcomeBack}
             onBackToUri={onBackToUri}
+            onCreateDatabase={handleCreateDatabase}
+            onCreateCollection={handleCreateCollection}
           />
         ) : activeTab ? (
           <box

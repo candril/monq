@@ -2,29 +2,36 @@
  * Hook: MongoDB connection lifecycle
  * Parses URI for display, initializes client, loads collections.
  * If the URI has no database, opens the db picker first.
+ * Also handles CREATE_DATABASE and CREATE_COLLECTION actions.
  */
 
 import { useEffect, useRef } from "react"
 import type { Dispatch } from "react"
 import type { AppAction } from "../state"
+import type { AppState } from "../types"
 import {
   parseUri,
   init,
   listCollections,
   listDatabases,
   switchDatabase,
+  createCollection,
+  createDatabase,
 } from "../providers/mongodb"
 
 interface UseMongoConnectionOptions {
   uri: string
   dispatch: Dispatch<AppAction>
   dbName: string
+  state: AppState
 }
 
-export function useMongoConnection({ uri, dispatch, dbName }: UseMongoConnectionOptions) {
+export function useMongoConnection({ uri, dispatch, dbName, state }: UseMongoConnectionOptions) {
   // Track whether the initial setup has run and whether the initial db came from the URI
   const didInitRef = useRef(false)
   const uriHadDbRef = useRef(false)
+  // Skip the next dbName effect when we've already handled the DB switch ourselves
+  const skipNextDbEffectRef = useRef(false)
 
   // Initialize client and kick off the first load once (on mount / uri change)
   useEffect(() => {
@@ -38,6 +45,7 @@ export function useMongoConnection({ uri, dispatch, dbName }: UseMongoConnection
 
     if (!uriDbName) {
       // No db in URI — list databases so user can pick one
+      dispatch({ type: "SET_DATABASES_LOADING", loading: true })
       listDatabases()
         .then((databases) => {
           if (cancelled) return
@@ -45,8 +53,10 @@ export function useMongoConnection({ uri, dispatch, dbName }: UseMongoConnection
           dispatch({ type: "OPEN_DB_PICKER" })
         })
         .catch((err: Error) => {
-          if (!cancelled)
+          if (!cancelled) {
+            dispatch({ type: "SET_DATABASES_LOADING", loading: false })
             dispatch({ type: "SET_ERROR", error: `Failed to list databases: ${err.message}` })
+          }
         })
     } else {
       // db is in URI — load collections right away
@@ -76,6 +86,10 @@ export function useMongoConnection({ uri, dispatch, dbName }: UseMongoConnection
       uriHadDbRef.current = false
       return
     }
+    if (skipNextDbEffectRef.current) {
+      skipNextDbEffectRef.current = false
+      return
+    }
 
     switchDatabase(dbName)
     let cancelled = false
@@ -91,4 +105,40 @@ export function useMongoConnection({ uri, dispatch, dbName }: UseMongoConnection
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- dispatch is stable, dbName is the only meaningful trigger
   }, [dbName])
+
+  // Handle CREATE_COLLECTION — called imperatively from WelcomeScreen via dispatch
+  // We expose this as a callable function returned from the hook
+  async function handleCreateCollection(collectionName: string): Promise<string | null> {
+    try {
+      await createCollection(collectionName)
+      const collections = await listCollections()
+      dispatch({ type: "SET_COLLECTIONS", collections })
+      dispatch({ type: "OPEN_TAB", collectionName })
+      return null
+    } catch (err) {
+      return (err as Error).message
+    }
+  }
+
+  async function handleCreateDatabase(
+    newDbName: string,
+    firstCollection: string,
+  ): Promise<string | null> {
+    try {
+      await createDatabase(newDbName, firstCollection)
+      switchDatabase(newDbName)
+      // Update state: set dbName and collections, then open the tab directly —
+      // bypassing the collection picker entirely.
+      const collections = await listCollections()
+      skipNextDbEffectRef.current = true
+      dispatch({ type: "SET_CONNECTION_INFO", dbName: newDbName, host: state.host })
+      dispatch({ type: "SET_COLLECTIONS", collections })
+      dispatch({ type: "OPEN_TAB", collectionName: firstCollection })
+      return null
+    } catch (err) {
+      return (err as Error).message
+    }
+  }
+
+  return { handleCreateCollection, handleCreateDatabase }
 }

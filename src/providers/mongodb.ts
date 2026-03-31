@@ -167,6 +167,17 @@ export async function deleteManyDocuments(
   return { deletedCount: result.deletedCount }
 }
 
+/** Create a collection in the active database (also materialises the database) */
+export async function createCollection(collectionName: string): Promise<void> {
+  await getDb().createCollection(collectionName)
+}
+
+/** Create a new database by creating a first collection inside it */
+export async function createDatabase(dbName: string, firstCollection: string): Promise<void> {
+  if (!client) throw new Error("Not connected")
+  await client.db(dbName).createCollection(firstCollection)
+}
+
 /** Replace a document by its original _id */
 export async function replaceDocument(
   collectionName: string,

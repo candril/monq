@@ -30,6 +30,7 @@ export type AppAction =
   | { type: "SET_ERROR"; error: string | null }
   // Database picker
   | { type: "SET_DATABASES"; databases: string[] }
+  | { type: "SET_DATABASES_LOADING"; loading: boolean }
   | { type: "OPEN_DB_PICKER" }
   | { type: "CLOSE_DB_PICKER" }
   | { type: "SELECT_DATABASE"; dbName: string }
@@ -37,6 +38,9 @@ export type AppAction =
   // Collections
   | { type: "SET_COLLECTIONS"; collections: CollectionInfo[] }
   | { type: "SET_COLLECTIONS_LOADING"; loading: boolean }
+  // Create
+  | { type: "CREATE_DATABASE"; dbName: string; firstCollection: string }
+  | { type: "CREATE_COLLECTION"; collectionName: string }
   | { type: "SELECT_COLLECTION"; index: number }
   | { type: "MOVE_COLLECTION"; delta: number }
   // View
@@ -140,6 +144,7 @@ export function createInitialState(): AppState {
     dbName: "",
     host: "",
     databases: [],
+    databasesLoading: true,
     dbPickerOpen: false,
     collections: [],
     collectionsLoading: true,
@@ -300,8 +305,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         databases: action.databases,
+        databasesLoading: false,
         collectionsLoading: state.dbName ? state.collectionsLoading : false,
       }
+
+    case "SET_DATABASES_LOADING":
+      return { ...state, databasesLoading: action.loading }
 
     case "OPEN_DB_PICKER":
       return { ...state, dbPickerOpen: true }
@@ -384,6 +393,12 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case "SET_COLLECTIONS_LOADING":
       return { ...state, collectionsLoading: action.loading }
+
+    // CREATE_DATABASE and CREATE_COLLECTION are handled imperatively in
+    // useMongoConnection — the reducer just needs to acknowledge them.
+    case "CREATE_DATABASE":
+    case "CREATE_COLLECTION":
+      return state
 
     case "SELECT_COLLECTION":
       return { ...state, collectionSelectedIndex: action.index }

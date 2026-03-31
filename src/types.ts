@@ -146,6 +146,8 @@ export interface AppState {
   host: string
   /** Available databases (populated when no db in URI, or after listDatabases) */
   databases: string[]
+  /** True while listDatabases is in-flight */
+  databasesLoading: boolean
   /** When true, the palette should open in databases mode */
   dbPickerOpen: boolean
 

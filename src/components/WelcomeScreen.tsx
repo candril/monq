@@ -9,6 +9,7 @@
  *   - Type to fuzzy-filter the list
  *   - ↑/↓, Ctrl-p/n, Ctrl-k/j → move selection
  *   - Enter → pick highlighted item
+ *   - n → open inline "new database" / "new collection" input
  *   - Backspace → delete last filter char; if empty and step 2 → go back
  *   - Esc / q (empty query) → quit
  */
@@ -31,6 +32,10 @@ interface WelcomeScreenProps {
   dbName: string
   /** MongoDB host (shown under the Monq brand) */
   host: string
+  /** True while step-1 database list is loading */
+  databasesLoading: boolean
+  /** True while step-2 collection list is loading */
+  collectionsLoading: boolean
   /** Called when a database is picked */
   onSelectDatabase: (name: string) => void
   /** Called when a collection is picked */
@@ -39,7 +44,13 @@ interface WelcomeScreenProps {
   onBack: () => void
   /** Called when Backspace on empty input in step 1 → back to URI screen (optional) */
   onBackToUri?: () => void
+  /** Called to create a new database; returns an error string or null on success */
+  onCreateDatabase: (dbName: string, firstCollection: string) => Promise<string | null>
+  /** Called to create a new collection; returns an error string or null on success */
+  onCreateCollection: (collectionName: string) => Promise<string | null>
 }
+
+type CreateStep = "idle" | "name" | "first-collection" | "creating"
 
 export function WelcomeScreen({
   databases,
@@ -47,22 +58,36 @@ export function WelcomeScreen({
   step,
   dbName,
   host,
+  databasesLoading,
+  collectionsLoading,
   onSelectDatabase,
   onSelectCollection,
   onBack,
   onBackToUri,
+  onCreateDatabase,
+  onCreateCollection,
 }: WelcomeScreenProps) {
   const renderer = useRenderer()
   const [query, setQuery] = useState("")
   const [cursor, setCursor] = useState(0)
 
+  // Create flow state
+  const [createStep, setCreateStep] = useState<CreateStep>("idle")
+  const [newName, setNewName] = useState("")
+  const [firstCollection, setFirstCollection] = useState("")
+  const [createError, setCreateError] = useState<string | null>(null)
+
   const items = step === 1 ? databases : collections
   const onSelect = step === 1 ? onSelectDatabase : onSelectCollection
 
-  // Reset query + cursor when the step changes (DB → collection)
+  // Reset query + cursor + create flow when the step changes
   useEffect(() => {
     setQuery("")
     setCursor(0)
+    setCreateStep("idle")
+    setNewName("")
+    setFirstCollection("")
+    setCreateError(null)
   }, [step])
 
   const filtered = useMemo(
@@ -72,7 +97,73 @@ export function WelcomeScreen({
 
   const safeCursor = Math.min(cursor, Math.max(0, filtered.length - 1))
 
+  const isCreating = createStep !== "idle"
+
   useKeyboard((key) => {
+    // ── Create flow ──────────────────────────────────────────────────────────
+    if (createStep === "name") {
+      if (key.name === "escape" || (key.name === "backspace" && !newName)) {
+        setCreateStep("idle")
+        setNewName("")
+        setCreateError(null)
+        return
+      }
+      if (key.name === "return") {
+        if (!newName.trim()) return
+        if (step === 1) {
+          // Database: go to second prompt for first collection name
+          setCreateStep("first-collection")
+          setFirstCollection("")
+          setCreateError(null)
+        } else {
+          // Collection: create immediately
+          setCreateStep("creating")
+          setCreateError(null)
+          onCreateCollection(newName.trim()).then((err) => {
+            if (err) {
+              setCreateStep("name")
+              setCreateError(err)
+            } else {
+              setCreateStep("idle")
+              setNewName("")
+            }
+          })
+        }
+        return
+      }
+      // Let <input> handle text input; suppress other key handlers
+      return
+    }
+
+    if (createStep === "first-collection") {
+      if (key.name === "escape") {
+        setCreateStep("name")
+        setFirstCollection("")
+        setCreateError(null)
+        return
+      }
+      if (key.name === "return") {
+        const col = firstCollection.trim() || "default"
+        setCreateStep("creating")
+        setCreateError(null)
+        onCreateDatabase(newName.trim(), col).then((err) => {
+          if (err) {
+            setCreateStep("first-collection")
+            setCreateError(err)
+          } else {
+            setCreateStep("idle")
+            setNewName("")
+            setFirstCollection("")
+          }
+        })
+        return
+      }
+      return
+    }
+
+    if (createStep === "creating") return
+
+    // ── Normal navigation ────────────────────────────────────────────────────
     // Move up
     if (key.name === "up" || (key.ctrl && key.name === "p") || (key.ctrl && key.name === "k")) {
       setCursor((c) => Math.max(0, c - 1))
@@ -93,6 +184,13 @@ export function WelcomeScreen({
       }
       return
     }
+    // New database / collection (Tab — Ctrl+I is the same byte in terminals)
+    if (key.name === "tab") {
+      setCreateStep("name")
+      setNewName("")
+      setCreateError(null)
+      return
+    }
     // Backspace on empty → go back one level
     if (key.name === "backspace" && !query) {
       if (step === 2) {
@@ -111,14 +209,25 @@ export function WelcomeScreen({
     }
   })
 
-  const stepTitle = step === 1 ? "Select a database" : `${dbName}  ›  Select a collection`
+  const isLoading = step === 1 ? databasesLoading : collectionsLoading
+  const isEmpty = !isLoading && items.length === 0
 
-  const hint =
-    step === 2 || onBackToUri
-      ? "↑↓ navigate  ·  Enter select  ·  Backspace back  ·  Esc quit"
-      : "↑↓ navigate  ·  Enter select  ·  Esc quit"
+  const stepTitle =
+    step === 1
+      ? isEmpty
+        ? "No databases found"
+        : "Select a database"
+      : isEmpty
+        ? `${dbName}  ›  No collections`
+        : `${dbName}  ›  Select a collection`
 
-  const loading = items.length === 0
+  const hintParts: string[] = []
+  if (!isCreating) {
+    if (!isLoading) hintParts.push("Tab  new")
+    if (step === 2 || onBackToUri) hintParts.push("⌫  back")
+    hintParts.push("Esc  quit")
+  }
+  const hint = hintParts.join("  ·  ")
 
   return (
     <box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
@@ -137,83 +246,174 @@ export function WelcomeScreen({
       {/* Step title */}
       <box marginBottom={1}>
         <text>
-          <span fg={theme.text}>{stepTitle}</span>
+          <span fg={isEmpty ? theme.textMuted : theme.text}>{stepTitle}</span>
         </text>
       </box>
 
-      {/* Search input — top, to avoid layout shifts */}
-      <box minWidth={36} flexDirection="column" marginBottom={1}>
-        <box>
-          <text>
-            <span fg={theme.textMuted}>{"─".repeat(36)}</span>
-          </text>
-        </box>
-        <box flexDirection="row" paddingLeft={1} paddingRight={1}>
-          <text>
-            <span fg={theme.textDim}>{"> "}</span>
-          </text>
-          <input
-            value={query}
-            onInput={(v) => {
-              setQuery(v)
-              setCursor(0)
-            }}
-            placeholder="type to filter..."
-            focused
-            backgroundColor={theme.bg}
-            textColor={theme.text}
-            placeholderColor={theme.textMuted}
-            cursorColor={theme.primary}
-            width={32}
-          />
-        </box>
-        <box>
-          <text>
-            <span fg={theme.textMuted}>{"─".repeat(36)}</span>
-          </text>
-        </box>
-      </box>
-
-      {/* Item list — fixed min-height to prevent layout shifts */}
-      <box flexDirection="column" minWidth={36} minHeight={MIN_LIST_HEIGHT}>
-        {loading ? (
-          <box paddingLeft={2} paddingTop={1}>
-            <text>
-              <span fg={theme.textMuted}>Loading...</span>
-            </text>
-          </box>
-        ) : filtered.length === 0 ? (
-          <box paddingLeft={2} paddingTop={1}>
-            <text>
-              <span fg={theme.textMuted}>No matches</span>
-            </text>
-          </box>
-        ) : (
-          filtered.map((item, i) => {
-            const isSelected = i === safeCursor
-            return (
-              <box
-                key={item}
-                flexDirection="row"
-                paddingLeft={2}
-                paddingRight={2}
-                backgroundColor={isSelected ? theme.selection : undefined}
-              >
+      {/* Create flow — inline input(s) */}
+      {isCreating && (
+        <box minWidth={36} flexDirection="column" marginBottom={1}>
+          {createStep !== "first-collection" && (
+            <>
+              <text>
+                <span fg={theme.textMuted}>
+                  {step === 1 ? "New database name" : "New collection name"}
+                </span>
+              </text>
+              <box flexDirection="row" paddingLeft={1} marginTop={0}>
                 <text>
-                  <span fg={isSelected ? theme.text : theme.textDim}>{item}</span>
+                  <span fg={theme.primary}>{"> "}</span>
                 </text>
+                <input
+                  value={newName}
+                  onInput={(v) => {
+                    setNewName(v)
+                    setCreateError(null)
+                  }}
+                  focused={createStep === "name"}
+                  backgroundColor={theme.bg}
+                  textColor={theme.text}
+                  cursorColor={theme.primary}
+                  width={32}
+                />
               </box>
-            )
-          })
-        )}
-      </box>
+            </>
+          )}
+          {createStep === "first-collection" && (
+            <>
+              <text>
+                <span fg={theme.textMuted}>Database: </span>
+                <span fg={theme.text}>{newName}</span>
+              </text>
+              <text>
+                <span fg={theme.textMuted}>{"First collection name (Enter for 'default')"}</span>
+              </text>
+              <box flexDirection="row" paddingLeft={1} marginTop={0}>
+                <text>
+                  <span fg={theme.primary}>{"> "}</span>
+                </text>
+                <input
+                  value={firstCollection}
+                  onInput={(v) => {
+                    setFirstCollection(v)
+                    setCreateError(null)
+                  }}
+                  placeholder="default"
+                  focused
+                  backgroundColor={theme.bg}
+                  textColor={theme.text}
+                  placeholderColor={theme.textMuted}
+                  cursorColor={theme.primary}
+                  width={32}
+                />
+              </box>
+            </>
+          )}
+          {createStep === "creating" && (
+            <text>
+              <span fg={theme.textMuted}>Creating...</span>
+            </text>
+          )}
+          {createError && (
+            <text>
+              <span fg={theme.error}>{createError}</span>
+            </text>
+          )}
+          <text>
+            <span fg={theme.textMuted}>
+              {createStep === "first-collection"
+                ? "Enter confirm  ·  Esc back"
+                : "Enter confirm  ·  Esc cancel"}
+            </span>
+          </text>
+        </box>
+      )}
+
+      {/* Search input — only shown when not in create flow and list is non-empty */}
+      {!isCreating && !isEmpty && (
+        <box minWidth={36} flexDirection="column" marginBottom={1}>
+          <box>
+            <text>
+              <span fg={theme.textMuted}>{"─".repeat(36)}</span>
+            </text>
+          </box>
+          <box flexDirection="row" paddingLeft={1} paddingRight={1}>
+            <text>
+              <span fg={theme.textDim}>{"> "}</span>
+            </text>
+            <input
+              value={query}
+              onInput={(v) => {
+                setQuery(v)
+                setCursor(0)
+              }}
+              placeholder="type to filter..."
+              focused
+              backgroundColor={theme.bg}
+              textColor={theme.text}
+              placeholderColor={theme.textMuted}
+              cursorColor={theme.primary}
+              width={32}
+            />
+          </box>
+          <box>
+            <text>
+              <span fg={theme.textMuted}>{"─".repeat(36)}</span>
+            </text>
+          </box>
+        </box>
+      )}
+
+      {/* Item list */}
+      {!isCreating && (
+        <box flexDirection="column" minWidth={36} minHeight={MIN_LIST_HEIGHT}>
+          {isLoading ? (
+            <box paddingLeft={2} paddingTop={1}>
+              <text>
+                <span fg={theme.textMuted}>Loading...</span>
+              </text>
+            </box>
+          ) : isEmpty ? (
+            <box paddingLeft={2} paddingTop={1}>
+              <text>
+                <span fg={theme.textMuted}>Press Tab to create one.</span>
+              </text>
+            </box>
+          ) : filtered.length === 0 ? (
+            <box paddingLeft={2} paddingTop={1}>
+              <text>
+                <span fg={theme.textMuted}>No matches</span>
+              </text>
+            </box>
+          ) : (
+            filtered.map((item, i) => {
+              const isSelected = i === safeCursor
+              return (
+                <box
+                  key={item}
+                  flexDirection="row"
+                  paddingLeft={2}
+                  paddingRight={2}
+                  backgroundColor={isSelected ? theme.selection : undefined}
+                >
+                  <text>
+                    <span fg={isSelected ? theme.text : theme.textDim}>{item}</span>
+                  </text>
+                </box>
+              )
+            })
+          )}
+        </box>
+      )}
 
       {/* Hint row */}
-      <box marginTop={1}>
-        <text>
-          <span fg={theme.textMuted}>{hint}</span>
-        </text>
-      </box>
+      {hint && (
+        <box marginTop={1}>
+          <text>
+            <span fg={theme.textMuted}>{hint}</span>
+          </text>
+        </box>
+      )}
     </box>
   )
 }

@@ -25,8 +25,8 @@ an actionable option to create a database or collection directly from the welcom
   message instead of "Loading..." — e.g. "No databases found"
 - When `listCollections` returns an empty array, welcome screen step 2 shows an empty state
   message instead of "Loading..." — e.g. "No collections in <db>"
-- Pressing `n` (or a clearly-labelled action in the hint row) from either empty state opens
-  an inline name input
+- Pressing `Tab` from either empty state (or any state) opens an inline name input
+  (`n` conflicts with filter-as-you-type; `Ctrl+I` = `Tab` in terminals)
 - Confirming the input creates the database (by creating a collection inside it) or creates
   the collection, then reloads and navigates into it automatically
 - Empty name or Escape cancels the create flow without side effects
@@ -35,10 +35,9 @@ an actionable option to create a database or collection directly from the welcom
 
 ### P2 — Should Have
 
-- `n` is also available as a persistent shortcut even when the list is non-empty (so the
-  user can add more databases/collections without switching tools)
+- `Tab` is available as a persistent shortcut even when the list is non-empty
 - After a successful create, the new item is highlighted/selected in the list
-- The hint row always shows `n  new` alongside the other shortcuts
+- The hint row always shows `Tab  new` alongside the other shortcuts
 
 ### P3 — Nice to Have
 
@@ -153,8 +152,8 @@ Step 2 — no collections (db already selected):
 
 | Input | State | Behavior |
 |-------|-------|----------|
-| `n` | step 1 (any) | Open "New database" inline input |
-| `n` | step 2 (any) | Open "New collection" inline input |
+| `Tab` | step 1 (any) | Open "New database" inline input |
+| `Tab` | step 2 (any) | Open "New collection" inline input |
 | `Enter` | create input, name non-empty | Run create, show spinner, then reload |
 | `Escape` | create input open | Dismiss input, return to list |
 | `Backspace` | create input empty | Same as Escape |
