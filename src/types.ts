@@ -82,6 +82,38 @@ export type QueryMode = "simple" | "bson"
 export type BsonSection = "filter" | "sort" | "projection"
 
 // ============================================================================
+// Index Types
+// ============================================================================
+
+/** A MongoDB index as returned by listIndexes() */
+export interface IndexInfo {
+  name: string
+  key: Record<string, unknown>
+  unique?: boolean
+  sparse?: boolean
+  expireAfterSeconds?: number
+  [key: string]: unknown
+}
+
+/** A parsed index definition ready to create */
+export interface IndexDef {
+  name: string
+  key: import("mongodb").IndexSpecification
+  options: import("mongodb").CreateIndexesOptions
+}
+
+/** Pending index create confirmation */
+export interface IndexCreateConfirmation {
+  /** Indexes to create (new or replacements) */
+  toCreate: IndexDef[]
+  /** Index names to drop */
+  toDrop: string[]
+  /** Names being replaced (drop+recreate due to edit) */
+  toReplace: string[]
+  resolve: (confirmed: boolean) => void
+}
+
+// ============================================================================
 // Collection Types
 // ============================================================================
 
@@ -279,4 +311,7 @@ export interface AppState {
   historyEntries: string[]
   /** Whether the history picker overlay is open */
   historyPickerOpen: boolean
+
+  // Index create confirmation dialog (null = not showing)
+  indexCreateConfirmation: IndexCreateConfirmation | null
 }

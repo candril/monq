@@ -49,6 +49,7 @@ export function useKeyboardNav({
     bulkQueryUpdateAwaitingFinal,
     bulkQueryDeleteFocusedIndex,
     bulkQueryDeleteAwaitingFinal,
+    indexCreateFocusedIndex,
   } = useDialogKeys({ state, dispatch })
   const { handleKey: handlePipelineKey } = usePipelineKeys({ state, dispatch, renderer, keymap })
   const { handleKey: handleEditKey } = useDocumentEditKeys({ state, dispatch, renderer, keymap })
@@ -460,5 +461,6 @@ export function useKeyboardNav({
     bulkQueryUpdateAwaitingFinal,
     bulkQueryDeleteFocusedIndex,
     bulkQueryDeleteAwaitingFinal,
+    indexCreateFocusedIndex,
   }
 }

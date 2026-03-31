@@ -54,6 +54,7 @@ Define named profiles in `~/.config/monq/config.toml`. Use `uri_cmd` to fetch UR
 - **Pipeline editor** — full aggregation pipelines in `$EDITOR` with JSON Schema autocompletion and live reload
 - **Document editing** — edit single docs or bulk-select and edit in `$EDITOR` as a JSON array
 - **Bulk update / delete via query** — run `updateMany` or `deleteMany` with a filter you write in `$EDITOR`; shows matched count before applying
+- **Index management** — edit all indexes in `$EDITOR` as a live JSON array; add, remove, or edit entries to create, drop, or replace indexes
 - **Collection tabs** — open multiple collections side by side, switch with `1–9` or `[`/`]`
 - **Schema-aware suggestions** — field name autocomplete with dot-notation drill-down
 - **Smart columns** — auto-detects fields, horizontal scroll, sort, column sizing, hide via `-`
@@ -144,6 +145,7 @@ monq                                        # shows saved connections or URI pro
 | `p` / `P` | Toggle / cycle preview pane |
 | `e` | Edit document in `$EDITOR` |
 | `i` | Insert new document |
+| `Shift+I` | Manage indexes (edit all in `$EDITOR`) |
 | `v` | Enter / freeze selection mode |
 | `Space` | Toggle row selection |
 | `Ctrl+A` | Select all |

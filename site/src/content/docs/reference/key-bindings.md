@@ -74,6 +74,7 @@ These operations are also available from the command palette, making them access
 | `p` / `P` | Toggle / cycle preview pane |
 | `e` | Edit document in `$EDITOR` |
 | `i` | Insert new document |
+| `Shift+I` | Manage indexes (edit all in `$EDITOR`) |
 | `v` | Enter / freeze selection mode |
 | `Space` | Toggle row selection |
 | `o` | Jump cursor to selection end |

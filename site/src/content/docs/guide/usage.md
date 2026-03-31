@@ -93,7 +93,32 @@ Open multiple collections at once with `t` (clone tab) or by switching after `Ct
 - `e` — edit the document under the cursor in `$EDITOR`
 - `v` then `Space` to select rows, then `e` — bulk edit as a JSON array
 - `i` — insert a new document
+- `Shift+I` — manage indexes (edit all in `$EDITOR`)
 - `Shift+D` — delete selected documents (with confirmation)
+
+## Managing indexes
+
+Press `Shift+I` to open all indexes on the current collection in `$EDITOR` as a live editable JSON array:
+
+```jsonc
+{
+  "$schema": "./.monq-index-schema.json",
+  "indexes": [
+    {
+      "key": { "_id": 1 },
+      "options": { "name": "_id_" }
+    },
+    {
+      "key": { "email": 1 },
+      "options": { "name": "email_1", "unique": true }
+    }
+  ]
+}
+```
+
+**Add** a new entry to create an index, **remove** an entry to drop it, or **edit** an entry to replace it (drop + recreate). Field names autocomplete from the collection's schema via the JSON Schema sidecar. After saving, monq shows a confirmation dialog listing what will be created, dropped, or replaced.
+
+Available options: `name` (required), `unique`, `sparse`, `expireAfterSeconds`, `background`, `partialFilterExpression`, `collation`.
 
 ## Bulk update / delete via query
 
