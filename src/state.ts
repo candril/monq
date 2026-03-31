@@ -878,6 +878,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         documentsLoading: true,
         reloadCounter: state.reloadCounter + 1,
         selectedIndex: 0,
+        documents: [],
+        loadedCount: 0,
+        loadingMore: false,
         tabs: state.tabs.map((t) =>
           t.id === state.activeTabId
             ? { ...t, query: state.queryInput, queryMode: state.queryMode }
@@ -893,6 +896,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         documentsLoading: true,
         reloadCounter: state.reloadCounter + 1,
         selectedIndex: 0,
+        documents: [],
+        loadedCount: 0,
+        loadingMore: false,
         tabs: state.tabs.map((t) => (t.id === state.activeTabId ? { ...t, query: "" } : t)),
       }
 
@@ -909,6 +915,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         documentsLoading: true,
         reloadCounter: state.reloadCounter + 1,
         selectedIndex: 0,
+        documents: [],
+        loadedCount: 0,
+        loadingMore: false,
       }
 
     case "CLEAR_PIPELINE":
@@ -925,6 +934,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         documentsLoading: true,
         reloadCounter: state.reloadCounter + 1,
         selectedIndex: 0,
+        documents: [],
+        loadedCount: 0,
+        loadingMore: false,
       }
 
     // Tab switches mode: simple → pipeline (no reload — same data, just display change)

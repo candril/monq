@@ -1,6 +1,6 @@
 # Fix: Stale Documents After Filtering When Paged
 
-**Status**: Ready
+**Status**: Done
 
 ## Description
 
