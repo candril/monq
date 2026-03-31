@@ -1,6 +1,6 @@
 # Query Bar
 
-**Status**: In Progress
+**Status**: Done
 
 ## What's Done
 
@@ -19,8 +19,8 @@
 - Syntax highlighting in BSON textareas (P2)
 - Inline BSON parse error display (P2) — errors currently silently fall back to unfiltered fetch
 - Query history picker — **done**
-  - `Ctrl-Y` while simple bar is open shows history overlay above the input
-  - `Ctrl-P` / `Ctrl-N` to navigate entries, `Enter` to pick, `Escape` or `Ctrl-Y` to dismiss
+  - `Ctrl-R` while simple bar is open shows history overlay above the input
+  - `Ctrl-P` / `Ctrl-N` to navigate entries, `Enter` to pick, `Escape` or `Ctrl-R` to dismiss
   - Picking a history entry sets the input and submits immediately
   - Persisted to `$XDG_DATA_HOME/monq/history` (default `~/.local/share/monq/history`)
   - Deduplicates entries; capped at 100; loaded at startup and updated in-session
