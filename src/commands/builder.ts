@@ -142,6 +142,18 @@ export function buildCommands(state: AppState): Command[] {
       })
     }
     commands.push({
+      id: "view:explain",
+      label: "Explain Query",
+      category: "view",
+      shortcut: "x",
+    })
+    commands.push({
+      id: "view:explain-raw",
+      label: "Explain Query (Raw JSON)",
+      category: "view",
+      shortcut: "Shift+X",
+    })
+    commands.push({
       id: "view:toggle-filter-bar",
       label: state.filterBarVisible ? "Hide Filter Bar" : "Show Filter Bar",
       category: "view",

@@ -103,6 +103,10 @@ export type AppAction =
   | { type: "TOGGLE_PREVIEW" }
   | { type: "CYCLE_PREVIEW_POSITION" }
   | { type: "SCROLL_PREVIEW"; delta: number }
+  | { type: "SET_PREVIEW_MODE"; mode: import("./types").PreviewMode }
+  // Explain
+  | { type: "SET_EXPLAIN_RESULT"; result: import("mongodb").Document | null }
+  | { type: "SET_EXPLAIN_LOADING"; loading: boolean }
   // Command palette
   | { type: "OPEN_COMMAND_PALETTE" }
   | { type: "CLOSE_COMMAND_PALETTE" }
@@ -193,7 +197,10 @@ export function createInitialState(): AppState {
     loadedCount: 0,
     loadingMore: false,
     previewPosition: null,
+    previewMode: "document",
     previewScrollOffset: 0,
+    explainResult: null,
+    explainLoading: false,
     commandPaletteVisible: false,
     message: null,
     error: null,
@@ -1080,6 +1087,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         previewPosition: state.previewPosition ? null : "right",
+        previewMode: "document",
         previewScrollOffset: 0,
       }
 
@@ -1096,6 +1104,19 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         previewScrollOffset: Math.max(0, state.previewScrollOffset + action.delta),
       }
+
+    case "SET_PREVIEW_MODE":
+      return {
+        ...state,
+        previewMode: action.mode,
+        previewScrollOffset: 0,
+      }
+
+    case "SET_EXPLAIN_RESULT":
+      return { ...state, explainResult: action.result, explainLoading: false }
+
+    case "SET_EXPLAIN_LOADING":
+      return { ...state, explainLoading: action.loading }
 
     // Command palette
     case "OPEN_COMMAND_PALETTE":

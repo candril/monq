@@ -217,6 +217,27 @@ export async function dropIndex(collectionName: string, indexName: string): Prom
   await collection.dropIndex(indexName)
 }
 
+/** Explain a find query */
+export async function explainFind(
+  collectionName: string,
+  filter: Filter<Document> = {},
+  options: { sort?: Record<string, 1 | -1>; projection?: Record<string, 0 | 1> } = {},
+): Promise<Document> {
+  const collection = getDb().collection(collectionName)
+  const cursor = collection.find(filter, options.projection ? { projection: options.projection } : undefined)
+  if (options.sort) cursor.sort(options.sort)
+  return cursor.explain("executionStats") as Promise<Document>
+}
+
+/** Explain an aggregation pipeline */
+export async function explainAggregate(
+  collectionName: string,
+  pipeline: Document[],
+): Promise<Document> {
+  const collection = getDb().collection(collectionName)
+  return collection.aggregate(pipeline).explain("executionStats") as Promise<Document>
+}
+
 /** Replace a document by its original _id */
 export async function replaceDocument(
   collectionName: string,

@@ -120,6 +120,19 @@ Press `Shift+I` to open all indexes on the current collection in `$EDITOR` as a 
 
 Available options: `name` (required), `unique`, `sparse`, `expireAfterSeconds`, `background`, `partialFilterExpression`, `collation`.
 
+## Explain query
+
+Press `x` to toggle the explain preview pane. It shows the execution plan for the current query or pipeline as stage cards connected by arrows — each card shows the stage type, returned count, and execution time.
+
+- `COLLSCAN` stages are highlighted in red and show which fields have no index
+- `IXSCAN` stages are highlighted in green and show the index name and key pattern
+- The summary section shows total docs returned/examined, execution time, ratio, and index info
+- Auto-refreshes when you reload (`r`) or change the query
+
+Press `Shift+X` to open the full raw explain JSON in `$EDITOR` for deep inspection.
+
+Both actions are also available from the command palette (`Ctrl+P` → "Explain Query").
+
 ## Bulk update / delete via query
 
 Open via `Ctrl+P` → **Bulk Update (query)** or **Bulk Delete (query)**.

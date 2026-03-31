@@ -23,11 +23,17 @@ export interface RawKey {
  * An empty combos array always returns false (action disabled).
  */
 export function matches(key: RawKey, combos: KeyCombo[]): boolean {
+  const keyName = key.name?.toLowerCase() ?? ""
+  // Detect implicit shift: if name is uppercase and shift flag is not set,
+  // treat it as shift+lowercase (some terminals send "X" instead of shift+"x")
+  const implicitShift = key.name?.length === 1 && key.name !== keyName && !key.shift
+  const keyShift = !!key.shift || implicitShift
+
   for (const combo of combos) {
     if (
-      key.name === combo.name &&
+      keyName === combo.name &&
       !!key.ctrl === !!combo.ctrl &&
-      !!key.shift === !!combo.shift &&
+      keyShift === !!combo.shift &&
       !!key.alt === !!combo.alt
     ) {
       return true

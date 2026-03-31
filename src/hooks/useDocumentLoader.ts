@@ -7,11 +7,12 @@ import { useEffect } from "react"
 import type { Dispatch } from "react"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
-import { fetchDocuments, fetchAggregate } from "../providers/mongodb"
+import { fetchDocuments, fetchAggregate, explainFind, explainAggregate } from "../providers/mongodb"
 import { detectColumns } from "../utils/document"
 import { parseSimpleQueryFull, parseBsonQuery } from "../query/parser"
 import { buildSchemaMap } from "../query/schema"
 import { classifyPipeline, extractFindParts } from "../query/pipeline"
+import { resolveCurrentQuery } from "../utils/query"
 
 /**
  * Strip `_id: 0` from a projection before sending to MongoDB.
@@ -320,4 +321,34 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only triggered by loadingMore flag
   }, [activeTab?.id, state.loadingMore])
+
+  // Effect 3: re-run explain when documents reload and explain mode is active
+  useEffect(() => {
+    if (!activeTab || !documentsLoading || state.previewMode !== "explain") return
+
+    let cancelled = false
+    dispatch({ type: "SET_EXPLAIN_LOADING", loading: true })
+
+    const query = resolveCurrentQuery(state)
+    const promise =
+      query.mode === "aggregate"
+        ? explainAggregate(activeTab.collectionName, query.pipeline)
+        : explainFind(activeTab.collectionName, query.filter, {
+            sort: query.sort,
+            projection: query.projection,
+          })
+
+    promise
+      .then((result) => {
+        if (!cancelled) dispatch({ type: "SET_EXPLAIN_RESULT", result })
+      })
+      .catch(() => {
+        if (!cancelled) dispatch({ type: "SET_EXPLAIN_LOADING", loading: false })
+      })
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- same triggers as document load
+  }, [activeTab?.id, documentsLoading, reloadCounter])
 }

@@ -32,6 +32,14 @@ Press `Ctrl+F` to open the pipeline editor in `$EDITOR` with JSON Schema autocom
 
 <img src="site/src/assets/screenshots/pipeline-editor.png" alt="Pipeline editor open in a tmux split alongside live results" width="100%" />
 
+### See why your query is slow
+
+Press `x` to toggle the explain preview — each execution stage shown as a card with returned count, timing, and index info. COLLSCAN tells you which fields need an index. `Shift+X` opens the full raw explain JSON in `$EDITOR`.
+
+<img src="site/src/assets/screenshots/explain-collscan.png" alt="Explain preview showing COLLSCAN with no index warning" width="100%" />
+
+<img src="site/src/assets/screenshots/explain-ixscan.png" alt="Explain preview showing IXSCAN with index details" width="100%" />
+
 ### Everything at your fingertips via the command palette
 
 `Ctrl+P` opens the palette — switch collections, change themes, open the pipeline editor, navigate databases, and more, all searchable from one place.
@@ -55,6 +63,7 @@ Define named profiles in `~/.config/monq/config.toml`. Use `uri_cmd` to fetch UR
 - **Document editing** — edit single docs or bulk-select and edit in `$EDITOR` as a JSON array
 - **Bulk update / delete via query** — run `updateMany` or `deleteMany` with a filter you write in `$EDITOR`; shows matched count before applying
 - **Index management** — edit all indexes in `$EDITOR` as a live JSON array; add, remove, or edit entries to create, drop, or replace indexes
+- **Explain query** — press `x` to see the execution plan as stage cards with per-stage stats; `X` opens the full raw explain JSON in `$EDITOR`
 - **Collection tabs** — open multiple collections side by side, switch with `1–9` or `[`/`]`
 - **Schema-aware suggestions** — field name autocomplete with dot-notation drill-down
 - **Smart columns** — auto-detects fields, horizontal scroll, sort, column sizing, hide via `-`
@@ -146,6 +155,7 @@ monq                                        # shows saved connections or URI pro
 | `e` | Edit document in `$EDITOR` |
 | `i` | Insert new document |
 | `Shift+I` | Manage indexes (edit all in `$EDITOR`) |
+| `x` / `X` | Toggle explain preview / open raw explain in `$EDITOR` |
 | `v` | Enter / freeze selection mode |
 | `Space` | Toggle row selection |
 | `Ctrl+A` | Select all |
