@@ -64,10 +64,12 @@ curl -fsSL -o "${TMP_DIR}/SHA256SUMS" "$CHECKSUM_URL"
 
 # Verify checksum
 cd "$TMP_DIR"
-if command -v shasum &> /dev/null; then
+if [ "$OS" = "darwin" ]; then
   grep "$ASSET" SHA256SUMS | shasum -a 256 -c --quiet
 elif command -v sha256sum &> /dev/null; then
   grep "$ASSET" SHA256SUMS | sha256sum -c --quiet
+elif command -v shasum &> /dev/null; then
+  grep "$ASSET" SHA256SUMS | shasum -a 256 -c --quiet
 else
   echo "Warning: no sha256sum or shasum found, skipping verification"
 fi
