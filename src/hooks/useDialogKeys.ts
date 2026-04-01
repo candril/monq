@@ -1,6 +1,7 @@
 /**
  * Hook: keyboard handling for modal confirmation dialogs.
- * Covers pipeline-confirm, bulk-edit-confirm, and delete-confirm.
+ * Covers pipeline-confirm, bulk-edit-confirm, delete-confirm,
+ * bulk-query-update-confirm, bulk-query-delete-confirm, and index-create-confirm.
  * Returns true if a dialog consumed the key (caller should return early).
  */
 
@@ -15,6 +16,35 @@ interface UseDialogKeysOptions {
   dispatch: Dispatch<AppAction>
 }
 
+type DialogOption = { key: string; exec: () => void }
+type Key = { name: string; ctrl?: boolean; shift?: boolean }
+
+/**
+ * Shared dialog keyboard navigation.
+ * Handles h/l/left/right to move focus, Enter to confirm, escape to cancel,
+ * and letter-key shortcuts to jump to an option.
+ */
+function handleDialogNav(
+  key: Key,
+  opts: DialogOption[],
+  focusedIndex: number,
+  setFocusedIndex: (fn: (i: number) => number) => void,
+  onEscape?: () => void,
+): void {
+  if (key.name === "escape") {
+    onEscape?.()
+  } else if (key.name === "return") {
+    if (focusedIndex >= 0) opts[focusedIndex]?.exec()
+  } else if (key.name === "h" || key.name === "left") {
+    setFocusedIndex((i) => Math.max(-1, i - 1))
+  } else if (key.name === "l" || key.name === "right") {
+    setFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
+  } else {
+    const match = opts.findIndex((o) => o.key === key.name)
+    if (match !== -1) setFocusedIndex(() => match)
+  }
+}
+
 export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
   const [pipelineFocusedIndex, setPipelineFocusedIndex] = useState(-1)
   const [bulkEditFocusedIndex, setBulkEditFocusedIndex] = useState(-1)
@@ -25,11 +55,11 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
   const [bulkQueryDeleteAwaitingFinal, setBulkQueryDeleteAwaitingFinal] = useState(false)
   const [indexCreateFocusedIndex, setIndexCreateFocusedIndex] = useState(-1)
 
-  function handleKey(key: { name: string; ctrl?: boolean; shift?: boolean }): boolean {
+  function handleKey(key: Key): boolean {
     // Pipeline→simple confirmation dialog
     if (state.pipelineConfirm) {
       const confirm = state.pipelineConfirm
-      const opts = [
+      const opts: DialogOption[] = [
         {
           key: "n",
           exec: () => {
@@ -59,103 +89,45 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
           },
         },
       ]
-      if (key.name === "escape") {
+      handleDialogNav(key, opts, pipelineFocusedIndex, setPipelineFocusedIndex, () => {
         dispatch({ type: "DISMISS_PIPELINE_CONFIRM" })
         setPipelineFocusedIndex(-1)
-      } else if (key.name === "h" || key.name === "left") {
-        setPipelineFocusedIndex((i) => Math.max(-1, i - 1))
-      } else if (key.name === "l" || key.name === "right") {
-        setPipelineFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
-      } else if (key.name === "return") {
-        if (pipelineFocusedIndex >= 0) opts[pipelineFocusedIndex]?.exec()
-      } else {
-        const match = opts.findIndex((o) => o.key === key.name)
-        if (match !== -1) setPipelineFocusedIndex(match)
-      }
+      })
       return true
     }
 
     // Bulk edit confirmation dialog
     if (state.bulkEditConfirmation) {
       const { resolve, goBack, missing, added } = state.bulkEditConfirmation
-      const opts: Array<{ key: string; exec: () => void }> = [
-        {
-          key: "b",
-          exec: () => {
-            dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" })
-            setBulkEditFocusedIndex(-1)
-            goBack()
-          },
-        },
-        {
-          key: "i",
-          exec: () => {
-            dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" })
-            setBulkEditFocusedIndex(-1)
-            resolve("ignore", "ignore")
-          },
-        },
+      const reset = () => {
+        dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" })
+        setBulkEditFocusedIndex(-1)
+      }
+      const opts: DialogOption[] = [
+        { key: "b", exec: () => { reset(); goBack() } },
+        { key: "i", exec: () => { reset(); resolve("ignore", "ignore") } },
       ]
       if (missing.length > 0)
-        opts.push({
-          key: "d",
-          exec: () => {
-            dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" })
-            setBulkEditFocusedIndex(-1)
-            resolve("delete", "ignore")
-          },
-        })
+        opts.push({ key: "d", exec: () => { reset(); resolve("delete", "ignore") } })
       if (added.length > 0)
-        opts.push({
-          key: "a",
-          exec: () => {
-            dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" })
-            setBulkEditFocusedIndex(-1)
-            resolve("ignore", "insert")
-          },
-        })
+        opts.push({ key: "a", exec: () => { reset(); resolve("ignore", "insert") } })
       if (missing.length > 0 && added.length > 0)
-        opts.push({
-          key: "x",
-          exec: () => {
-            dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" })
-            setBulkEditFocusedIndex(-1)
-            resolve("delete", "insert")
-          },
-        })
-      opts.push({
-        key: "c",
-        exec: () => {
-          dispatch({ type: "CLEAR_BULK_EDIT_CONFIRM" })
-          setBulkEditFocusedIndex(-1)
-        },
-      })
-
-      if (key.name === "return") {
-        if (bulkEditFocusedIndex >= 0) opts[bulkEditFocusedIndex]?.exec()
-      } else if (key.name === "h" || key.name === "left") {
-        setBulkEditFocusedIndex((i) => Math.max(-1, i - 1))
-      } else if (key.name === "l" || key.name === "right") {
-        setBulkEditFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
-      } else {
-        const match = opts.findIndex((o) => o.key === key.name)
-        if (match !== -1) setBulkEditFocusedIndex(match)
-      }
+        opts.push({ key: "x", exec: () => { reset(); resolve("delete", "insert") } })
+      opts.push({ key: "c", exec: reset })
+      handleDialogNav(key, opts, bulkEditFocusedIndex, setBulkEditFocusedIndex)
       return true
     }
 
     // Delete confirmation dialog
     if (state.deleteConfirmation) {
       const { resolve } = state.deleteConfirmation
-      const opts = [
-        {
-          key: "c",
-          exec: () => {
-            dispatch({ type: "CLEAR_DELETE_CONFIRM" })
-            setDeleteFocusedIndex(-1)
-            resolve(false)
-          },
-        },
+      const cancel = () => {
+        dispatch({ type: "CLEAR_DELETE_CONFIRM" })
+        setDeleteFocusedIndex(-1)
+        resolve(false)
+      }
+      const opts: DialogOption[] = [
+        { key: "c", exec: cancel },
         {
           key: "d",
           exec: () => {
@@ -165,20 +137,7 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
           },
         },
       ]
-      if (key.name === "return") {
-        if (deleteFocusedIndex >= 0) opts[deleteFocusedIndex]?.exec()
-      } else if (key.name === "escape") {
-        dispatch({ type: "CLEAR_DELETE_CONFIRM" })
-        setDeleteFocusedIndex(-1)
-        resolve(false)
-      } else if (key.name === "h" || key.name === "left") {
-        setDeleteFocusedIndex((i) => Math.max(-1, i - 1))
-      } else if (key.name === "l" || key.name === "right") {
-        setDeleteFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
-      } else {
-        const match = opts.findIndex((o) => o.key === key.name)
-        if (match !== -1) setDeleteFocusedIndex(match)
-      }
+      handleDialogNav(key, opts, deleteFocusedIndex, setDeleteFocusedIndex, cancel)
       return true
     }
 
@@ -191,9 +150,8 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
         setBulkQueryUpdateAwaitingFinal(false)
         resolve(false)
       }
-      // Second stage: empty filter final confirm (y / c)
       if (bulkQueryUpdateAwaitingFinal) {
-        const finalOpts = [
+        const finalOpts: DialogOption[] = [
           {
             key: "y",
             exec: () => {
@@ -205,29 +163,14 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
           },
           { key: "c", exec: cancel },
         ]
-        if (key.name === "escape") {
-          cancel()
-          return true
-        }
-        if (key.name === "return") {
-          if (bulkQueryUpdateFocusedIndex >= 0) finalOpts[bulkQueryUpdateFocusedIndex]?.exec()
-        } else if (key.name === "h" || key.name === "left")
-          setBulkQueryUpdateFocusedIndex((i) => Math.max(-1, i - 1))
-        else if (key.name === "l" || key.name === "right")
-          setBulkQueryUpdateFocusedIndex((i) => Math.min(finalOpts.length - 1, i + 1))
-        else {
-          const m = finalOpts.findIndex((o) => o.key === key.name)
-          if (m !== -1) setBulkQueryUpdateFocusedIndex(m)
-        }
+        handleDialogNav(key, finalOpts, bulkQueryUpdateFocusedIndex, setBulkQueryUpdateFocusedIndex, cancel)
         return true
       }
-      // First stage
-      const opts = [
+      const opts: DialogOption[] = [
         {
           key: "a",
           exec: () => {
             if (emptyFilter) {
-              // Escalate to second confirm
               setBulkQueryUpdateFocusedIndex(-1)
               setBulkQueryUpdateAwaitingFinal(true)
             } else {
@@ -239,18 +182,7 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
         },
         { key: "c", exec: cancel },
       ]
-      if (key.name === "escape") {
-        cancel()
-      } else if (key.name === "return") {
-        if (bulkQueryUpdateFocusedIndex >= 0) opts[bulkQueryUpdateFocusedIndex]?.exec()
-      } else if (key.name === "h" || key.name === "left")
-        setBulkQueryUpdateFocusedIndex((i) => Math.max(-1, i - 1))
-      else if (key.name === "l" || key.name === "right")
-        setBulkQueryUpdateFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
-      else {
-        const match = opts.findIndex((o) => o.key === key.name)
-        if (match !== -1) setBulkQueryUpdateFocusedIndex(match)
-      }
+      handleDialogNav(key, opts, bulkQueryUpdateFocusedIndex, setBulkQueryUpdateFocusedIndex, cancel)
       return true
     }
 
@@ -263,9 +195,8 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
         setBulkQueryDeleteAwaitingFinal(false)
         resolve(false)
       }
-      // Second stage: empty filter final confirm (y / c)
       if (bulkQueryDeleteAwaitingFinal) {
-        const finalOpts = [
+        const finalOpts: DialogOption[] = [
           {
             key: "y",
             exec: () => {
@@ -277,29 +208,14 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
           },
           { key: "c", exec: cancel },
         ]
-        if (key.name === "escape") {
-          cancel()
-          return true
-        }
-        if (key.name === "return") {
-          if (bulkQueryDeleteFocusedIndex >= 0) finalOpts[bulkQueryDeleteFocusedIndex]?.exec()
-        } else if (key.name === "h" || key.name === "left")
-          setBulkQueryDeleteFocusedIndex((i) => Math.max(-1, i - 1))
-        else if (key.name === "l" || key.name === "right")
-          setBulkQueryDeleteFocusedIndex((i) => Math.min(finalOpts.length - 1, i + 1))
-        else {
-          const m = finalOpts.findIndex((o) => o.key === key.name)
-          if (m !== -1) setBulkQueryDeleteFocusedIndex(m)
-        }
+        handleDialogNav(key, finalOpts, bulkQueryDeleteFocusedIndex, setBulkQueryDeleteFocusedIndex, cancel)
         return true
       }
-      // First stage
-      const opts = [
+      const opts: DialogOption[] = [
         {
           key: "d",
           exec: () => {
             if (emptyFilter) {
-              // Escalate to second confirm
               setBulkQueryDeleteFocusedIndex(-1)
               setBulkQueryDeleteAwaitingFinal(true)
             } else {
@@ -311,18 +227,7 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
         },
         { key: "c", exec: cancel },
       ]
-      if (key.name === "escape") {
-        cancel()
-      } else if (key.name === "return") {
-        if (bulkQueryDeleteFocusedIndex >= 0) opts[bulkQueryDeleteFocusedIndex]?.exec()
-      } else if (key.name === "h" || key.name === "left")
-        setBulkQueryDeleteFocusedIndex((i) => Math.max(-1, i - 1))
-      else if (key.name === "l" || key.name === "right")
-        setBulkQueryDeleteFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
-      else {
-        const m = opts.findIndex((o) => o.key === key.name)
-        if (m !== -1) setBulkQueryDeleteFocusedIndex(m)
-      }
+      handleDialogNav(key, opts, bulkQueryDeleteFocusedIndex, setBulkQueryDeleteFocusedIndex, cancel)
       return true
     }
 
@@ -334,7 +239,7 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
         setIndexCreateFocusedIndex(-1)
         resolve(false)
       }
-      const opts = [
+      const opts: DialogOption[] = [
         { key: "c", exec: cancel },
         {
           key: "a",
@@ -345,18 +250,7 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
           },
         },
       ]
-      if (key.name === "escape") {
-        cancel()
-      } else if (key.name === "return") {
-        if (indexCreateFocusedIndex >= 0) opts[indexCreateFocusedIndex]?.exec()
-      } else if (key.name === "h" || key.name === "left")
-        setIndexCreateFocusedIndex((i) => Math.max(-1, i - 1))
-      else if (key.name === "l" || key.name === "right")
-        setIndexCreateFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
-      else {
-        const m = opts.findIndex((o) => o.key === key.name)
-        if (m !== -1) setIndexCreateFocusedIndex(m)
-      }
+      handleDialogNav(key, opts, indexCreateFocusedIndex, setIndexCreateFocusedIndex, cancel)
       return true
     }
 
