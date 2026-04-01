@@ -137,7 +137,14 @@ export function useDocumentEditKeys({
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return true
       const activeFilter = resolveActiveFilter(state)
-      runBulkQueryUpdate(activeTab.collectionName, state.dbName, activeFilter, state.schemaMap, dispatch, renderer)
+      runBulkQueryUpdate(
+        activeTab.collectionName,
+        state.dbName,
+        activeFilter,
+        state.schemaMap,
+        dispatch,
+        renderer,
+      )
       return true
     }
 
@@ -146,7 +153,14 @@ export function useDocumentEditKeys({
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return true
       const activeFilter = resolveActiveFilter(state)
-      runBulkQueryDelete(activeTab.collectionName, state.dbName, activeFilter, state.schemaMap, dispatch, renderer)
+      runBulkQueryDelete(
+        activeTab.collectionName,
+        state.dbName,
+        activeFilter,
+        state.schemaMap,
+        dispatch,
+        renderer,
+      )
       return true
     }
 
@@ -225,8 +239,8 @@ export function useDocumentEditKeys({
             })
 
       promise
-        .then((result) => {
-          dispatch({ type: "SET_EXPLAIN_RESULT", result })
+        .then(({ result, limited }) => {
+          dispatch({ type: "SET_EXPLAIN_RESULT", result, limited })
         })
         .catch((err: Error) => {
           dispatch({ type: "SET_EXPLAIN_LOADING", loading: false })
@@ -258,7 +272,7 @@ export function useDocumentEditKeys({
             })
 
       promise
-        .then((result) => openExplainInEditor(activeTab.collectionName, result))
+        .then(({ result }) => openExplainInEditor(activeTab.collectionName, result))
         .then(() => {
           renderer.resume()
         })

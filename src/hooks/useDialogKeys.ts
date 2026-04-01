@@ -104,15 +104,45 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
         setBulkEditFocusedIndex(-1)
       }
       const opts: DialogOption[] = [
-        { key: "b", exec: () => { reset(); goBack() } },
-        { key: "i", exec: () => { reset(); resolve("ignore", "ignore") } },
+        {
+          key: "b",
+          exec: () => {
+            reset()
+            goBack()
+          },
+        },
+        {
+          key: "i",
+          exec: () => {
+            reset()
+            resolve("ignore", "ignore")
+          },
+        },
       ]
       if (missing.length > 0)
-        opts.push({ key: "d", exec: () => { reset(); resolve("delete", "ignore") } })
+        opts.push({
+          key: "d",
+          exec: () => {
+            reset()
+            resolve("delete", "ignore")
+          },
+        })
       if (added.length > 0)
-        opts.push({ key: "a", exec: () => { reset(); resolve("ignore", "insert") } })
+        opts.push({
+          key: "a",
+          exec: () => {
+            reset()
+            resolve("ignore", "insert")
+          },
+        })
       if (missing.length > 0 && added.length > 0)
-        opts.push({ key: "x", exec: () => { reset(); resolve("delete", "insert") } })
+        opts.push({
+          key: "x",
+          exec: () => {
+            reset()
+            resolve("delete", "insert")
+          },
+        })
       opts.push({ key: "c", exec: reset })
       handleDialogNav(key, opts, bulkEditFocusedIndex, setBulkEditFocusedIndex)
       return true
@@ -163,7 +193,13 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
           },
           { key: "c", exec: cancel },
         ]
-        handleDialogNav(key, finalOpts, bulkQueryUpdateFocusedIndex, setBulkQueryUpdateFocusedIndex, cancel)
+        handleDialogNav(
+          key,
+          finalOpts,
+          bulkQueryUpdateFocusedIndex,
+          setBulkQueryUpdateFocusedIndex,
+          cancel,
+        )
         return true
       }
       const opts: DialogOption[] = [
@@ -182,7 +218,13 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
         },
         { key: "c", exec: cancel },
       ]
-      handleDialogNav(key, opts, bulkQueryUpdateFocusedIndex, setBulkQueryUpdateFocusedIndex, cancel)
+      handleDialogNav(
+        key,
+        opts,
+        bulkQueryUpdateFocusedIndex,
+        setBulkQueryUpdateFocusedIndex,
+        cancel,
+      )
       return true
     }
 
@@ -208,7 +250,13 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
           },
           { key: "c", exec: cancel },
         ]
-        handleDialogNav(key, finalOpts, bulkQueryDeleteFocusedIndex, setBulkQueryDeleteFocusedIndex, cancel)
+        handleDialogNav(
+          key,
+          finalOpts,
+          bulkQueryDeleteFocusedIndex,
+          setBulkQueryDeleteFocusedIndex,
+          cancel,
+        )
         return true
       }
       const opts: DialogOption[] = [
@@ -227,7 +275,13 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
         },
         { key: "c", exec: cancel },
       ]
-      handleDialogNav(key, opts, bulkQueryDeleteFocusedIndex, setBulkQueryDeleteFocusedIndex, cancel)
+      handleDialogNav(
+        key,
+        opts,
+        bulkQueryDeleteFocusedIndex,
+        setBulkQueryDeleteFocusedIndex,
+        cancel,
+      )
       return true
     }
 

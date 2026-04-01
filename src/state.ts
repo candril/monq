@@ -64,7 +64,12 @@ export type AppAction =
   | { type: "SWITCH_TAB"; tabId: string }
   | { type: "UNDO_CLOSE_TAB" }
   // Documents
-  | { type: "SET_DOCUMENTS"; documents: import("mongodb").Document[]; count: number; totalCount?: number }
+  | {
+      type: "SET_DOCUMENTS"
+      documents: import("mongodb").Document[]
+      count: number
+      totalCount?: number
+    }
   | { type: "APPEND_DOCUMENTS"; documents: import("mongodb").Document[] }
   | { type: "LOAD_MORE" }
   | { type: "SET_DOCUMENTS_LOADING"; loading: boolean }
@@ -116,7 +121,7 @@ export type AppAction =
   | { type: "SCROLL_PREVIEW"; delta: number }
   | { type: "SET_PREVIEW_MODE"; mode: import("./types").PreviewMode }
   // Explain
-  | { type: "SET_EXPLAIN_RESULT"; result: import("mongodb").Document | null }
+  | { type: "SET_EXPLAIN_RESULT"; result: import("mongodb").Document | null; limited?: boolean }
   | { type: "SET_EXPLAIN_LOADING"; loading: boolean }
   // Command palette
   | { type: "OPEN_COMMAND_PALETTE" }
@@ -207,6 +212,7 @@ export function createInitialState(): AppState {
     previewMode: "document",
     previewScrollOffset: 0,
     explainResult: null,
+    explainLimited: false,
     explainLoading: false,
     commandPaletteVisible: false,
     message: null,

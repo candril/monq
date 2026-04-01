@@ -100,7 +100,7 @@ export async function fetchDocuments(
       .skip(skip)
       .limit(limit)
       .toArray(),
-    collection.countDocuments(filter),
+    hasFilter ? collection.countDocuments(filter) : collection.estimatedDocumentCount(),
     hasFilter ? collection.estimatedDocumentCount() : Promise.resolve(0),
   ])
 
@@ -231,28 +231,37 @@ export async function dropIndex(collectionName: string, indexName: string): Prom
   await collection.dropIndex(indexName)
 }
 
-/** Explain a find query */
+export type ExplainResult = { result: Document; limited: boolean }
+
+const EXPLAIN_LIMIT = 1000
+
+/** Explain a find query — injects a limit to avoid scanning the full collection */
 export async function explainFind(
   collectionName: string,
   filter: Filter<Document> = {},
   options: { sort?: Record<string, 1 | -1>; projection?: Record<string, 0 | 1> } = {},
-): Promise<Document> {
+): Promise<ExplainResult> {
   const collection = getDb().collection(collectionName)
   const cursor = collection.find(
     filter,
     options.projection ? { projection: options.projection } : undefined,
   )
-  if (options.sort) cursor.sort(options.sort)
-  return cursor.explain("executionStats") as Promise<Document>
+  cursor.sort(options.sort ?? { _id: -1 })
+  cursor.limit(EXPLAIN_LIMIT)
+  const result = (await cursor.explain("executionStats")) as Document
+  return { result, limited: true }
 }
 
-/** Explain an aggregation pipeline */
+/** Explain an aggregation pipeline — appends a $limit if the pipeline has none */
 export async function explainAggregate(
   collectionName: string,
   pipeline: Document[],
-): Promise<Document> {
+): Promise<ExplainResult> {
   const collection = getDb().collection(collectionName)
-  return collection.aggregate(pipeline).explain("executionStats") as Promise<Document>
+  const hasLimit = pipeline.some((s) => "$limit" in s)
+  const explainPipeline = hasLimit ? pipeline : [...pipeline, { $limit: EXPLAIN_LIMIT }]
+  const result = (await collection.aggregate(explainPipeline).explain("executionStats")) as Document
+  return { result, limited: !hasLimit }
 }
 
 /** Replace a document by its original _id */

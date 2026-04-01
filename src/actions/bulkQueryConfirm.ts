@@ -39,8 +39,14 @@ export function runBulkQueryUpdate(
         })
         return
       }
-      const { filter, update, upsert, matchedCount, apply, collectionName: resolvedCollection } =
-        outcome as QueryUpdateReady
+      const {
+        filter,
+        update,
+        upsert,
+        matchedCount,
+        apply,
+        collectionName: resolvedCollection,
+      } = outcome as QueryUpdateReady
       dispatch({
         type: "SHOW_BULK_QUERY_UPDATE_CONFIRM",
         confirmation: {

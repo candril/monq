@@ -12,6 +12,7 @@ import { theme } from "../theme"
 interface ExplainPreviewProps {
   result: Document | null
   loading: boolean
+  limited: boolean
   position: PreviewPosition
   scrollOffset: number
   collectionName?: string
@@ -395,6 +396,7 @@ function Summary({ stats, stages }: { stats: ExplainStats; stages: StageInfo[] }
 export function ExplainPreview({
   result,
   loading,
+  limited,
   position,
   scrollOffset,
   collectionName,
@@ -468,6 +470,14 @@ export function ExplainPreview({
             ))}
 
           {data?.stats && <Summary stats={data.stats} stages={data?.stages ?? []} />}
+
+          {data && limited && (
+            <box marginX={2} marginTop={1} paddingX={1}>
+              <text>
+                <span fg={theme.textMuted}>limited to 1000 docs for explain</span>
+              </text>
+            </box>
+          )}
         </box>
       </scrollbox>
     </box>

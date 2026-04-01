@@ -60,7 +60,11 @@ export function handleQueryCommand(cmdId: string, ctx: PaletteContext): boolean 
             source: result.source,
             isAggregate: result.isAggregate,
           })
-          const { queryFile } = pipelineFilePaths(state.dbName, activeTab.collectionName, activeTab.id)
+          const { queryFile } = pipelineFilePaths(
+            state.dbName,
+            activeTab.collectionName,
+            activeTab.id,
+          )
           startWatching(queryFile, () => reloadFromFile(queryFile, dispatch))
           dispatch({ type: "START_PIPELINE_WATCH" })
         })
@@ -90,9 +94,17 @@ export function handleQueryCommand(cmdId: string, ctx: PaletteContext): boolean 
           if (result === "tmux") {
             startWatching(queryFile, () => reloadFromFile(queryFile, dispatch))
             dispatch({ type: "START_PIPELINE_WATCH" })
-            dispatch({ type: "SHOW_MESSAGE", message: "Opened in tmux split — watching for saves", kind: "info" })
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: "Opened in tmux split — watching for saves",
+              kind: "info",
+            })
           } else if (result === "clipboard") {
-            dispatch({ type: "SHOW_MESSAGE", message: `Path copied to clipboard: ${queryFile}`, kind: "info" })
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: `Path copied to clipboard: ${queryFile}`,
+              kind: "info",
+            })
           } else {
             dispatch({ type: "SHOW_MESSAGE", message: `Pipeline file: ${queryFile}`, kind: "info" })
           }

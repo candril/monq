@@ -280,6 +280,7 @@ export interface AppState {
   previewMode: PreviewMode
   previewScrollOffset: number
   explainResult: Document | null
+  explainLimited: boolean
   explainLoading: boolean
 
   // Command palette

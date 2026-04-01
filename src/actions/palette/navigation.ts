@@ -13,7 +13,16 @@ import {
 } from "../database"
 
 export function handleNavigationCommand(cmdId: string, ctx: PaletteContext): boolean {
-  const { state, dispatch, renderer, setPaletteMode, onCreateCollection, onRenameCollection, onDropCollection, onDropDatabase } = ctx
+  const {
+    state,
+    dispatch,
+    renderer,
+    setPaletteMode,
+    onCreateCollection,
+    onRenameCollection,
+    onDropCollection,
+    onDropDatabase,
+  } = ctx
 
   switch (cmdId) {
     case "nav:switch-connection":
@@ -57,7 +66,8 @@ export function handleNavigationCommand(cmdId: string, ctx: PaletteContext): boo
     case "tabs:next": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId)
-      if (currentIndex < state.tabs.length - 1) switchToTab(state.tabs[currentIndex + 1].id, dispatch)
+      if (currentIndex < state.tabs.length - 1)
+        switchToTab(state.tabs[currentIndex + 1].id, dispatch)
       return true
     }
 
@@ -89,14 +99,16 @@ export function handleNavigationCommand(cmdId: string, ctx: PaletteContext): boo
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       setPaletteMode("commands")
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (activeTab && onRenameCollection) promptRenameCollection(dispatch, activeTab.collectionName, onRenameCollection)
+      if (activeTab && onRenameCollection)
+        promptRenameCollection(dispatch, activeTab.collectionName, onRenameCollection)
       return true
     }
     case "manage:drop-collection": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       setPaletteMode("commands")
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (activeTab && onDropCollection) promptDropCollection(dispatch, activeTab.collectionName, onDropCollection)
+      if (activeTab && onDropCollection)
+        promptDropCollection(dispatch, activeTab.collectionName, onDropCollection)
       return true
     }
     case "manage:drop-database":

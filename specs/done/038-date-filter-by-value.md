@@ -1,6 +1,6 @@
 # Date-aware filter-by-value
 
-**Status**: Ready
+**Status**: Done
 
 ## Description
 

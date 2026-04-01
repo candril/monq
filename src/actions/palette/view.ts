@@ -100,10 +100,16 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
               projection: query.projection,
             })
       explainPromise
-        .then((result) => dispatch({ type: "SET_EXPLAIN_RESULT", result }))
+        .then(({ result, limited }) => {
+          dispatch({ type: "SET_EXPLAIN_RESULT", result, limited })
+        })
         .catch((err: Error) => {
           dispatch({ type: "SET_EXPLAIN_LOADING", loading: false })
-          dispatch({ type: "SHOW_MESSAGE", message: `Explain failed: ${err.message}`, kind: "error" })
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Explain failed: ${err.message}`,
+            kind: "error",
+          })
           dispatch({ type: "SET_PREVIEW_MODE", mode: "document" })
         })
       return true
@@ -122,11 +128,15 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
               projection: rawQuery.projection,
             })
       rawPromise
-        .then((result) => openExplainInEditor(activeTab.collectionName, result))
+        .then(({ result }) => openExplainInEditor(activeTab.collectionName, result))
         .then(() => renderer.resume())
         .catch((err: Error) => {
           renderer.resume()
-          dispatch({ type: "SHOW_MESSAGE", message: `Explain failed: ${err.message}`, kind: "error" })
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Explain failed: ${err.message}`,
+            kind: "error",
+          })
         })
       return true
     }
@@ -155,7 +165,11 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
                   const parts: string[] = []
                   if (result.created > 0) parts.push(`Created ${result.created}`)
                   if (result.dropped > 0) parts.push(`Dropped ${result.dropped}`)
-                  dispatch({ type: "SHOW_MESSAGE", message: parts.join(", ") || "No changes", kind: "success" })
+                  dispatch({
+                    type: "SHOW_MESSAGE",
+                    message: parts.join(", ") || "No changes",
+                    kind: "success",
+                  })
                 }
               },
             },
@@ -163,7 +177,11 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
         })
         .catch((err: Error) => {
           renderer.resume()
-          dispatch({ type: "SHOW_MESSAGE", message: `Index editor failed: ${err.message}`, kind: "error" })
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Index editor failed: ${err.message}`,
+            kind: "error",
+          })
         })
       return true
     }

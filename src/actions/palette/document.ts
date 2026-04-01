@@ -35,7 +35,11 @@ export function handleDocumentCommand(cmdId: string, ctx: PaletteContext): boole
         })
         .catch((err: Error) => {
           renderer.resume()
-          dispatch({ type: "SHOW_MESSAGE", message: `Insert failed: ${err.message}`, kind: "error" })
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Insert failed: ${err.message}`,
+            kind: "error",
+          })
         })
       return true
     }
@@ -56,7 +60,14 @@ export function handleDocumentCommand(cmdId: string, ctx: PaletteContext): boole
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return true
       const activeFilter = resolveActiveFilter(state)
-      runBulkQueryUpdate(activeTab.collectionName, state.dbName, activeFilter, state.schemaMap, dispatch, renderer)
+      runBulkQueryUpdate(
+        activeTab.collectionName,
+        state.dbName,
+        activeFilter,
+        state.schemaMap,
+        dispatch,
+        renderer,
+      )
       return true
     }
     case "doc:bulk-query-delete": {
@@ -64,7 +75,14 @@ export function handleDocumentCommand(cmdId: string, ctx: PaletteContext): boole
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return true
       const activeFilter = resolveActiveFilter(state)
-      runBulkQueryDelete(activeTab.collectionName, state.dbName, activeFilter, state.schemaMap, dispatch, renderer)
+      runBulkQueryDelete(
+        activeTab.collectionName,
+        state.dbName,
+        activeFilter,
+        state.schemaMap,
+        dispatch,
+        renderer,
+      )
       return true
     }
     default:

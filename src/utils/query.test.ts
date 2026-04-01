@@ -53,10 +53,7 @@ describe("resolveActiveFilter", () => {
   test("returns filter from find-compatible pipeline", () => {
     const state = mockState({
       pipelineMode: true,
-      pipeline: [
-        { $match: { status: "active" } },
-        { $sort: { _id: -1 } },
-      ],
+      pipeline: [{ $match: { status: "active" } }, { $sort: { _id: -1 } }],
     })
     const filter = resolveActiveFilter(state)
     expect(filter).toEqual({ status: "active" })

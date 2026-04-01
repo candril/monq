@@ -47,7 +47,29 @@ describe("SUBMIT_QUERY", () => {
       selectedIndex: 5,
       reloadCounter: 3,
       activeTabId: "tab-1",
-      tabs: [{ id: "tab-1", collectionName: "users", query: "", queryMode: "simple", bsonSort: "", bsonProjection: "", selectedIndex: 0, selectedColumnIndex: 0, scrollOffset: 0, sortField: null, sortDirection: -1, columns: [], previewPosition: null, previewScrollOffset: 0, documents: [], documentCount: 0, totalDocumentCount: 0, selectionMode: "none", selectedIds: new Set() }],
+      tabs: [
+        {
+          id: "tab-1",
+          collectionName: "users",
+          query: "",
+          queryMode: "simple",
+          bsonSort: "",
+          bsonProjection: "",
+          selectedIndex: 0,
+          selectedColumnIndex: 0,
+          scrollOffset: 0,
+          sortField: null,
+          sortDirection: -1,
+          columns: [],
+          previewPosition: null,
+          previewScrollOffset: 0,
+          documents: [],
+          documentCount: 0,
+          totalDocumentCount: 0,
+          selectionMode: "none",
+          selectedIds: new Set(),
+        },
+      ],
     })
     const result = queryReducer(s, { type: "SUBMIT_QUERY" })!
     expect(result.documentsLoading).toBe(true)
@@ -65,7 +87,29 @@ describe("CLEAR_QUERY", () => {
       queryInput: "status:active",
       reloadCounter: 3,
       activeTabId: "tab-1",
-      tabs: [{ id: "tab-1", collectionName: "users", query: "status:active", queryMode: "simple", bsonSort: "", bsonProjection: "", selectedIndex: 0, selectedColumnIndex: 0, scrollOffset: 0, sortField: null, sortDirection: -1, columns: [], previewPosition: null, previewScrollOffset: 0, documents: [], documentCount: 0, totalDocumentCount: 0, selectionMode: "none", selectedIds: new Set() }],
+      tabs: [
+        {
+          id: "tab-1",
+          collectionName: "users",
+          query: "status:active",
+          queryMode: "simple",
+          bsonSort: "",
+          bsonProjection: "",
+          selectedIndex: 0,
+          selectedColumnIndex: 0,
+          scrollOffset: 0,
+          sortField: null,
+          sortDirection: -1,
+          columns: [],
+          previewPosition: null,
+          previewScrollOffset: 0,
+          documents: [],
+          documentCount: 0,
+          totalDocumentCount: 0,
+          selectionMode: "none",
+          selectedIds: new Set(),
+        },
+      ],
     })
     const result = queryReducer(s, { type: "CLEAR_QUERY" })!
     expect(result.queryInput).toBe("")

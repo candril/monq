@@ -276,8 +276,8 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
           })
 
     promise
-      .then((result) => {
-        if (!cancelled) dispatch({ type: "SET_EXPLAIN_RESULT", result })
+      .then(({ result, limited }) => {
+        if (!cancelled) dispatch({ type: "SET_EXPLAIN_RESULT", result, limited })
       })
       .catch(() => {
         if (!cancelled) dispatch({ type: "SET_EXPLAIN_LOADING", loading: false })

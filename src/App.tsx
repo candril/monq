@@ -386,6 +386,7 @@ export function App({
           <ExplainPreview
             result={state.explainResult}
             loading={state.explainLoading}
+            limited={state.explainLimited}
             position={state.previewPosition}
             scrollOffset={state.previewScrollOffset}
             collectionName={activeTab.collectionName}

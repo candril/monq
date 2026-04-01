@@ -32,7 +32,7 @@ export function uiReducer(state: AppState, action: AppAction): AppState | null {
       return { ...state, previewMode: action.mode, previewScrollOffset: 0 }
 
     case "SET_EXPLAIN_RESULT":
-      return { ...state, explainResult: action.result, explainLoading: false }
+      return { ...state, explainResult: action.result, explainLimited: action.limited ?? false, explainLoading: false }
 
     case "SET_EXPLAIN_LOADING":
       return { ...state, explainLoading: action.loading }
