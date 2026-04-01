@@ -11,7 +11,7 @@ import type { AppAction } from "../state"
 import type { Keymap } from "../config/types"
 import { matches } from "../utils/keymap"
 import type { EditManyResult } from "../actions/editMany"
-import { deleteDocument } from "../providers/mongodb"
+import { showDeleteConfirm } from "../actions/deleteConfirm"
 import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../actions/editMany"
 import { openEditorForQueryUpdate, openEditorForQueryDelete } from "../actions/queryUpdate"
 import { openEditorForIndexes } from "../actions/index"
@@ -128,35 +128,7 @@ export function useDocumentEditKeys({
           ? state.documents.filter((_, i) => state.selectedRows.has(i))
           : [state.documents[state.selectedIndex]].filter(Boolean)
       if (docsToDelete.length === 0) return true
-      dispatch({
-        type: "SHOW_DELETE_CONFIRM",
-        confirmation: {
-          docs: docsToDelete,
-          resolve: async (confirmed) => {
-            if (!confirmed) return
-            const errors: string[] = []
-            for (const doc of docsToDelete) {
-              try {
-                await deleteDocument(activeTab.collectionName, doc._id)
-              } catch (err) {
-                errors.push(`Delete failed: ${(err as Error).message}`)
-              }
-            }
-            if (errors.length > 0) {
-              dispatch({ type: "SHOW_MESSAGE", message: errors[0], kind: "error" })
-            } else {
-              const n = docsToDelete.length
-              dispatch({
-                type: "SHOW_MESSAGE",
-                message: `Deleted ${n} document${n === 1 ? "" : "s"}`,
-                kind: "success",
-              })
-              dispatch({ type: "EXIT_SELECTION_MODE" })
-            }
-            dispatch({ type: "RELOAD_DOCUMENTS" })
-          },
-        },
-      })
+      showDeleteConfirm(activeTab.collectionName, docsToDelete, dispatch)
       return true
     }
 

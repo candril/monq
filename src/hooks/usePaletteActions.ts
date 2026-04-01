@@ -31,7 +31,8 @@ import {
   promptDropDatabase,
 } from "../actions/database"
 import type { QueryUpdateReady } from "../actions/queryUpdate"
-import { disconnect, deleteDocument, listDatabases, switchDatabase } from "../providers/mongodb"
+import { showDeleteConfirm } from "../actions/deleteConfirm"
+import { disconnect, listDatabases, switchDatabase } from "../providers/mongodb"
 import { switchConnection } from "../navigation"
 import { serializeDocument } from "../utils/document"
 import { getNestedValue } from "../utils/format"
@@ -484,35 +485,7 @@ export function usePaletteActions({
               ? state.documents.filter((_, i) => state.selectedRows.has(i))
               : [state.documents[state.selectedIndex]].filter(Boolean)
           if (docsToDelete.length === 0) break
-          dispatch({
-            type: "SHOW_DELETE_CONFIRM",
-            confirmation: {
-              docs: docsToDelete,
-              resolve: async (confirmed) => {
-                if (!confirmed) return
-                const errors: string[] = []
-                for (const doc of docsToDelete) {
-                  try {
-                    await deleteDocument(activeTab.collectionName, doc._id)
-                  } catch (err) {
-                    errors.push(`Delete failed: ${(err as Error).message}`)
-                  }
-                }
-                if (errors.length > 0) {
-                  dispatch({ type: "SHOW_MESSAGE", message: errors[0], kind: "error" })
-                } else {
-                  const n = docsToDelete.length
-                  dispatch({
-                    type: "SHOW_MESSAGE",
-                    message: `Deleted ${n} document${n === 1 ? "" : "s"}`,
-                    kind: "success",
-                  })
-                  dispatch({ type: "EXIT_SELECTION_MODE" })
-                }
-                dispatch({ type: "RELOAD_DOCUMENTS" })
-              },
-            },
-          })
+          showDeleteConfirm(activeTab.collectionName, docsToDelete, dispatch)
           break
         }
         case "doc:bulk-query-update": {
