@@ -65,6 +65,7 @@ These operations are also available from the command palette, making them access
 | `Shift+F` | Show / hide filter bar |
 | `Ctrl+F` | Open pipeline editor in `$EDITOR` |
 | `Ctrl+E` | Open pipeline file in tmux split (or copy path) |
+| `Ctrl+R` | Open query history picker |
 | `Backspace` | Clear query / pipeline |
 
 ## Documents

@@ -72,6 +72,10 @@ monq supports three ways to query a collection:
 
 See [Query Syntax](/monq/reference/query-syntax/) for the full simple mode reference.
 
+## Query history
+
+Press `Ctrl+R` while the query bar is open to browse past queries in a fuzzy picker. History is persisted to disk (`~/.local/share/monq/history`) and survives across sessions.
+
 ## Navigating results
 
 Use vim-style keys to move through results:

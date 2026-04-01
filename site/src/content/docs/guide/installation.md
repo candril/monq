@@ -3,11 +3,31 @@ title: Installation
 description: How to install monq on your system.
 ---
 
-:::caution
-monq is not yet available via any package manager (Homebrew, npm, etc.). You need to build from source for now.
-:::
+## Quick install
 
-## Prerequisites
+The fastest way to install monq is with the install script. It downloads the latest release binary for your platform and verifies the checksum:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/candril/monq/main/scripts/install.sh | bash
+```
+
+To install a specific version:
+
+```sh
+MONQ_VERSION=0.1.0 curl -fsSL https://raw.githubusercontent.com/candril/monq/main/scripts/install.sh | bash
+```
+
+To install to a custom directory:
+
+```sh
+MONQ_INSTALL_DIR=~/.local/bin curl -fsSL https://raw.githubusercontent.com/candril/monq/main/scripts/install.sh | bash
+```
+
+You can also download binaries directly from [GitHub Releases](https://github.com/candril/monq/releases).
+
+## Build from source
+
+### Prerequisites
 
 - [Bun](https://bun.sh) — monq uses Bun as its runtime and build tool
 - [just](https://github.com/casey/just) — used to run the build recipe
