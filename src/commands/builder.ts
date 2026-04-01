@@ -1,11 +1,15 @@
 /**
  * Build all commands for the command palette based on current app state.
+ * Key hint shortcuts are derived from the active keymap so they always
+ * reflect the user's configured bindings.
  */
 
 import type { Command } from "./types"
 import type { AppState } from "../types"
+import type { Keymap } from "../config/types"
+import { hintFor } from "../utils/keymap"
 
-export function buildCommands(state: AppState): Command[] {
+export function buildCommands(state: AppState, keymap: Keymap): Command[] {
   const commands: Command[] = []
   const hasTab = state.activeTabId !== null
   const hasDoc = hasTab && state.documents.length > 0
@@ -64,41 +68,43 @@ export function buildCommands(state: AppState): Command[] {
       id: "doc:edit",
       label: hasSelection ? "Edit Selected Documents" : "Edit Document",
       category: "document",
-      shortcut: "e",
+      shortcut: hintFor(keymap, "doc.edit"),
     })
     commands.push({
       id: "doc:insert",
       label: "Insert New Document",
       category: "document",
-      shortcut: "i",
+      shortcut: hintFor(keymap, "doc.insert"),
     })
     commands.push({
       id: "doc:delete",
       label: hasSelection ? "Delete Selected Documents" : "Delete Document",
       category: "document",
-      shortcut: "Shift+D",
+      shortcut: hintFor(keymap, "doc.delete"),
     })
     commands.push({
       id: "doc:bulk-query-update",
       label: "Bulk Update",
       category: "document",
+      shortcut: hintFor(keymap, "doc.bulk_query_update"),
     })
     commands.push({
       id: "doc:bulk-query-delete",
       label: "Bulk Delete",
       category: "document",
+      shortcut: hintFor(keymap, "doc.bulk_query_delete"),
     })
     commands.push({
       id: "doc:copy-cell",
       label: "Copy Cell Value",
       category: "document",
-      shortcut: "y",
+      shortcut: hintFor(keymap, "doc.yank_cell"),
     })
     commands.push({
       id: "doc:copy-json",
       label: "Copy Document as JSON",
       category: "document",
-      shortcut: "Y",
+      shortcut: hintFor(keymap, "doc.yank_document"),
     })
     commands.push({
       id: "doc:copy-id",
@@ -109,7 +115,7 @@ export function buildCommands(state: AppState): Command[] {
       id: "doc:filter-value",
       label: "Filter by Selected Value",
       category: "document",
-      shortcut: "f",
+      shortcut: hintFor(keymap, "doc.filter_value"),
     })
   }
 
@@ -119,51 +125,51 @@ export function buildCommands(state: AppState): Command[] {
       id: "view:toggle-preview",
       label: "Toggle Preview Panel",
       category: "view",
-      shortcut: "p",
+      shortcut: hintFor(keymap, "preview.toggle"),
     })
     commands.push({
       id: "view:cycle-preview",
       label: "Cycle Preview Position",
       category: "view",
-      shortcut: "P",
+      shortcut: hintFor(keymap, "preview.cycle_position"),
     })
     commands.push({
       id: "view:cycle-column-mode",
       label: "Cycle Column Width Mode",
       category: "view",
-      shortcut: "w",
+      shortcut: hintFor(keymap, "nav.column_mode"),
     })
     if (!state.pipelineMode && state.queryMode !== "bson" && state.documents.length > 0) {
       commands.push({
         id: "view:toggle-column-exclude",
         label: "Hide/Show Column (projection)",
         category: "view",
-        shortcut: "-",
+        shortcut: hintFor(keymap, "doc.hide_column"),
       })
     }
     commands.push({
       id: "view:explain",
       label: "Explain Query",
       category: "view",
-      shortcut: "x",
+      shortcut: hintFor(keymap, "explain.run"),
     })
     commands.push({
       id: "view:explain-raw",
       label: "Explain Query (Raw JSON)",
       category: "view",
-      shortcut: "Shift+X",
+      shortcut: hintFor(keymap, "explain.raw"),
     })
     commands.push({
       id: "view:toggle-filter-bar",
       label: state.filterBarVisible ? "Hide Filter Bar" : "Show Filter Bar",
       category: "view",
-      shortcut: "Shift+F",
+      shortcut: hintFor(keymap, "filter_bar.toggle"),
     })
     commands.push({
       id: "view:reload",
       label: "Reload Documents",
       category: "view",
-      shortcut: "r",
+      shortcut: hintFor(keymap, "doc.reload"),
     })
   }
 
@@ -173,26 +179,26 @@ export function buildCommands(state: AppState): Command[] {
       id: "query:open-filter",
       label: "Filter (simple)",
       category: "query",
-      shortcut: "/",
+      shortcut: hintFor(keymap, "query.open"),
     })
     commands.push({
       id: "query:open-pipeline",
       label: "Open Pipeline Editor",
       category: "query",
-      shortcut: "Ctrl+F",
+      shortcut: hintFor(keymap, "pipeline.open"),
     })
     commands.push({
       id: "query:open-pipeline-tmux",
       label: "Open Pipeline in Tmux Split",
       category: "query",
-      shortcut: "Ctrl+E",
+      shortcut: hintFor(keymap, "pipeline.open_full"),
     })
     if (state.pipelineMode) {
       commands.push({
         id: "query:clear-pipeline",
         label: "Clear Pipeline",
         category: "query",
-        shortcut: "⌫",
+        shortcut: hintFor(keymap, "query.clear"),
       })
     }
     if (state.queryInput) {
@@ -200,7 +206,7 @@ export function buildCommands(state: AppState): Command[] {
         id: "query:clear-filter",
         label: "Clear Filter",
         category: "query",
-        shortcut: "⌫",
+        shortcut: hintFor(keymap, "query.clear"),
       })
     }
     if (state.queryMode === "bson") {
@@ -215,7 +221,7 @@ export function buildCommands(state: AppState): Command[] {
         id: "query:sort",
         label: "Sort by Selected Column",
         category: "query",
-        shortcut: "s",
+        shortcut: hintFor(keymap, "doc.sort"),
       })
     }
   }
@@ -226,32 +232,32 @@ export function buildCommands(state: AppState): Command[] {
       id: "tabs:clone",
       label: "Clone Tab",
       category: "tabs",
-      shortcut: "t",
+      shortcut: hintFor(keymap, "tab.clone"),
     })
     commands.push({
       id: "tabs:close",
       label: "Close Tab",
       category: "tabs",
-      shortcut: "d",
+      shortcut: hintFor(keymap, "tab.close"),
     })
     commands.push({
       id: "tabs:undo-close",
       label: "Undo Close Tab",
       category: "tabs",
-      shortcut: "u",
+      shortcut: hintFor(keymap, "tab.undo_close"),
     })
     if (state.tabs.length > 1) {
       commands.push({
         id: "tabs:prev",
         label: "Previous Tab",
         category: "tabs",
-        shortcut: "[",
+        shortcut: hintFor(keymap, "tab.prev"),
       })
       commands.push({
         id: "tabs:next",
         label: "Next Tab",
         category: "tabs",
-        shortcut: "]",
+        shortcut: hintFor(keymap, "tab.next"),
       })
     }
   }
@@ -263,14 +269,14 @@ export function buildCommands(state: AppState): Command[] {
         id: "selection:enter",
         label: "Enter Selection Mode",
         category: "selection",
-        shortcut: "v",
+        shortcut: hintFor(keymap, "selection.toggle"),
       })
     } else {
       commands.push({
         id: "selection:freeze",
         label: "Freeze Selection",
         category: "selection",
-        shortcut: "v",
+        shortcut: hintFor(keymap, "selection.toggle"),
       })
       commands.push({
         id: "selection:exit",
@@ -283,7 +289,7 @@ export function buildCommands(state: AppState): Command[] {
       id: "selection:select-all",
       label: "Select All",
       category: "selection",
-      shortcut: "Ctrl+A",
+      shortcut: hintFor(keymap, "selection.select_all"),
     })
   }
 
@@ -299,7 +305,7 @@ export function buildCommands(state: AppState): Command[] {
     id: "app:quit",
     label: "Quit",
     category: "navigation",
-    shortcut: "q",
+    shortcut: hintFor(keymap, "app.quit"),
   })
 
   return commands

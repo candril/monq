@@ -1,6 +1,6 @@
 # Command Palette: Dynamic Key Hints from Config
 
-**Status**: Ready
+**Status**: Done
 
 ## Description
 

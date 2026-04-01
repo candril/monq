@@ -4,7 +4,7 @@
  * any of the KeyCombos registered for an action.
  */
 
-import type { KeyCombo } from "../config/types"
+import type { ActionName, KeyCombo, Keymap } from "../config/types"
 
 /**
  * Raw key event as received from @opentui/react useKeyboard.
@@ -16,6 +16,29 @@ export interface RawKey {
   shift?: boolean
   alt?: boolean
   sequence?: string
+}
+
+/**
+ * Format a single KeyCombo as a short display hint (e.g. "⌃P", "⇧D", "⌃⇧A").
+ * Returns an empty string if the combo is undefined.
+ */
+export function formatKeyHint(combo: KeyCombo | undefined): string {
+  if (!combo) return ""
+  let hint = ""
+  if (combo.ctrl) hint += "⌃"
+  if (combo.shift) hint += "⇧"
+  if (combo.alt) hint += "⌥"
+  // Single letters are uppercased for readability; special key names kept as-is.
+  const key = combo.name.length === 1 ? combo.name.toUpperCase() : combo.name
+  return hint + key
+}
+
+/**
+ * Return the formatted hint for the first binding of a given action,
+ * or an empty string if the action has no bindings.
+ */
+export function hintFor(keymap: Keymap, action: ActionName): string {
+  return formatKeyHint(keymap[action]?.[0])
 }
 
 /**

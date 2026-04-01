@@ -156,7 +156,7 @@ export function App({
   useDocumentLoader({ state, dispatch, pageSize })
 
   // Build palette commands based on mode (for in-app switching via Ctrl+P)
-  const mainCommands = useMemo(() => buildCommands(state), [state])
+  const mainCommands = useMemo(() => buildCommands(state, keymap), [state, keymap])
   const collectionCommands = useMemo(
     () => buildCollectionCommands(state.collections),
     [state.collections],
