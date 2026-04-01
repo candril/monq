@@ -51,7 +51,7 @@ export function formatKeyHint(combo: KeyCombo | undefined): string {
   const key = isLetter ? combo.name.toLowerCase() : combo.name
 
   if (parts.length === 0) return key
-  return parts.join("+") + "+" + key.toUpperCase()
+  return parts.join("+") + "+" + key
 }
 
 /**
