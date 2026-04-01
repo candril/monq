@@ -22,7 +22,7 @@ import { openEditorForIndexes } from "../actions/index"
 import { openEditorForQueryUpdate, openEditorForQueryDelete } from "../actions/queryUpdate"
 import { openExplainInEditor } from "../actions/explain"
 import { explainFind, explainAggregate } from "../providers/mongodb"
-import { resolveCurrentQuery } from "../utils/query"
+import { resolveCurrentQuery, resolveActiveFilter } from "../utils/query"
 import {
   promptCreateCollection,
   promptRenameCollection,
@@ -30,13 +30,12 @@ import {
   promptDropDatabase,
 } from "../actions/database"
 import type { QueryUpdateReady } from "../actions/queryUpdate"
-import type { Filter, Document } from "mongodb"
 import { disconnect, deleteDocument, listDatabases, switchDatabase } from "../providers/mongodb"
 import { switchConnection } from "../navigation"
 import { serializeDocument } from "../utils/document"
 import { getNestedValue } from "../utils/format"
 import { copyToClipboard } from "../utils/clipboard"
-import { parseSimpleQueryFull, parseBsonQuery, projectionToSimple } from "../query/parser"
+import { parseSimpleQueryFull, projectionToSimple } from "../query/parser"
 import { findPreset } from "../themes/index"
 import { setTheme, buildTheme } from "../theme"
 import { saveStateTheme, clearStateTheme } from "../state/theme"
@@ -519,18 +518,7 @@ export function usePaletteActions({
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
           const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
           if (!activeTab) break
-          let activeFilter: Filter<Document> = {}
-          try {
-            if (state.queryInput.trim()) {
-              if (state.queryMode === "bson") {
-                activeFilter = parseBsonQuery(state.queryInput)
-              } else {
-                activeFilter = parseSimpleQueryFull(state.queryInput, state.schemaMap).filter
-              }
-            }
-          } catch {
-            // use empty filter
-          }
+          const activeFilter = resolveActiveFilter(state)
           renderer.suspend()
           openEditorForQueryUpdate(
             activeTab.collectionName,
@@ -614,18 +602,7 @@ export function usePaletteActions({
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
           const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
           if (!activeTab) break
-          let activeFilter: Filter<Document> = {}
-          try {
-            if (state.queryInput.trim()) {
-              if (state.queryMode === "bson") {
-                activeFilter = parseBsonQuery(state.queryInput)
-              } else {
-                activeFilter = parseSimpleQueryFull(state.queryInput, state.schemaMap).filter
-              }
-            }
-          } catch {
-            // use empty filter
-          }
+          const activeFilter = resolveActiveFilter(state)
           renderer.suspend()
           openEditorForQueryDelete(
             activeTab.collectionName,

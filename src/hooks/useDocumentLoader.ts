@@ -9,7 +9,6 @@ import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import { fetchDocuments, fetchAggregate, explainFind, explainAggregate } from "../providers/mongodb"
 import { detectColumns } from "../utils/document"
-import { parseSimpleQueryFull, parseBsonQuery } from "../query/parser"
 import { buildSchemaMap } from "../query/schema"
 import { classifyPipeline, extractFindParts } from "../query/pipeline"
 import { resolveCurrentQuery } from "../utils/query"
@@ -42,7 +41,7 @@ interface UseDocumentLoaderOptions {
 
 export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoaderOptions) {
   const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-  const { documentsLoading, reloadCounter, queryInput, queryMode } = state
+  const { documentsLoading, reloadCounter, queryMode } = state
 
   // Effect 1: initial load / reload (triggered by documentsLoading + reloadCounter)
   useEffect(() => {
@@ -137,43 +136,11 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
       }
     }
 
-    // Simple / BSON filter mode
-    let filter = {}
-    let projection: Record<string, 0 | 1> | undefined
-    try {
-      if (queryInput.trim()) {
-        if (queryMode === "bson") {
-          filter = parseBsonQuery(queryInput)
-        } else {
-          const parsed = parseSimpleQueryFull(queryInput, state.schemaMap)
-          filter = parsed.filter
-          projection = parsed.projection
-        }
-      }
-    } catch {
-      // Invalid query — fetch unfiltered
-    }
-
-    // Sort: bson mode uses bsonSort textarea, simple mode uses sortField
-    let sort: Record<string, 1 | -1> | undefined
-    if (queryMode === "bson" && state.bsonSort.trim()) {
-      try {
-        sort = JSON.parse(state.bsonSort)
-      } catch {
-        /* skip */
-      }
-    } else if (state.sortField) {
-      sort = { [state.sortField]: state.sortDirection as 1 | -1 }
-    }
-
-    // BSON mode projection: uses bsonProjection textarea
-    if (queryMode === "bson" && state.bsonProjection.trim()) {
-      try {
-        projection = JSON.parse(state.bsonProjection)
-      } catch {
-        /* skip */
-      }
-    }
+    // Resolve filter/sort/projection from current query state
+    const resolved = resolveCurrentQuery(state)
+    const filter = resolved.mode === "find" ? resolved.filter : {}
+    const sort = resolved.mode === "find" ? resolved.sort : undefined
+    const projection = resolved.mode === "find" ? resolved.projection : undefined
 
     // Always fetch _id so edit/delete commands work; hide it in the column list
     // if the user explicitly excluded it via projection.
@@ -263,41 +230,11 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
 
     let cancelled = false
 
-    // Reconstruct filter/sort/projection from current state (same as Effect 1)
-    let filter = {}
-    let projection: Record<string, 0 | 1> | undefined
-    try {
-      if (queryInput.trim()) {
-        if (queryMode === "bson") {
-          filter = parseBsonQuery(queryInput)
-        } else {
-          const parsed = parseSimpleQueryFull(queryInput, state.schemaMap)
-          filter = parsed.filter
-          projection = parsed.projection
-        }
-      }
-    } catch {
-      /* invalid query — fetch unfiltered */
-    }
-
-    let sort: Record<string, 1 | -1> | undefined
-    if (queryMode === "bson" && state.bsonSort.trim()) {
-      try {
-        sort = JSON.parse(state.bsonSort)
-      } catch {
-        /* skip */
-      }
-    } else if (state.sortField) {
-      sort = { [state.sortField]: state.sortDirection as 1 | -1 }
-    }
-
-    if (queryMode === "bson" && state.bsonProjection.trim()) {
-      try {
-        projection = JSON.parse(state.bsonProjection)
-      } catch {
-        /* skip */
-      }
-    }
+    // Resolve filter/sort/projection from current state (same as Effect 1)
+    const resolved = resolveCurrentQuery(state)
+    const filter = resolved.mode === "find" ? resolved.filter : {}
+    const sort = resolved.mode === "find" ? resolved.sort : undefined
+    const projection = resolved.mode === "find" ? resolved.projection : undefined
 
     // Always fetch _id so edit/delete commands work (same logic as Effect 1)
     const { projection: safeProjection } = sanitizeProjection(projection)

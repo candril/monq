@@ -16,11 +16,8 @@ import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../
 import { openEditorForQueryUpdate, openEditorForQueryDelete } from "../actions/queryUpdate"
 import { openEditorForIndexes } from "../actions/index"
 import { explainFind, explainAggregate } from "../providers/mongodb"
-import { resolveCurrentQuery } from "../utils/query"
+import { resolveCurrentQuery, resolveActiveFilter } from "../utils/query"
 import { openExplainInEditor } from "../actions/explain"
-import { parseSimpleQueryFull, parseBsonQuery } from "../query/parser"
-import type { Filter } from "mongodb"
-import type { Document } from "mongodb"
 
 interface UseDocumentEditKeysOptions {
   state: AppState
@@ -168,19 +165,7 @@ export function useDocumentEditKeys({
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return true
 
-      // Derive the active filter from query state
-      let activeFilter: Filter<Document> = {}
-      try {
-        if (state.queryInput.trim()) {
-          if (state.queryMode === "bson") {
-            activeFilter = parseBsonQuery(state.queryInput)
-          } else {
-            activeFilter = parseSimpleQueryFull(state.queryInput, state.schemaMap).filter
-          }
-        }
-      } catch {
-        // Invalid query — use empty filter
-      }
+      const activeFilter = resolveActiveFilter(state)
 
       renderer.suspend()
       openEditorForQueryUpdate(
@@ -266,18 +251,7 @@ export function useDocumentEditKeys({
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       if (!activeTab) return true
 
-      let activeFilter: Filter<Document> = {}
-      try {
-        if (state.queryInput.trim()) {
-          if (state.queryMode === "bson") {
-            activeFilter = parseBsonQuery(state.queryInput)
-          } else {
-            activeFilter = parseSimpleQueryFull(state.queryInput, state.schemaMap).filter
-          }
-        }
-      } catch {
-        // use empty filter
-      }
+      const activeFilter = resolveActiveFilter(state)
 
       renderer.suspend()
       openEditorForQueryDelete(

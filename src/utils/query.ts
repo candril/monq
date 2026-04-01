@@ -73,3 +73,12 @@ export function resolveCurrentQuery(state: AppState): ResolvedQuery {
 
   return { mode: "find", filter, sort, projection }
 }
+
+/**
+ * Resolve just the active filter from app state (ignoring pipeline mode).
+ * Used by bulk update/delete actions that always operate on the query filter.
+ */
+export function resolveActiveFilter(state: AppState): Filter<Document> {
+  const query = resolveCurrentQuery(state)
+  return query.mode === "find" ? query.filter : {}
+}
