@@ -182,6 +182,7 @@ export function useDocumentEditKeys({
               toReplace,
               resolve: async (confirmed) => {
                 if (!confirmed) return
+                dispatch({ type: "SHOW_MESSAGE", message: "Applying index changes...", kind: "info" })
                 const result = await apply()
                 if (result.errors.length > 0) {
                   dispatch({ type: "SHOW_MESSAGE", message: result.errors[0], kind: "error" })
