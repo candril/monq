@@ -155,7 +155,6 @@ export function ConnectionScreen({ profiles, onConnect }: ConnectionScreenProps)
             <strong>monq</strong>
           </span>
           <span fg={theme.textDim}> — {title}</span>
-          <span fg={theme.textMuted}> v{version}</span>
         </text>
         <text>
           <span fg={theme.textDim}>{profiles.length} saved connections</span>
@@ -242,6 +241,13 @@ export function ConnectionScreen({ profiles, onConnect }: ConnectionScreenProps)
       <box marginTop={1}>
         <text>
           {error ? <span fg={theme.error}>{error}</span> : <span fg={theme.textMuted}>{hint}</span>}
+        </text>
+      </box>
+
+      {/* Version footer */}
+      <box marginTop={1}>
+        <text>
+          <span fg={theme.textMuted}>v{version}</span>
         </text>
       </box>
     </box>

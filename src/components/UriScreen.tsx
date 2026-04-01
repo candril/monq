@@ -47,7 +47,6 @@ export function UriScreen({ onConnect }: UriScreenProps) {
             <strong>monq</strong>
           </span>
           <span fg={theme.textDim}> — connect</span>
-          <span fg={theme.textMuted}> v{version}</span>
         </text>
       </box>
 
@@ -92,6 +91,13 @@ export function UriScreen({ onConnect }: UriScreenProps) {
           ) : (
             <span fg={theme.textMuted}>Enter to connect · Esc to quit</span>
           )}
+        </text>
+      </box>
+
+      {/* Version footer */}
+      <box marginTop={1}>
+        <text>
+          <span fg={theme.textMuted}>v{version}</span>
         </text>
       </box>
     </box>
