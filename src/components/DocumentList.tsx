@@ -40,6 +40,8 @@ interface DocumentListProps {
   loading?: boolean
   scrollRef?: React.RefObject<ScrollBoxRenderable>
   themeVersion?: number
+  /** Effective viewport width in columns. Defaults to full terminal width. */
+  viewportWidth?: number
 }
 
 /** Compute natural column widths, then expand capped columns to fill available screen width */
@@ -220,6 +222,7 @@ export function DocumentList({
   selectedRows,
   loading,
   scrollRef: externalScrollRef,
+  viewportWidth: viewportWidthProp,
 }: DocumentListProps) {
   const scrollRef = externalScrollRef ?? useRef<ScrollBoxRenderable>(null)
   const { width: terminalWidth } = useTerminalDimensions()
@@ -246,14 +249,18 @@ export function DocumentList({
   }, [selectedIndex])
 
   const visibleColumns = columns.filter((c) => c.visible)
-  const viewportWidth = terminalWidth - 2 // padding
+  // Use the explicit viewport width when provided (e.g. when a preview panel is open
+  // and the document list only occupies part of the terminal width). Fall back to the
+  // full terminal width minus padding.
+  const effectiveTerminalWidth = viewportWidthProp ?? terminalWidth
+  const viewportWidth = effectiveTerminalWidth - 2 // padding
   const colWidths = useMemo(
     () => computeColumnWidths(documents, columns, viewportWidth),
     [documents, columns, viewportWidth],
   )
   const scrollLeft = useMemo(
-    () => computeScrollLeft(visibleColumns, colWidths, selectedColumnIndex, terminalWidth),
-    [visibleColumns, colWidths, selectedColumnIndex, terminalWidth],
+    () => computeScrollLeft(visibleColumns, colWidths, selectedColumnIndex, effectiveTerminalWidth),
+    [visibleColumns, colWidths, selectedColumnIndex, effectiveTerminalWidth],
   )
 
   const colWidthArray = useMemo(

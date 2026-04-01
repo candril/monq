@@ -1,6 +1,6 @@
 # Fix Column Browser / Preview Overlap
 
-**Status**: Ready
+**Status**: Done
 
 ## Description
 

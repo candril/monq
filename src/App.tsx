@@ -94,7 +94,7 @@ export function App({
     return () => clearTimeout(t)
   }, [])
   const renderer = useRenderer()
-  const { height: terminalHeight } = useTerminalDimensions()
+  const { height: terminalHeight, width: terminalWidth } = useTerminalDimensions()
   const docListScrollRef = useRef<ScrollBoxRenderable>(null)
 
   const pageSize = terminalHeight + 10
@@ -366,6 +366,11 @@ export function App({
               loading={state.documentsLoading}
               scrollRef={docListScrollRef}
               themeVersion={themeVersion}
+              viewportWidth={
+                state.previewPosition === "right"
+                  ? Math.floor(terminalWidth / 2)
+                  : terminalWidth
+              }
             />
           </box>
         ) : null}
