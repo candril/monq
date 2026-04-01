@@ -249,6 +249,14 @@ export function App({
         : effectivePaletteMode === "themes"
           ? "Choose theme..."
           : "Search commands..."
+  const effectiveTitle =
+    effectivePaletteMode === "databases"
+      ? "Databases"
+      : effectivePaletteMode === "collections"
+        ? "Collections"
+        : effectivePaletteMode === "themes"
+          ? "Themes"
+          : "Commands"
 
   // Welcome screen: shown when db is loaded but no tab is open yet
   const showWelcome = !state.error && !state.collectionsLoading && !state.activeTabId
@@ -462,6 +470,7 @@ export function App({
             : undefined
         }
         placeholder={effectivePlaceholder}
+        title={effectiveTitle}
       />
 
       {state.pipelineConfirm && (

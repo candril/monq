@@ -4,7 +4,7 @@
  */
 
 import { useState, useMemo, useEffect, useRef } from "react"
-import { useKeyboard } from "@opentui/react"
+import { useKeyboard, useTerminalDimensions } from "@opentui/react"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import type { Command } from "../commands/types"
 import { CATEGORY_ORDER, type CommandCategory } from "../commands/types"
@@ -13,11 +13,6 @@ import { theme } from "../theme"
 
 const SCROLL_MARGIN = 2
 
-/** A renderable row — either a category header or a command */
-type PaletteItem =
-  | { type: "header"; category: string }
-  | { type: "command"; command: Command; globalIndex: number }
-
 interface CommandPaletteProps {
   visible: boolean
   commands: Command[]
@@ -25,11 +20,18 @@ interface CommandPaletteProps {
   onClose: () => void
   onHighlight?: (command: Command | null) => void
   placeholder?: string
+  title?: string
 }
 
-/** Group filtered commands by category and interleave headers */
+/** A renderable row — spacer, category header, or a command */
+type PaletteItem =
+  | { type: "spacer" }
+  | { type: "header"; category: string }
+  | { type: "command"; command: Command; globalIndex: number }
+
+/** Group filtered commands by category and interleave headers.
+ *  Each item maps to exactly one visual row so scroll positions are accurate. */
 function buildPaletteItems(commands: Command[]): { items: PaletteItem[]; commandCount: number } {
-  // Group by category
   const groups = new Map<string, Command[]>()
   for (const cmd of commands) {
     const list = groups.get(cmd.category) ?? []
@@ -37,7 +39,6 @@ function buildPaletteItems(commands: Command[]): { items: PaletteItem[]; command
     groups.set(cmd.category, list)
   }
 
-  // Sort groups by CATEGORY_ORDER
   const sortedCategories = [...groups.keys()].sort((a, b) => {
     const ai = CATEGORY_ORDER.indexOf(a as CommandCategory)
     const bi = CATEGORY_ORDER.indexOf(b as CommandCategory)
@@ -46,12 +47,18 @@ function buildPaletteItems(commands: Command[]): { items: PaletteItem[]; command
 
   const items: PaletteItem[] = []
   let commandIndex = 0
+  let first = true
   for (const category of sortedCategories) {
+    // Blank line between sections (except before the first)
+    if (!first) items.push({ type: "spacer" })
+    first = false
     items.push({ type: "header", category })
     for (const cmd of groups.get(category)!) {
       items.push({ type: "command", command: cmd, globalIndex: commandIndex++ })
     }
   }
+  // Trailing spacer so the last row doesn't sit flush against the bottom edge
+  if (items.length > 0) items.push({ type: "spacer" })
   return { items, commandCount: commandIndex }
 }
 
@@ -80,10 +87,18 @@ export function CommandPalette({
   onClose,
   onHighlight,
   placeholder = "Search...",
+  title = "Commands",
 }: CommandPaletteProps) {
   const [query, setQuery] = useState("")
   const [selectedIndex, setSelectedIndex] = useState(0)
   const scrollRef = useRef<ScrollBoxRenderable>(null)
+  const { height: terminalHeight } = useTerminalDimensions()
+
+  // Concrete pixel dimensions so the scrollbox gets a real bounded height.
+  // Modal: 70% of terminal, offset 2 rows from top.
+  // Fixed rows: spacer (1) + title (1) + spacer (1) + input (2) = 5.
+  const modalHeight = Math.floor(terminalHeight * 0.7)
+  const scrollboxHeight = Math.max(4, modalHeight - 5)
 
   useEffect(() => {
     if (visible) {
@@ -132,7 +147,11 @@ export function CommandPalette({
     if (visualRow < scrollTop + SCROLL_MARGIN) {
       scrollbox.scrollTo(Math.max(0, visualRow - SCROLL_MARGIN))
     } else if (visualRow >= scrollBottom - SCROLL_MARGIN) {
-      scrollbox.scrollTo(visualRow - viewportHeight + SCROLL_MARGIN + 1)
+      // Scroll just enough to keep the row visible, but never beyond the
+      // last item so the scrollbar correctly reaches the bottom.
+      const maxScroll = Math.max(0, items.length - viewportHeight)
+      const target = visualRow - viewportHeight + SCROLL_MARGIN + 1
+      scrollbox.scrollTo(Math.min(target, maxScroll))
     }
   }, [selectedIndex, items])
 
@@ -189,10 +208,16 @@ export function CommandPalette({
         top={2}
         left="25%"
         width="50%"
-        height="70%"
+        height={modalHeight}
         flexDirection="column"
         backgroundColor={theme.modalBg}
       >
+        <box height={1} />
+        <box height={1} paddingLeft={2}>
+          <text>
+            <span fg={theme.primary}>{title}</span>
+          </text>
+        </box>
         <box height={1} />
         <box paddingLeft={2} paddingRight={2} paddingBottom={1} height={2}>
           <input
@@ -213,11 +238,14 @@ export function CommandPalette({
             </text>
           </box>
         ) : (
-          <scrollbox ref={scrollRef} flexGrow={1}>
+          <scrollbox ref={scrollRef} height={scrollboxHeight}>
             {items.map((item, i) => {
+              if (item.type === "spacer") {
+                return <box key={`s-${i}`} height={1} />
+              }
               if (item.type === "header") {
                 return (
-                  <box key={`h-${item.category}`} paddingLeft={2} paddingTop={i > 0 ? 1 : 0}>
+                  <box key={`h-${item.category}`} paddingLeft={2} height={1}>
                     <text>
                       <span fg={theme.secondary}>{categoryLabel(item.category)}</span>
                     </text>
