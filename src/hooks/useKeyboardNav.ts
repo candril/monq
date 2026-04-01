@@ -22,6 +22,7 @@ import { projectionToSimple, parseSimpleQueryFull } from "../query/parser"
 import { classifyPipeline, stageOf } from "../query/pipeline"
 import { copyToClipboard } from "../utils/clipboard"
 import { stopWatching } from "../actions/pipelineWatch"
+import { switchToTab } from "../utils/tabs"
 import { useDialogKeys } from "./useDialogKeys"
 import { usePipelineKeys } from "./usePipelineKeys"
 import { useDocumentEditKeys } from "./useDocumentEditKeys"
@@ -183,9 +184,7 @@ export function useKeyboardNav({
       if (matches(key, keymap[action])) {
         const tabIndex = n - 1
         if (tabIndex < state.tabs.length) {
-          stopWatching()
-          dispatch({ type: "STOP_PIPELINE_WATCH" })
-          dispatch({ type: "SWITCH_TAB", tabId: state.tabs[tabIndex].id })
+          switchToTab(state.tabs[tabIndex].id, dispatch)
         }
         return
       }
@@ -194,18 +193,14 @@ export function useKeyboardNav({
     if (matches(key, keymap["tab.prev"])) {
       const idx = state.tabs.findIndex((t) => t.id === state.activeTabId)
       if (idx > 0) {
-        stopWatching()
-        dispatch({ type: "STOP_PIPELINE_WATCH" })
-        dispatch({ type: "SWITCH_TAB", tabId: state.tabs[idx - 1].id })
+        switchToTab(state.tabs[idx - 1].id, dispatch)
       }
       return
     }
     if (matches(key, keymap["tab.next"])) {
       const idx = state.tabs.findIndex((t) => t.id === state.activeTabId)
       if (idx < state.tabs.length - 1) {
-        stopWatching()
-        dispatch({ type: "STOP_PIPELINE_WATCH" })
-        dispatch({ type: "SWITCH_TAB", tabId: state.tabs[idx + 1].id })
+        switchToTab(state.tabs[idx + 1].id, dispatch)
       }
       return
     }

@@ -17,6 +17,7 @@ import {
   reloadFromFile,
   openTmuxSplit,
 } from "../actions/pipelineWatch"
+import { switchToTab } from "../utils/tabs"
 import { openEditorForInsert } from "../actions/editMany"
 import { openEditorForIndexes } from "../actions/index"
 import { openEditorForQueryUpdate, openEditorForQueryDelete } from "../actions/queryUpdate"
@@ -694,9 +695,7 @@ export function usePaletteActions({
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
           const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId)
           if (currentIndex > 0) {
-            stopWatching()
-            dispatch({ type: "STOP_PIPELINE_WATCH" })
-            dispatch({ type: "SWITCH_TAB", tabId: state.tabs[currentIndex - 1].id })
+            switchToTab(state.tabs[currentIndex - 1].id, dispatch)
           }
           break
         }
@@ -704,9 +703,7 @@ export function usePaletteActions({
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })
           const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId)
           if (currentIndex < state.tabs.length - 1) {
-            stopWatching()
-            dispatch({ type: "STOP_PIPELINE_WATCH" })
-            dispatch({ type: "SWITCH_TAB", tabId: state.tabs[currentIndex + 1].id })
+            switchToTab(state.tabs[currentIndex + 1].id, dispatch)
           }
           break
         }
