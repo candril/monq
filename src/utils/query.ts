@@ -75,10 +75,14 @@ export function resolveCurrentQuery(state: AppState): ResolvedQuery {
 }
 
 /**
- * Resolve just the active filter from app state (ignoring pipeline mode).
- * Used by bulk update/delete actions that always operate on the query filter.
+ * Resolve just the active filter from app state.
+ * In pipeline mode, extracts the $match stage filter.
+ * Used by bulk update/delete actions that operate on the query filter.
  */
 export function resolveActiveFilter(state: AppState): Filter<Document> {
   const query = resolveCurrentQuery(state)
-  return query.mode === "find" ? query.filter : {}
+  if (query.mode === "find") return query.filter
+  // Aggregate pipeline — extract $match filter if present
+  const { filter } = extractFindParts(query.pipeline)
+  return filter
 }
