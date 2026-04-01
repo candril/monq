@@ -19,18 +19,39 @@ export interface RawKey {
 }
 
 /**
- * Format a single KeyCombo as a short display hint (e.g. "⌃P", "⇧D", "⌃⇧A").
+ * Format a single KeyCombo as a short display hint.
+ *
+ * Rules:
+ * - Ctrl modifier → "Ctrl+X"  (e.g. ctrl+p → "Ctrl+P")
+ * - Shift on a letter → uppercase letter only, no "Shift+" prefix
+ *   (e.g. shift+d → "D",  shift+y → "Y")
+ * - Shift on a non-letter → "Shift+<key>"
+ * - Alt modifier → "Alt+X"
+ * - Plain letter → lowercase  (e.g. "e", "y", "/")
+ * - Special keys (backspace, tab, …) → kept as-is
+ *
  * Returns an empty string if the combo is undefined.
  */
 export function formatKeyHint(combo: KeyCombo | undefined): string {
   if (!combo) return ""
-  let hint = ""
-  if (combo.ctrl) hint += "⌃"
-  if (combo.shift) hint += "⇧"
-  if (combo.alt) hint += "⌥"
-  // Single letters are uppercased for readability; special key names kept as-is.
-  const key = combo.name.length === 1 ? combo.name.toUpperCase() : combo.name
-  return hint + key
+
+  const isLetter = combo.name.length === 1 && /[a-z]/i.test(combo.name)
+
+  // Shift on a single letter → just uppercase the letter, no prefix needed
+  if (combo.shift && isLetter && !combo.ctrl && !combo.alt) {
+    return combo.name.toUpperCase()
+  }
+
+  const parts: string[] = []
+  if (combo.ctrl) parts.push("Ctrl")
+  if (combo.alt) parts.push("Alt")
+  if (combo.shift) parts.push("Shift")
+
+  // Single letters stay lowercase; special key names kept as-is
+  const key = isLetter ? combo.name.toLowerCase() : combo.name
+
+  if (parts.length === 0) return key
+  return parts.join("+") + "+" + key.toUpperCase()
 }
 
 /**
