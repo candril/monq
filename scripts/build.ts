@@ -16,6 +16,9 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const projectDir = path.resolve(__dirname, "..")
 
+const pkg = JSON.parse(fs.readFileSync(path.resolve(projectDir, "package.json"), "utf-8"))
+const version: string = pkg.version
+
 process.chdir(projectDir)
 
 // Parse command line arguments
@@ -62,7 +65,7 @@ await $`mkdir -p dist`
 const parserWorkerPath = fs.realpathSync(
   path.resolve(projectDir, "./node_modules/@opentui/core/parser.worker.js")
 )
-const workerRelativePath = path.relative(projectDir, parserWorkerPath).replaceAll("\\", "/")
+const workerRelativePath = path.relative(projectDir, parserWorkerPath).split("\\").join("/")
 
 console.log(`Parser worker: ${workerRelativePath}`)
 
@@ -93,6 +96,7 @@ for (const target of targets) {
       // Define the worker path as a compile-time constant
       // The value must be a valid JS expression, so we JSON.stringify the string
       "OTUI_TREE_SITTER_WORKER_PATH": JSON.stringify(workerPathInBinary),
+      "MONQ_VERSION": JSON.stringify(version),
     },
   })
   

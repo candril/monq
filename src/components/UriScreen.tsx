@@ -8,6 +8,7 @@
 import { useState } from "react"
 import { useKeyboard, useRenderer } from "@opentui/react"
 import { theme } from "../theme"
+import { version } from "../version"
 
 const DEFAULT_URI = "mongodb://localhost:27017"
 
@@ -46,6 +47,7 @@ export function UriScreen({ onConnect }: UriScreenProps) {
             <strong>monq</strong>
           </span>
           <span fg={theme.textDim}> — connect</span>
+          <span fg={theme.textMuted}> v{version}</span>
         </text>
       </box>
 

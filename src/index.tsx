@@ -10,6 +10,7 @@ import { stopWatching } from "./actions/pipelineWatch"
 import { loadProfiles } from "./config/connections"
 import type { ConnectionProfile } from "./config/connections"
 import { registerSwitchConnection } from "./navigation"
+import { version } from "./version"
 import { loadConfig } from "./config/loader"
 import { resolveConfig } from "./config/merge"
 import { buildTheme, setTheme } from "./theme"
@@ -29,10 +30,16 @@ process.on("SIGTERM", () => {
 })
 
 // Parse URI from argv — supports:
+//   monq --version / -v       (print version and exit)
 //   monq --uri mongodb://...
 //   monq mongodb://...        (bare positional)
 //   monq                      (shows ConnectionScreen or URI input screen)
 const args = process.argv.slice(2)
+
+if (args.includes("--version") || args.includes("-v")) {
+  console.log(version)
+  process.exit(0)
+}
 const uriIndex = args.indexOf("--uri")
 const flagUri = uriIndex !== -1 ? (args[uriIndex + 1] ?? null) : null
 const positionalUri =

@@ -23,6 +23,7 @@ import type { ConnectionProfile } from "../config/connections"
 import { profileHint } from "../config/connections"
 import { resolveUri } from "../utils/resolveUri"
 import { randomConnectionMessage } from "../utils/loadingMessages"
+import { version } from "../version"
 
 const MIN_LIST_HEIGHT = 8
 const DEFAULT_URI = "mongodb://localhost:27017"
@@ -154,6 +155,7 @@ export function ConnectionScreen({ profiles, onConnect }: ConnectionScreenProps)
             <strong>monq</strong>
           </span>
           <span fg={theme.textDim}> — {title}</span>
+          <span fg={theme.textMuted}> v{version}</span>
         </text>
         <text>
           <span fg={theme.textDim}>{profiles.length} saved connections</span>
