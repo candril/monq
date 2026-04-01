@@ -20,7 +20,7 @@ import {
 import { switchToTab } from "../utils/tabs"
 import { openEditorForInsert } from "../actions/editMany"
 import { openEditorForIndexes } from "../actions/index"
-import { openEditorForQueryUpdate, openEditorForQueryDelete } from "../actions/queryUpdate"
+import { runBulkQueryUpdate, runBulkQueryDelete } from "../actions/bulkQueryConfirm"
 import { openExplainInEditor } from "../actions/explain"
 import { explainFind, explainAggregate } from "../providers/mongodb"
 import { resolveCurrentQuery, resolveActiveFilter } from "../utils/query"
@@ -30,7 +30,6 @@ import {
   promptDropCollection,
   promptDropDatabase,
 } from "../actions/database"
-import type { QueryUpdateReady } from "../actions/queryUpdate"
 import { showDeleteConfirm } from "../actions/deleteConfirm"
 import { disconnect, listDatabases, switchDatabase } from "../providers/mongodb"
 import { switchConnection } from "../navigation"
@@ -493,82 +492,7 @@ export function usePaletteActions({
           const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
           if (!activeTab) break
           const activeFilter = resolveActiveFilter(state)
-          renderer.suspend()
-          openEditorForQueryUpdate(
-            activeTab.collectionName,
-            state.dbName,
-            activeFilter,
-            state.schemaMap,
-          )
-            .then((outcome) => {
-              renderer.resume()
-              if (outcome.cancelled) return
-              if ("emptyUpdate" in outcome && outcome.emptyUpdate) {
-                dispatch({
-                  type: "SHOW_MESSAGE",
-                  message: "Nothing to update — add fields to $set (or another operator)",
-                  kind: "info",
-                })
-                return
-              }
-              const { filter, update, upsert, matchedCount, apply, collectionName } =
-                outcome as QueryUpdateReady
-              dispatch({
-                type: "SHOW_BULK_QUERY_UPDATE_CONFIRM",
-                confirmation: {
-                  collectionName,
-                  filter,
-                  update,
-                  upsert,
-                  matchedCount,
-                  emptyFilter: Object.keys(filter).length === 0,
-                  resolve: async (confirmed) => {
-                    if (!confirmed) return
-                    try {
-                      const result = await apply()
-                      if (result.matchedCount === 0) {
-                        dispatch({
-                          type: "SHOW_MESSAGE",
-                          message: "No documents matched",
-                          kind: "warning",
-                        })
-                      } else if (result.modifiedCount === 0 && result.upsertedCount === 0) {
-                        dispatch({
-                          type: "SHOW_MESSAGE",
-                          message: "No documents modified",
-                          kind: "info",
-                        })
-                      } else {
-                        const parts: string[] = []
-                        if (result.modifiedCount > 0) parts.push(`Updated ${result.modifiedCount}`)
-                        if (result.upsertedCount > 0) parts.push(`Upserted ${result.upsertedCount}`)
-                        parts.push(`/ matched ${result.matchedCount}`)
-                        dispatch({
-                          type: "SHOW_MESSAGE",
-                          message: parts.join(" "),
-                          kind: "success",
-                        })
-                      }
-                      dispatch({ type: "RELOAD_DOCUMENTS" })
-                    } catch (err) {
-                      dispatch({
-                        type: "SHOW_MESSAGE",
-                        message: `Update failed: ${(err as Error).message}`,
-                        kind: "error",
-                      })
-                    }
-                  },
-                },
-              })
-            })
-            .catch((err: Error) => {
-              renderer.resume()
-              dispatch({
-                type: "SHOW_MESSAGE",
-                message: `Bulk update failed: ${err.message}`,
-                kind: "error",
-              })
-            })
+          runBulkQueryUpdate(activeTab.collectionName, state.dbName, activeFilter, state.schemaMap, dispatch, renderer)
           break
         }
 
@@ -577,53 +501,7 @@ export function usePaletteActions({
           const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
           if (!activeTab) break
           const activeFilter = resolveActiveFilter(state)
-          renderer.suspend()
-          openEditorForQueryDelete(
-            activeTab.collectionName,
-            state.dbName,
-            activeFilter,
-            state.schemaMap,
-          )
-            .then((outcome) => {
-              renderer.resume()
-              if (outcome.cancelled) return
-              const { filter, matchedCount, apply, collectionName } = outcome
-              dispatch({
-                type: "SHOW_BULK_QUERY_DELETE_CONFIRM",
-                confirmation: {
-                  collectionName,
-                  filter,
-                  matchedCount,
-                  emptyFilter: Object.keys(filter).length === 0,
-                  resolve: async (confirmed) => {
-                    if (!confirmed) return
-                    try {
-                      const result = await apply()
-                      dispatch({
-                        type: "SHOW_MESSAGE",
-                        message: `Deleted ${result.deletedCount} document${result.deletedCount === 1 ? "" : "s"}`,
-                        kind: result.deletedCount > 0 ? "success" : "info",
-                      })
-                      dispatch({ type: "RELOAD_DOCUMENTS" })
-                    } catch (err) {
-                      dispatch({
-                        type: "SHOW_MESSAGE",
-                        message: `Delete failed: ${(err as Error).message}`,
-                        kind: "error",
-                      })
-                    }
-                  },
-                },
-              })
-            })
-            .catch((err: Error) => {
-              renderer.resume()
-              dispatch({
-                type: "SHOW_MESSAGE",
-                message: `Bulk delete failed: ${err.message}`,
-                kind: "error",
-              })
-            })
+          runBulkQueryDelete(activeTab.collectionName, state.dbName, activeFilter, state.schemaMap, dispatch, renderer)
           break
         }
 
