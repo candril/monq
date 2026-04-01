@@ -171,16 +171,16 @@ function parseIndexDefs(json: string): IndexDef[] {
     if (typeof item !== "object" || item === null) {
       throw new Error(`Item ${i + 1}: expected an object`)
     }
-    const obj = item as Record<string, unknown>
-    if (!("key" in obj)) throw new Error(`Item ${i + 1}: missing "key" field`)
-    const key = obj.key as IndexSpecification
+    const entry = item as Record<string, unknown>
+    if (!("key" in entry)) throw new Error(`Item ${i + 1}: missing "key" field`)
+    const key = entry.key as IndexSpecification
     if (typeof key !== "object" || key === null || Array.isArray(key)) {
       throw new Error(`Item ${i + 1}: "key" must be an object, e.g. { email: 1 }`)
     }
     if (Object.keys(key).length === 0) {
       throw new Error(`Item ${i + 1}: "key" must not be empty — add at least one field`)
     }
-    const options = (obj.options ?? {}) as CreateIndexesOptions & { name?: string }
+    const options = (entry.options ?? {}) as CreateIndexesOptions & { name?: string }
     const name = options.name
     if (typeof name !== "string" || name.trim() === "") {
       throw new Error(`Item ${i + 1}: "options.name" is required — provide a non-empty string`)
@@ -225,8 +225,6 @@ export async function openEditorForIndexes(
 
   // Fetch existing indexes for the header
   const existing = await listIndexes(collectionName)
-  const existingNames = new Set(existing.map((i) => i.name))
-
   const tmpFile = join(dir, `index-${Date.now()}.jsonc`)
   const header = buildHeader(collectionName, dbName, schemaMap)
   await Bun.write(tmpFile, header + buildTemplateBody(existing))

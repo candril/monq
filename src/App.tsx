@@ -84,7 +84,7 @@ export function App({
     if (paletteMode === "themes") {
       previewBaseThemeId.current = activeThemeId
     }
-  }, [paletteMode])
+  }, [paletteMode, activeThemeId])
   const [loadingMessage, setLoadingMessage] = useState(randomConnectionMessage)
   // Hold-off: don't show the loading screen until 500ms have passed.
   // Prevents a jarring flash when the connection is very fast.

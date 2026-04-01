@@ -107,7 +107,7 @@ export function CommandPalette({
     } else {
       onHighlight?.(null)
     }
-  }, [visible])
+  }, [visible, onHighlight])
 
   const filtered = useMemo(
     () => fuzzyFilter(query, commands, (cmd) => [cmd.label, cmd.category]),
@@ -127,7 +127,7 @@ export function CommandPalette({
     if (!visible || !onHighlight) return
     const selected = items.find((it) => it.type === "command" && it.globalIndex === selectedIndex)
     onHighlight(selected?.type === "command" ? selected.command : null)
-  }, [selectedIndex, visible, items])
+  }, [selectedIndex, visible, items, onHighlight])
 
   // Auto-scroll: need to map selectedIndex to visual row
   useEffect(() => {
