@@ -5,7 +5,7 @@ import { EJSON } from "bson"
 import JSON5 from "json5"
 import type { Document } from "mongodb"
 import { replaceDocument, insertDocument, deleteDocument } from "../providers/mongodb"
-import { getEditor, stripComments, stripErrorComment } from "../utils/editor"
+import { getEditor, stripComments, stripErrorComment, openEditorWithError } from "../utils/editor"
 import type { SchemaMap } from "../query/schema"
 
 export interface EditManyResult {
@@ -154,30 +154,6 @@ function parseArray(json: string): Document[] {
     (item: unknown) =>
       EJSON.deserialize(item as Parameters<typeof EJSON.deserialize>[0]) as Document,
   )
-}
-
-// ── Error handling ────────────────────────────────────────────────────────────
-
-async function openEditorWithError(
-  tmpFile: string,
-  content: string,
-  errorMsg: string,
-): Promise<string | null> {
-  const errorComment = `// !! PARSE ERROR: ${errorMsg}\n// Fix the JSON below and save, or delete all content to cancel.\n\n`
-  await Bun.write(tmpFile, errorComment + stripErrorComment(content))
-  const editor = getEditor()
-  const proc = Bun.spawn([editor, tmpFile], {
-    stdin: "inherit",
-    stdout: "inherit",
-    stderr: "inherit",
-  })
-  await proc.exited
-  if (proc.exitCode !== 0) return null
-  try {
-    return await Bun.file(tmpFile).text()
-  } catch {
-    return null
-  }
 }
 
 // ── Diff logic ───────────────────────────────────────────────────────────────

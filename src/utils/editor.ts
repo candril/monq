@@ -19,3 +19,29 @@ export function stripComments(content: string): string {
 export function stripErrorComment(content: string): string {
   return content.replace(ERROR_COMMENT_RE, "")
 }
+
+/**
+ * Inject a parse-error comment into a file and re-open the editor.
+ * Returns the edited content, or null if the user quit or the file couldn't be read.
+ */
+export async function openEditorWithError(
+  tmpFile: string,
+  content: string,
+  errorMsg: string,
+): Promise<string | null> {
+  const errorComment = `// !! PARSE ERROR: ${errorMsg}\n// Fix the JSON below and save, or delete all content to cancel.\n\n`
+  await Bun.write(tmpFile, errorComment + stripErrorComment(content))
+  const editor = getEditor()
+  const proc = Bun.spawn([editor, tmpFile], {
+    stdin: "inherit",
+    stdout: "inherit",
+    stderr: "inherit",
+  })
+  await proc.exited
+  if (proc.exitCode !== 0) return null
+  try {
+    return await Bun.file(tmpFile).text()
+  } catch {
+    return null
+  }
+}

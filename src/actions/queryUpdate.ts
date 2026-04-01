@@ -9,7 +9,7 @@ import { mkdir } from "fs/promises"
 import JSON5 from "json5"
 import type { Document, Filter } from "mongodb"
 import { updateManyDocuments, countDocuments, deleteManyDocuments } from "../providers/mongodb"
-import { getEditor, stripComments, stripErrorComment } from "../utils/editor"
+import { getEditor, stripComments, stripErrorComment, openEditorWithError } from "../utils/editor"
 import type { SchemaMap } from "../query/schema"
 
 // ── Temp dir ─────────────────────────────────────────────────────────────────
@@ -266,30 +266,6 @@ function parseTemplate(json: string): ParsedQueryUpdate {
     throw new Error('Missing or invalid "update" key — must be a MongoDB update operator object')
   const upsert = raw.upsert === true
   return { filter, update, upsert }
-}
-
-// ── Error retry ───────────────────────────────────────────────────────────────
-
-async function openEditorWithError(
-  tmpFile: string,
-  content: string,
-  errorMsg: string,
-): Promise<string | null> {
-  const errorComment = `// !! PARSE ERROR: ${errorMsg}\n// Fix the JSON below and save, or delete all content to cancel.\n\n`
-  await Bun.write(tmpFile, errorComment + stripErrorComment(content))
-  const editor = getEditor()
-  const proc = Bun.spawn([editor, tmpFile], {
-    stdin: "inherit",
-    stdout: "inherit",
-    stderr: "inherit",
-  })
-  await proc.exited
-  if (proc.exitCode !== 0) return null
-  try {
-    return await Bun.file(tmpFile).text()
-  } catch {
-    return null
-  }
 }
 
 // ── Main entry point ──────────────────────────────────────────────────────────
