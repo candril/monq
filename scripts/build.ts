@@ -35,10 +35,18 @@ const allTargets: BuildTarget[] = [
   { os: "linux", arch: "arm64" },
 ]
 
-// If --single flag or no args, build only for current platform
-const targets = singleFlag
-  ? allTargets.filter(t => t.os === process.platform && t.arch === process.arch)
-  : allTargets
+// CI can override target via env vars (BUILD_TARGET_OS / BUILD_TARGET_ARCH)
+const envOS = process.env.BUILD_TARGET_OS as BuildTarget["os"] | undefined
+const envArch = process.env.BUILD_TARGET_ARCH as BuildTarget["arch"] | undefined
+
+let targets: BuildTarget[]
+if (envOS && envArch) {
+  targets = [{ os: envOS, arch: envArch }]
+} else if (singleFlag) {
+  targets = allTargets.filter(t => t.os === process.platform && t.arch === process.arch)
+} else {
+  targets = allTargets
+}
 
 if (targets.length === 0) {
   console.error(`No matching target for platform: ${process.platform}/${process.arch}`)

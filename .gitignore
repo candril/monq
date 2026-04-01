@@ -23,3 +23,7 @@ tsconfig.tsbuildinfo
 
 # Local editor config
 .vim/
+
+# Override global gitignore to track OpenCode commands
+!.opencode/
+!.opencode/commands/

@@ -1,0 +1,101 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target_os: linux
+            target_arch: x64
+          - os: ubuntu-latest
+            target_os: linux
+            target_arch: arm64
+          - os: macos-latest
+            target_os: darwin
+            target_arch: arm64
+          - os: macos-latest
+            target_os: darwin
+            target_arch: x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build binary
+        run: bun scripts/build.ts
+        env:
+          BUILD_TARGET_OS: ${{ matrix.target_os }}
+          BUILD_TARGET_ARCH: ${{ matrix.target_arch }}
+
+      - name: Rename binary
+        run: |
+          cd dist
+          binary=$(ls monq-* | head -1)
+          # Compress the binary
+          gzip -k "$binary"
+          echo "ARTIFACT=${binary}.gz" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: monq-${{ matrix.target_os }}-${{ matrix.target_arch }}
+          path: dist/*.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          sha256sum *.gz > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # Extract the section for this version from CHANGELOG.md
+          awk -v ver="$version" '
+            /^## \[/ {
+              if (found) exit
+              if (index($0, "[" ver "]")) found=1
+              next
+            }
+            found { print }
+          ' CHANGELOG.md > release_notes.md
+          cat release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release_notes.md
+          files: |
+            artifacts/*.gz
+            artifacts/SHA256SUMS
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
