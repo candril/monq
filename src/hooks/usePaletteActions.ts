@@ -38,7 +38,7 @@ import { getNestedValue } from "../utils/format"
 import { copyToClipboard } from "../utils/clipboard"
 import { parseSimpleQueryFull, projectionToSimple } from "../query/parser"
 import { findPreset } from "../themes/index"
-import { setTheme, buildTheme } from "../theme"
+import { type Theme, buildTheme } from "../theme"
 import { saveStateTheme, clearStateTheme } from "../state/theme"
 import type { ThemeConfig } from "../config/types"
 
@@ -48,6 +48,8 @@ interface UsePaletteActionsOptions {
   renderer: CliRenderer
   setPaletteMode: (mode: "commands" | "collections" | "databases" | "themes") => void
   onThemeChange: (presetId: string) => void
+  /** Apply a theme: updates the singleton + triggers re-render */
+  applyTheme: (t: Theme) => void
   /** The preset ID from config.toml (null = none set). Used by the Reset command. */
   configThemeId: string | null
   /** The [theme] token overrides from config.toml. Re-applied over the reset preset. */
@@ -68,6 +70,7 @@ export function usePaletteActions({
   renderer,
   setPaletteMode,
   onThemeChange,
+  applyTheme,
   configThemeId,
   configThemeOverrides,
   onCreateCollection,
@@ -93,7 +96,7 @@ export function usePaletteActions({
           const resetPresetId = configThemeId ?? "tokyo-night"
           const resetPreset = findPreset(resetPresetId)
           if (resetPreset) {
-            setTheme(buildTheme({ ...resetPreset.theme, ...configThemeOverrides }))
+            applyTheme(buildTheme({ ...resetPreset.theme, ...configThemeOverrides }))
             onThemeChange(resetPresetId)
           }
           clearStateTheme().catch(() => {})
@@ -106,7 +109,7 @@ export function usePaletteActions({
         const presetId = cmd.id.slice(6)
         const preset = findPreset(presetId)
         if (preset) {
-          setTheme(buildTheme({ ...preset.theme, ...configThemeOverrides }))
+          applyTheme(buildTheme({ ...preset.theme, ...configThemeOverrides }))
           onThemeChange(presetId)
           saveStateTheme(presetId).catch(() => {})
           dispatch({ type: "CLOSE_COMMAND_PALETTE" })

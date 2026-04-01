@@ -39,8 +39,10 @@ import { loadHistory, appendHistory } from "./utils/history"
 import { buildCollectionCommands } from "./commands/collections"
 import { buildDatabaseCommands } from "./commands/databases"
 import { buildThemeCommands } from "./commands/themes"
+import type { Command } from "./commands/types"
 import { findPreset } from "./themes/index"
-import { setTheme, buildTheme } from "./theme"
+import { buildTheme } from "./theme"
+import { useApplyTheme } from "./hooks/useApplyTheme"
 import { usePaletteActions } from "./hooks/usePaletteActions"
 import { formatDocumentCount, resolveSortField, resolveSortDirection } from "./utils/format"
 import { randomConnectionMessage } from "./utils/loadingMessages"
@@ -74,8 +76,8 @@ export function App({
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("commands")
   // Active theme preset ID — used to show a checkmark in the theme picker
   const [activeThemeId, setActiveThemeId] = useState(initialThemeId)
-  // Bump this to force a full re-render of content so components re-read the updated theme
-  const [themeVersion, setThemeVersion] = useState(0)
+  // Unified theme application: updates the singleton + forces re-render
+  const { applyTheme, themeVersion } = useApplyTheme()
   // The theme that was active when the theme picker was opened — used to revert on cancel
   const previewBaseThemeId = useRef("tokyo-night")
 
@@ -169,14 +171,14 @@ export function App({
   const handleThemeChange = useCallback((presetId: string) => {
     previewBaseThemeId.current = presetId
     setActiveThemeId(presetId)
-    setThemeVersion((v) => v + 1)
   }, [])
 
   // Live preview: apply theme as cursor moves over presets, revert on null (close/escape)
   const handleThemeHighlight = useCallback(
-    (presetId: string | null) => {
+    (cmd: Command | null) => {
       // null = closed/escaped → revert to base
       // "reset" = hovering Reset entry → preview the config/default theme
+      const presetId = cmd ? cmd.id.slice(6) : null
       const id =
         presetId === null
           ? previewBaseThemeId.current
@@ -185,11 +187,10 @@ export function App({
             : presetId
       const preset = findPreset(id)
       if (preset) {
-        setTheme(buildTheme({ ...preset.theme, ...configThemeOverrides }))
-        setThemeVersion((v) => v + 1)
+        applyTheme(buildTheme({ ...preset.theme, ...configThemeOverrides }))
       }
     },
-    [configThemeId, configThemeOverrides],
+    [configThemeId, configThemeOverrides, applyTheme],
   )
 
   const { handleSelect: handlePaletteSelect } = usePaletteActions({
@@ -198,6 +199,7 @@ export function App({
     renderer,
     setPaletteMode,
     onThemeChange: handleThemeChange,
+    applyTheme,
     configThemeId,
     configThemeOverrides,
     onCreateCollection: handleCreateCollection,
@@ -211,13 +213,12 @@ export function App({
     if (paletteMode === "themes") {
       const base = findPreset(previewBaseThemeId.current)
       if (base) {
-        setTheme(base.theme)
-        setThemeVersion((v) => v + 1)
+        applyTheme(base.theme)
       }
     }
     setPaletteMode("commands")
     dispatch({ type: "CLOSE_COMMAND_PALETTE" })
-  }, [paletteMode])
+  }, [paletteMode, applyTheme])
 
   // Build theme commands list (re-computed when active theme changes)
   const themeCommands = useMemo(() => buildThemeCommands(activeThemeId), [activeThemeId])
@@ -462,11 +463,7 @@ export function App({
         commands={effectiveCommands}
         onSelect={handlePaletteSelect}
         onClose={handlePaletteClose}
-        onHighlight={
-          paletteMode === "themes"
-            ? (cmd) => handleThemeHighlight(cmd ? cmd.id.slice(6) : null)
-            : undefined
-        }
+        onHighlight={paletteMode === "themes" ? handleThemeHighlight : undefined}
         placeholder={effectivePlaceholder}
         title={effectiveTitle}
       />
