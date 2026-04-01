@@ -160,6 +160,12 @@ export function buildCommands(state: AppState, keymap: Keymap): Command[] {
       shortcut: hintFor(keymap, "explain.raw"),
     })
     commands.push({
+      id: "view:manage-indexes",
+      label: "Manage Indexes",
+      category: "view",
+      shortcut: hintFor(keymap, "index.open"),
+    })
+    commands.push({
       id: "view:toggle-filter-bar",
       label: state.filterBarVisible ? "Hide Filter Bar" : "Show Filter Bar",
       category: "view",

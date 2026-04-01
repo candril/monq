@@ -18,6 +18,7 @@ import {
   openTmuxSplit,
 } from "../actions/pipelineWatch"
 import { openEditorForInsert } from "../actions/editMany"
+import { openEditorForIndexes } from "../actions/index"
 import { openEditorForQueryUpdate, openEditorForQueryDelete } from "../actions/queryUpdate"
 import { openExplainInEditor } from "../actions/explain"
 import { explainFind, explainAggregate } from "../providers/mongodb"
@@ -230,6 +231,51 @@ export function usePaletteActions({
             .catch((err: Error) => {
               renderer.resume()
               dispatch({ type: "SHOW_MESSAGE", message: `Explain failed: ${err.message}`, kind: "error" })
+            })
+          break
+        }
+        case "view:manage-indexes": {
+          dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+          const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+          if (!activeTab) break
+          renderer.suspend()
+          openEditorForIndexes(activeTab.collectionName, state.dbName, state.schemaMap)
+            .then((outcome) => {
+              renderer.resume()
+              if (outcome.cancelled) return
+              const { toCreate, toDrop, toReplace, apply } = outcome
+              dispatch({
+                type: "SHOW_INDEX_CREATE_CONFIRM",
+                confirmation: {
+                  toCreate,
+                  toDrop,
+                  toReplace,
+                  resolve: async (confirmed) => {
+                    if (!confirmed) return
+                    const result = await apply()
+                    if (result.errors.length > 0) {
+                      dispatch({ type: "SHOW_MESSAGE", message: result.errors[0], kind: "error" })
+                    } else {
+                      const parts: string[] = []
+                      if (result.created > 0) parts.push(`Created ${result.created}`)
+                      if (result.dropped > 0) parts.push(`Dropped ${result.dropped}`)
+                      dispatch({
+                        type: "SHOW_MESSAGE",
+                        message: parts.join(", ") || "No changes",
+                        kind: "success",
+                      })
+                    }
+                  },
+                },
+              })
+            })
+            .catch((err: Error) => {
+              renderer.resume()
+              dispatch({
+                type: "SHOW_MESSAGE",
+                message: `Index editor failed: ${err.message}`,
+                kind: "error",
+              })
             })
           break
         }
