@@ -5,7 +5,7 @@ import { EJSON } from "bson"
 import JSON5 from "json5"
 import type { Document } from "mongodb"
 import { replaceDocument, insertDocument, deleteDocument } from "../providers/mongodb"
-import { getEditor, ERROR_COMMENT_RE } from "../utils/editor"
+import { getEditor, stripComments, stripErrorComment } from "../utils/editor"
 import type { SchemaMap } from "../query/schema"
 
 export interface EditManyResult {
@@ -145,11 +145,6 @@ function serializeArray(docs: Document[], schemaPath?: string): string {
   return JSON.stringify(wrapped, null, 2)
 }
 
-function stripComments(content: string): string {
-  // Remove full-line comments (// ...) only — preserve inline strings
-  return content.replace(/^\/\/.*$/gm, "").trim()
-}
-
 function parseArray(json: string): Document[] {
   const clean = stripComments(json)
   const raw = JSON5.parse(clean)
@@ -162,10 +157,6 @@ function parseArray(json: string): Document[] {
 }
 
 // ── Error handling ────────────────────────────────────────────────────────────
-
-function stripErrorComment(content: string): string {
-  return content.replace(ERROR_COMMENT_RE, "")
-}
 
 async function openEditorWithError(
   tmpFile: string,

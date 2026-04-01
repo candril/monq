@@ -11,7 +11,7 @@ import type { Document } from "mongodb"
 import type { SchemaMap } from "../query/schema"
 import { replaceDocument } from "../providers/mongodb"
 import { serializeDocument, deserializeDocument } from "../utils/document"
-import { getEditor, ERROR_COMMENT_RE } from "../utils/editor"
+import { getEditor, stripComments, stripErrorComment } from "../utils/editor"
 
 function buildHeader(
   collectionName: string,
@@ -40,10 +40,9 @@ function buildHeader(
 }
 
 function injectErrorComment(content: string, errorMsg: string): string {
-  const stripped = content.replace(ERROR_COMMENT_RE, "")
   return (
     `// !! PARSE ERROR: ${errorMsg}\n// Fix the JSON below and save, or delete all content to cancel.\n\n` +
-    stripped
+    stripErrorComment(content)
   )
 }
 
@@ -91,10 +90,7 @@ export async function editDocument(
     }
 
     // Strip header + error comments to get the bare JSON
-    const stripped = editedContent
-      .replace(ERROR_COMMENT_RE, "")
-      .replace(/^\/\/.*\n/gm, "")
-      .trim()
+    const stripped = stripComments(stripErrorComment(editedContent))
 
     // Empty → cancelled
     if (stripped === "") {

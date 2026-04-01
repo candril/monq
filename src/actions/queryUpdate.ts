@@ -9,7 +9,7 @@ import { mkdir } from "fs/promises"
 import JSON5 from "json5"
 import type { Document, Filter } from "mongodb"
 import { updateManyDocuments, countDocuments, deleteManyDocuments } from "../providers/mongodb"
-import { getEditor, ERROR_COMMENT_RE } from "../utils/editor"
+import { getEditor, stripComments, stripErrorComment } from "../utils/editor"
 import type { SchemaMap } from "../query/schema"
 
 // ── Temp dir ─────────────────────────────────────────────────────────────────
@@ -234,14 +234,6 @@ function buildHeader(collectionName: string, dbName: string): string {
 }
 
 // ── Parse helpers ─────────────────────────────────────────────────────────────
-
-function stripComments(content: string): string {
-  return content.replace(/^\/\/.*$/gm, "").trim()
-}
-
-function stripErrorComment(content: string): string {
-  return content.replace(ERROR_COMMENT_RE, "")
-}
 
 export interface ParsedQueryUpdate {
   filter: Filter<Document>

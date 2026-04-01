@@ -11,7 +11,7 @@ import { mkdir } from "fs/promises"
 import JSON5 from "json5"
 import type { IndexSpecification, CreateIndexesOptions } from "mongodb"
 import { listIndexes, createIndex, dropIndex } from "../providers/mongodb"
-import { getEditor, ERROR_COMMENT_RE } from "../utils/editor"
+import { getEditor, stripComments, stripErrorComment } from "../utils/editor"
 import type { IndexInfo, IndexDef } from "../types"
 
 // ── Schema sidecar ────────────────────────────────────────────────────────────
@@ -166,10 +166,6 @@ ${items}
 
 // ── Parsing ───────────────────────────────────────────────────────────────────
 
-function stripComments(content: string): string {
-  return content.replace(/^\/\/.*$/gm, "").trim()
-}
-
 function parseIndexDefs(json: string): IndexDef[] {
   const clean = stripComments(json)
   const raw = JSON5.parse(clean)
@@ -209,8 +205,7 @@ function parseIndexDefs(json: string): IndexDef[] {
 // ── Error injection ───────────────────────────────────────────────────────────
 
 function injectError(content: string, errorMsg: string): string {
-  const stripped = content.replace(ERROR_COMMENT_RE, "")
-  return `// !! PARSE ERROR: ${errorMsg}\n// Fix the JSON below and save, or delete all content to cancel.\n\n${stripped}`
+  return `// !! PARSE ERROR: ${errorMsg}\n// Fix the JSON below and save, or delete all content to cancel.\n\n${stripErrorComment(content)}`
 }
 
 // ── Result types ──────────────────────────────────────────────────────────────
@@ -266,7 +261,7 @@ export async function openEditorForIndexes(
       return { cancelled: true }
     }
 
-    const body = stripComments(edited.replace(ERROR_COMMENT_RE, ""))
+    const body = stripComments(stripErrorComment(edited))
     if (body === "") return { cancelled: true }
 
     let defs: IndexDef[]
