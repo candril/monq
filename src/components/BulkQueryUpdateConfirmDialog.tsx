@@ -1,16 +1,12 @@
 import { ConfirmDialog } from "./ConfirmDialog"
 import { theme } from "../theme"
+import { summarise } from "../utils/format"
 import type { BulkQueryUpdateConfirmation } from "../types"
 
 interface BulkQueryUpdateConfirmDialogProps {
   confirmation: BulkQueryUpdateConfirmation
   focusedIndex: number
   awaitingFinalConfirm?: boolean
-}
-
-function summarise(obj: object): string {
-  const s = JSON.stringify(obj)
-  return s.length > 60 ? s.slice(0, 57) + "…" : s
 }
 
 export function BulkQueryUpdateConfirmDialog({

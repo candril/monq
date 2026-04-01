@@ -165,6 +165,12 @@ export function docSummary(doc: Record<string, unknown>): string {
   return `_id: ${String(doc._id)}`
 }
 
+/** Compact JSON summary of an object, truncated to 60 chars */
+export function summarise(obj: object): string {
+  const s = JSON.stringify(obj)
+  return s.length > 60 ? s.slice(0, 57) + "\u2026" : s
+}
+
 /** Resolve a dot-separated field path from a document object */
 export function getNestedValue(doc: Record<string, unknown>, field: string): unknown {
   const parts = field.split(".")

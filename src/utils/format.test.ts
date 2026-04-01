@@ -7,6 +7,7 @@ import {
   padRight,
   truncate,
   formatDocumentCount,
+  summarise,
 } from "./format"
 
 describe("detectValueType", () => {
@@ -147,5 +148,27 @@ describe("formatDocumentCount", () => {
   test("large numbers formatted with locale separators", () => {
     const result = formatDocumentCount(2034, 2034, 2034, false)
     expect(result).toContain("2,034")
+  })
+})
+
+describe("summarise", () => {
+  test("short object returned as-is", () => {
+    expect(summarise({ a: 1 })).toBe('{"a":1}')
+  })
+
+  test("long object truncated with ellipsis", () => {
+    const obj = { longFieldName: "a".repeat(60) }
+    const result = summarise(obj)
+    expect(result.length).toBe(58) // 57 chars + 1 ellipsis
+    expect(result.endsWith("\u2026")).toBe(true)
+  })
+
+  test("exactly 60 char object not truncated", () => {
+    // Build an object whose JSON is exactly 60 chars
+    const padding = "x".repeat(60 - '{"k":""}'.length)
+    const obj = { k: padding }
+    const json = JSON.stringify(obj)
+    expect(json.length).toBe(60)
+    expect(summarise(obj)).toBe(json)
   })
 })
