@@ -3,7 +3,7 @@
 import type { PaletteContext } from "./types"
 import { switchToTab } from "../../utils/tabs"
 import { stopWatching } from "../pipelineWatch"
-import { disconnect, listDatabases, switchDatabase } from "../../providers/mongodb"
+import { disconnect, listDatabases } from "../../providers/mongodb"
 import { switchConnection } from "../../navigation"
 import {
   promptCreateCollection,

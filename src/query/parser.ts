@@ -277,7 +277,15 @@ export function parseSimpleQueryFull(input: string, schemaMap?: SchemaMap): Pars
         if (Object.keys(range).length > 0) setFilterValue(filter, field, range, schemaMap)
       } else {
         const val = coerceValue(rawValue)
-        setFilterValue(filter, field, negated ? { $ne: val } : val, schemaMap)
+        // Date-only token → day-range query (exact equality rarely matches)
+        if (val instanceof Date && isDateOnly(rawValue)) {
+          const range = negated
+            ? { $not: { $gte: val, $lte: endOfDay(val) } }
+            : { $gte: val, $lte: endOfDay(val) }
+          setFilterValue(filter, field, range, schemaMap)
+        } else {
+          setFilterValue(filter, field, negated ? { $ne: val } : val, schemaMap)
+        }
       }
       continue
     }

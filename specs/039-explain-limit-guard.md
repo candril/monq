@@ -10,6 +10,7 @@ When running `explain` on a query or pipeline that has no `$limit` stage, MongoD
 
 - Changing the actual query behavior (only affects explain)
 - User-configurable explain limit (can be added later)
+- Make the explain limit configurable in `config.toml`
 
 ## Capabilities
 
@@ -22,7 +23,6 @@ When running `explain` on a query or pipeline that has no `$limit` stage, MongoD
 ### P2 - Should Have
 
 - If the user's query already has a `$limit`, respect it and don't add another
-- Make the explain limit configurable in `config.toml`
 
 ## Technical Notes
 

@@ -39,12 +39,12 @@ export function runBulkQueryUpdate(
         })
         return
       }
-      const { filter, update, upsert, matchedCount, apply, collectionName } =
+      const { filter, update, upsert, matchedCount, apply, collectionName: resolvedCollection } =
         outcome as QueryUpdateReady
       dispatch({
         type: "SHOW_BULK_QUERY_UPDATE_CONFIRM",
         confirmation: {
-          collectionName,
+          collectionName: resolvedCollection,
           filter,
           update,
           upsert,
@@ -104,11 +104,11 @@ export function runBulkQueryDelete(
     .then((outcome) => {
       renderer.resume()
       if (outcome.cancelled) return
-      const { filter, matchedCount, apply, collectionName } = outcome
+      const { filter, matchedCount, apply, collectionName: resolvedCollection } = outcome
       dispatch({
         type: "SHOW_BULK_QUERY_DELETE_CONFIRM",
         confirmation: {
-          collectionName,
+          collectionName: resolvedCollection,
           filter,
           matchedCount,
           emptyFilter: Object.keys(filter).length === 0,

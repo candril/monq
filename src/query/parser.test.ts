@@ -118,9 +118,14 @@ describe("parseSimpleQueryFull", () => {
 })
 
 describe("date coercion in parseSimpleQueryFull", () => {
-  test("date-only string coerced to start-of-day UTC Date", () => {
+  test("date-only string produces day-range query", () => {
     const { filter } = parseSimpleQueryFull("createdAt:2025-01-01", emptySchema)
-    expect(filter).toEqual({ createdAt: new Date("2025-01-01T00:00:00.000Z") })
+    expect(filter).toEqual({
+      createdAt: {
+        $gte: new Date("2025-01-01T00:00:00.000Z"),
+        $lte: new Date("2025-01-01T23:59:59.999Z"),
+      },
+    })
   })
 
   test("ISO datetime string coerced to Date", () => {

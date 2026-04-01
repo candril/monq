@@ -50,7 +50,11 @@ function filterByValuePipeline(
     return
   }
   const isSimpleValue =
-    val === null || typeof val === "string" || typeof val === "number" || typeof val === "boolean"
+    val === null ||
+    typeof val === "string" ||
+    typeof val === "number" ||
+    typeof val === "boolean" ||
+    val instanceof Date
   if (!isSimpleValue) {
     dispatch({
       type: "SHOW_MESSAGE",
@@ -87,7 +91,9 @@ function filterByValueSimple(
   }
 
   let formatted: string
-  if (val instanceof ObjectId) {
+  if (val instanceof Date) {
+    formatted = val.toISOString().slice(0, 10)
+  } else if (val instanceof ObjectId) {
     formatted = `ObjectId(${val.toHexString()})`
   } else if (typeof val === "string") {
     formatted = val.includes(" ") ? `"${val}"` : val
