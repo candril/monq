@@ -116,11 +116,17 @@ export async function fetchAggregate(
   const collection = getDb().collection(collectionName)
   const { limit = 200 } = options
 
+  // Append a page-size $limit unless the user's pipeline already has one.
+  // IMPORTANT: clone the array — the driver's AggregationCursor.limit()
+  // mutates the pipeline via addStage(), which would corrupt state.pipeline.
+  const hasUserLimit = pipeline.some((s) => "$limit" in s)
+  const fetchPipeline = hasUserLimit ? [...pipeline] : [...pipeline, { $limit: limit }]
+
   // Run pipeline + a parallel count pipeline (append $count stage)
   const countPipeline = [...pipeline, { $count: "__count" }]
 
   const [documents, countResult] = await Promise.all([
-    collection.aggregate(pipeline).limit(limit).toArray(),
+    collection.aggregate(fetchPipeline).toArray(),
     collection.aggregate(countPipeline).toArray(),
   ])
 
