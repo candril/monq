@@ -366,7 +366,11 @@ export function useDocumentEditKeys({
         })
         .catch((err: Error) => {
           renderer.resume()
-          dispatch({ type: "SHOW_MESSAGE", message: `Index editor failed: ${err.message}`, kind: "error" })
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Index editor failed: ${err.message}`,
+            kind: "error",
+          })
         })
       return true
     }
@@ -405,7 +409,11 @@ export function useDocumentEditKeys({
         })
         .catch((err: Error) => {
           dispatch({ type: "SET_EXPLAIN_LOADING", loading: false })
-          dispatch({ type: "SHOW_MESSAGE", message: `Explain failed: ${err.message}`, kind: "error" })
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Explain failed: ${err.message}`,
+            kind: "error",
+          })
           dispatch({ type: "SET_PREVIEW_MODE", mode: "document" })
         })
 
@@ -435,7 +443,11 @@ export function useDocumentEditKeys({
         })
         .catch((err: Error) => {
           renderer.resume()
-          dispatch({ type: "SHOW_MESSAGE", message: `Explain failed: ${err.message}`, kind: "error" })
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Explain failed: ${err.message}`,
+            kind: "error",
+          })
         })
 
       return true

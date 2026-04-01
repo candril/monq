@@ -36,7 +36,11 @@ export function IndexCreateConfirmDialog({
     })
     for (const name of toReplace) {
       const def = toCreate.find((d) => d.name === name)
-      lines.push({ text: `  ${name}  ${def ? JSON.stringify(def.key) : ""}`, dim: false, danger: true } as import("./ConfirmDialog").ConfirmLine)
+      lines.push({
+        text: `  ${name}  ${def ? JSON.stringify(def.key) : ""}`,
+        dim: false,
+        danger: true,
+      } as import("./ConfirmDialog").ConfirmLine)
     }
   }
 
@@ -49,7 +53,11 @@ export function IndexCreateConfirmDialog({
       dim: true,
     })
     for (const name of pureDrop) {
-      lines.push({ text: `  ${name}`, dim: false, danger: true } as import("./ConfirmDialog").ConfirmLine)
+      lines.push({
+        text: `  ${name}`,
+        dim: false,
+        danger: true,
+      } as import("./ConfirmDialog").ConfirmLine)
     }
   }
 

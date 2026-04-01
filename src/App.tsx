@@ -375,9 +375,7 @@ export function App({
               scrollRef={docListScrollRef}
               themeVersion={themeVersion}
               viewportWidth={
-                state.previewPosition === "right"
-                  ? Math.floor(terminalWidth / 2)
-                  : terminalWidth
+                state.previewPosition === "right" ? Math.floor(terminalWidth / 2) : terminalWidth
               }
             />
           </box>

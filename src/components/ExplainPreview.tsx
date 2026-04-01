@@ -39,7 +39,8 @@ function parseStageNode(s: Record<string, unknown>): StageInfo {
   if (s.keyPattern) info.keyPattern = s.keyPattern as Record<string, unknown>
   if (s.direction) info.direction = s.direction as string
   if (typeof s.nReturned === "number") info.nReturned = s.nReturned as number
-  if (typeof s.executionTimeMillisEstimate === "number") info.executionTimeMillisEstimate = s.executionTimeMillisEstimate as number
+  if (typeof s.executionTimeMillisEstimate === "number")
+    info.executionTimeMillisEstimate = s.executionTimeMillisEstimate as number
   if (s.filter && typeof s.filter === "object") info.filter = s.filter as Record<string, unknown>
   if (typeof s.isMultiKey === "boolean") info.isMultiKey = s.isMultiKey as boolean
   if (typeof s.memUsage === "number") info.memUsage = s.memUsage as number
@@ -63,7 +64,11 @@ function flattenStages(plan: Document): StageInfo[] {
   const p = plan as Record<string, Document>
 
   const execStages = p.executionStats?.executionStages
-  if (execStages && typeof execStages === "object" && (execStages as Record<string, unknown>).stage) {
+  if (
+    execStages &&
+    typeof execStages === "object" &&
+    (execStages as Record<string, unknown>).stage
+  ) {
     return walkInputStages(execStages as Document)
   }
 
@@ -87,7 +92,8 @@ function flattenStages(plan: Document): StageInfo[] {
         if (typeof stageData === "object" && stageData !== null) {
           const sd = stageData as Record<string, unknown>
           if (typeof sd.nReturned === "number") info.nReturned = sd.nReturned as number
-          if (typeof sd.executionTimeMillisEstimate === "number") info.executionTimeMillisEstimate = sd.executionTimeMillisEstimate as number
+          if (typeof sd.executionTimeMillisEstimate === "number")
+            info.executionTimeMillisEstimate = sd.executionTimeMillisEstimate as number
         }
         stages.push(info)
       }
@@ -135,10 +141,16 @@ function extractStats(plan: Document): ExplainStats | null {
     for (const entry of p.stages as Document[]) {
       if ("$cursor" in entry) {
         const cursor = (entry as Record<string, Document>).$cursor
-        const cursorExec = (cursor as Record<string, unknown>)?.executionStats as Record<string, unknown> | undefined
+        const cursorExec = (cursor as Record<string, unknown>)?.executionStats as
+          | Record<string, unknown>
+          | undefined
         if (cursorExec) {
-          const qp = (cursor as Record<string, unknown>)?.queryPlanner as Record<string, unknown> | undefined
-          const rejected = Array.isArray(qp?.rejectedPlans) ? (qp!.rejectedPlans as unknown[]).length : 0
+          const qp = (cursor as Record<string, unknown>)?.queryPlanner as
+            | Record<string, unknown>
+            | undefined
+          const rejected = Array.isArray(qp?.rejectedPlans)
+            ? (qp!.rejectedPlans as unknown[]).length
+            : 0
           return {
             nReturned: (cursorExec.nReturned as number) ?? 0,
             totalDocsExamined: (cursorExec.totalDocsExamined as number) ?? 0,
@@ -193,7 +205,9 @@ function StageCard({ stage }: { stage: StageInfo }) {
         {/* Header: STAGE  INDEX_NAME */}
         <box flexDirection="row" gap={2}>
           <text>
-            <span fg={stageColor(stage.stage)}><b>{stage.stage}</b></span>
+            <span fg={stageColor(stage.stage)}>
+              <b>{stage.stage}</b>
+            </span>
           </text>
           {stage.indexName && (
             <text>
@@ -212,7 +226,9 @@ function StageCard({ stage }: { stage: StageInfo }) {
             {stage.executionTimeMillisEstimate !== undefined && (
               <text>
                 <span fg={theme.textMuted}>{"   "}</span>
-                <span fg={timeColor(stage.executionTimeMillisEstimate)}>{stage.executionTimeMillisEstimate} ms</span>
+                <span fg={timeColor(stage.executionTimeMillisEstimate)}>
+                  {stage.executionTimeMillisEstimate} ms
+                </span>
               </text>
             )}
           </box>
@@ -249,11 +265,12 @@ function StageCard({ stage }: { stage: StageInfo }) {
             <span fg={theme.error}>{filterFields(stage.filter).join(", ")}</span>
           </text>
         )}
-        {stage.stage === "COLLSCAN" && (!stage.filter || filterFields(stage.filter).length === 0) && (
-          <text>
-            <span fg={theme.error}>no index available for this query</span>
-          </text>
-        )}
+        {stage.stage === "COLLSCAN" &&
+          (!stage.filter || filterFields(stage.filter).length === 0) && (
+            <text>
+              <span fg={theme.error}>no index available for this query</span>
+            </text>
+          )}
 
         {/* SORT details */}
         {stage.stage === "SORT" && stage.sortPattern && (
@@ -339,7 +356,9 @@ function Summary({ stats, stages }: { stats: ExplainStats; stages: StageInfo[] }
         <text>
           <span fg={theme.textMuted}>{"index".padEnd(W)}</span>
           <span fg={theme.success}>{ixscan.indexName ?? "unknown"}</span>
-          {ixscan.keyPattern && <span fg={theme.textDim}>{"  " + JSON.stringify(ixscan.keyPattern)}</span>}
+          {ixscan.keyPattern && (
+            <span fg={theme.textDim}>{"  " + JSON.stringify(ixscan.keyPattern)}</span>
+          )}
         </text>
       )}
       {hasCollScan && !ixscan && (
@@ -373,7 +392,13 @@ function Summary({ stats, stages }: { stats: ExplainStats; stages: StageInfo[] }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function ExplainPreview({ result, loading, position, scrollOffset, collectionName }: ExplainPreviewProps) {
+export function ExplainPreview({
+  result,
+  loading,
+  position,
+  scrollOffset,
+  collectionName,
+}: ExplainPreviewProps) {
   const scrollRef = useRef<ScrollBoxRenderable>(null)
 
   useEffect(() => {
@@ -408,7 +433,7 @@ export function ExplainPreview({ result, loading, position, scrollOffset, collec
         <text>
           <span fg={theme.primary}>Explain</span>
           {collectionName && <span fg={theme.textMuted}> -- {collectionName}</span>}
-          {loading && <span fg={theme.textDim}>  loading...</span>}
+          {loading && <span fg={theme.textDim}> loading...</span>}
         </text>
       </box>
       <scrollbox ref={scrollRef} flexGrow={1}>
@@ -434,12 +459,13 @@ export function ExplainPreview({ result, loading, position, scrollOffset, collec
             </box>
           )}
 
-          {data && data.stages.map((stage, i) => (
-            <box key={i} flexDirection="column">
-              <StageCard stage={stage} />
-              {i < data.stages.length - 1 && <Arrow />}
-            </box>
-          ))}
+          {data &&
+            data.stages.map((stage, i) => (
+              <box key={i} flexDirection="column">
+                <StageCard stage={stage} />
+                {i < data.stages.length - 1 && <Arrow />}
+              </box>
+            ))}
 
           {data?.stats && <Summary stats={data.stats} stages={data?.stages ?? []} />}
         </box>

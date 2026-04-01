@@ -2,7 +2,15 @@
  * MongoDB connection and query provider
  */
 
-import { MongoClient, type Db, type Document, type Filter, type UpdateFilter, type IndexSpecification, type CreateIndexesOptions } from "mongodb"
+import {
+  MongoClient,
+  type Db,
+  type Document,
+  type Filter,
+  type UpdateFilter,
+  type IndexSpecification,
+  type CreateIndexesOptions,
+} from "mongodb"
 import type { CollectionInfo, IndexInfo } from "../types"
 
 let client: MongoClient | null = null
@@ -224,7 +232,10 @@ export async function explainFind(
   options: { sort?: Record<string, 1 | -1>; projection?: Record<string, 0 | 1> } = {},
 ): Promise<Document> {
   const collection = getDb().collection(collectionName)
-  const cursor = collection.find(filter, options.projection ? { projection: options.projection } : undefined)
+  const cursor = collection.find(
+    filter,
+    options.projection ? { projection: options.projection } : undefined,
+  )
   if (options.sort) cursor.sort(options.sort)
   return cursor.explain("executionStats") as Promise<Document>
 }

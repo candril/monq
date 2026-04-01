@@ -23,11 +23,16 @@ function buildIndexSchema(schemaMap?: import("../query/schema").SchemaMap): obje
   const keyProperties: Record<string, object> = {}
   if (schemaMap && schemaMap.size > 0) {
     for (const [path] of schemaMap) {
-      if (!path.includes(".")) { // top-level fields only
+      if (!path.includes(".")) {
+        // top-level fields only
         keyProperties[path] = {
           oneOf: [
             { type: "number", enum: [1, -1], description: "1 = ascending, -1 = descending" },
-            { type: "string", enum: ["text", "2dsphere", "hashed"], description: "Special index type" },
+            {
+              type: "string",
+              enum: ["text", "2dsphere", "hashed"],
+              description: "Special index type",
+            },
           ],
         }
       }
@@ -49,7 +54,8 @@ function buildIndexSchema(schemaMap?: import("../query/schema").SchemaMap): obje
           properties: {
             key: {
               type: "object",
-              description: "Field(s) and sort direction. Values: 1 (asc), -1 (desc), \"text\", \"2dsphere\", \"hashed\"",
+              description:
+                'Field(s) and sort direction. Values: 1 (asc), -1 (desc), "text", "2dsphere", "hashed"',
               minProperties: 1,
               properties: keyProperties,
               additionalProperties: {
@@ -63,13 +69,19 @@ function buildIndexSchema(schemaMap?: import("../query/schema").SchemaMap): obje
               type: "object",
               required: ["name"],
               properties: {
-                name:               { type: "string", minLength: 1, description: "Index name (required)" },
-                unique:             { type: "boolean", description: "Enforce uniqueness" },
-                sparse:             { type: "boolean", description: "Only index docs that have the field" },
-                expireAfterSeconds: { type: "number",  description: "TTL in seconds (Date fields only)" },
-                background:         { type: "boolean", description: "Build in background (deprecated in 4.2+)" },
+                name: { type: "string", minLength: 1, description: "Index name (required)" },
+                unique: { type: "boolean", description: "Enforce uniqueness" },
+                sparse: { type: "boolean", description: "Only index docs that have the field" },
+                expireAfterSeconds: {
+                  type: "number",
+                  description: "TTL in seconds (Date fields only)",
+                },
+                background: {
+                  type: "boolean",
+                  description: "Build in background (deprecated in 4.2+)",
+                },
                 partialFilterExpression: { type: "object", description: "Partial index filter" },
-                collation:          { type: "object",  description: "Collation document" },
+                collation: { type: "object", description: "Collation document" },
               },
               additionalProperties: false,
             },
@@ -84,13 +96,18 @@ function buildIndexSchema(schemaMap?: import("../query/schema").SchemaMap): obje
 
 // ── Header / template ─────────────────────────────────────────────────────────
 
-function buildHeader(collectionName: string, dbName: string, schemaMap?: import("../query/schema").SchemaMap): string {
-  const fieldLines = schemaMap && schemaMap.size > 0
-    ? [...schemaMap.keys()]
-        .filter((p) => !p.includes("."))
-        .slice(0, 10)
-        .map((f) => `//   ${f}`)
-    : ["//   (no schema sampled)"]
+function buildHeader(
+  collectionName: string,
+  dbName: string,
+  schemaMap?: import("../query/schema").SchemaMap,
+): string {
+  const fieldLines =
+    schemaMap && schemaMap.size > 0
+      ? [...schemaMap.keys()]
+          .filter((p) => !p.includes("."))
+          .slice(0, 10)
+          .map((f) => `//   ${f}`)
+      : ["//   (no schema sampled)"]
 
   return [
     `// Monq — indexes on ${collectionName} @ ${dbName}`,
@@ -157,7 +174,7 @@ function parseIndexDefs(json: string): IndexDef[] {
   const clean = stripComments(json)
   const raw = JSON5.parse(clean)
   if (typeof raw !== "object" || raw === null) {
-    throw new Error("Expected a JSON object with an \"indexes\" array")
+    throw new Error('Expected a JSON object with an "indexes" array')
   }
   const obj = raw as Record<string, unknown>
   if (!("indexes" in obj)) {
@@ -279,7 +296,8 @@ export async function openEditorForIndexes(
         const origOpts: Record<string, unknown> = { name: orig.name }
         if (orig.unique) origOpts.unique = true
         if (orig.sparse) origOpts.sparse = true
-        if (orig.expireAfterSeconds !== undefined) origOpts.expireAfterSeconds = orig.expireAfterSeconds
+        if (orig.expireAfterSeconds !== undefined)
+          origOpts.expireAfterSeconds = orig.expireAfterSeconds
 
         const origStr = JSON.stringify({ key: orig.key, options: origOpts })
         const editedStr = JSON.stringify({ key: def.key, options: def.options })

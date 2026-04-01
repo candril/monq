@@ -345,11 +345,18 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
           },
         },
       ]
-      if (key.name === "escape") { cancel() }
-      else if (key.name === "return") { if (indexCreateFocusedIndex >= 0) opts[indexCreateFocusedIndex]?.exec() }
-      else if (key.name === "h" || key.name === "left") setIndexCreateFocusedIndex((i) => Math.max(-1, i - 1))
-      else if (key.name === "l" || key.name === "right") setIndexCreateFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
-      else { const m = opts.findIndex((o) => o.key === key.name); if (m !== -1) setIndexCreateFocusedIndex(m) }
+      if (key.name === "escape") {
+        cancel()
+      } else if (key.name === "return") {
+        if (indexCreateFocusedIndex >= 0) opts[indexCreateFocusedIndex]?.exec()
+      } else if (key.name === "h" || key.name === "left")
+        setIndexCreateFocusedIndex((i) => Math.max(-1, i - 1))
+      else if (key.name === "l" || key.name === "right")
+        setIndexCreateFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
+      else {
+        const m = opts.findIndex((o) => o.key === key.name)
+        if (m !== -1) setIndexCreateFocusedIndex(m)
+      }
       return true
     }
 

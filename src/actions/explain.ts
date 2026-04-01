@@ -8,10 +8,7 @@ import { mkdir } from "fs/promises"
 import type { Document } from "mongodb"
 import { getEditor } from "../utils/editor"
 
-export async function openExplainInEditor(
-  collectionName: string,
-  result: Document,
-): Promise<void> {
+export async function openExplainInEditor(collectionName: string, result: Document): Promise<void> {
   const dir = join(tmpdir(), "monq", collectionName)
   await mkdir(dir, { recursive: true })
   const tmpFile = join(dir, `explain-${Date.now()}.json`)

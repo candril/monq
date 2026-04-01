@@ -205,12 +205,19 @@ export function usePaletteActions({
           const explainPromise =
             query.mode === "aggregate"
               ? explainAggregate(activeTabExplain.collectionName, query.pipeline)
-              : explainFind(activeTabExplain.collectionName, query.filter, { sort: query.sort, projection: query.projection })
+              : explainFind(activeTabExplain.collectionName, query.filter, {
+                  sort: query.sort,
+                  projection: query.projection,
+                })
           explainPromise
             .then((result) => dispatch({ type: "SET_EXPLAIN_RESULT", result }))
             .catch((err: Error) => {
               dispatch({ type: "SET_EXPLAIN_LOADING", loading: false })
-              dispatch({ type: "SHOW_MESSAGE", message: `Explain failed: ${err.message}`, kind: "error" })
+              dispatch({
+                type: "SHOW_MESSAGE",
+                message: `Explain failed: ${err.message}`,
+                kind: "error",
+              })
               dispatch({ type: "SET_PREVIEW_MODE", mode: "document" })
             })
           break
@@ -224,13 +231,20 @@ export function usePaletteActions({
           const rawPromise =
             rawQuery.mode === "aggregate"
               ? explainAggregate(activeTabRaw.collectionName, rawQuery.pipeline)
-              : explainFind(activeTabRaw.collectionName, rawQuery.filter, { sort: rawQuery.sort, projection: rawQuery.projection })
+              : explainFind(activeTabRaw.collectionName, rawQuery.filter, {
+                  sort: rawQuery.sort,
+                  projection: rawQuery.projection,
+                })
           rawPromise
             .then((result) => openExplainInEditor(activeTabRaw.collectionName, result))
             .then(() => renderer.resume())
             .catch((err: Error) => {
               renderer.resume()
-              dispatch({ type: "SHOW_MESSAGE", message: `Explain failed: ${err.message}`, kind: "error" })
+              dispatch({
+                type: "SHOW_MESSAGE",
+                message: `Explain failed: ${err.message}`,
+                kind: "error",
+              })
             })
           break
         }
