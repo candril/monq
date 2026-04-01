@@ -27,6 +27,7 @@ const MIN_COL_WIDTH = 6
 const MAX_COL_WIDTH = 40
 const MINIMIZED_COL_WIDTH = 3
 const COL_GAP = 1 // space between columns
+const SORT_INDICATOR_WIDTH = 2 // " ▴" or " ▾"
 
 interface DocumentListProps {
   documents: Document[]
@@ -64,8 +65,10 @@ function computeColumnWidths(
       continue
     }
 
-    let maxW = col.field.length
-    let naturalW = col.field.length
+    // Reserve space for the sort indicator so that toggling sort never causes truncation.
+    const headerMinW = col.field.length + SORT_INDICATOR_WIDTH
+    let maxW = headerMinW
+    let naturalW = headerMinW
     for (const doc of sample) {
       const val = getNestedValue(doc, col.field)
       const formatted = formatValue(val, 200)
@@ -347,11 +350,10 @@ function HeaderRow({
     let label: string
     if (col.displayMode === "minimized") {
       label = truncate(col.field, MINIMIZED_COL_WIDTH)
-    } else if (isSorted) {
-      // Truncate field name to ensure indicator always fits within column width
-      label = truncate(col.field, colW - sortIndicator.length) + sortIndicator
     } else {
-      label = col.field
+      // Column widths already reserve SORT_INDICATOR_WIDTH, so the indicator always fits.
+      // Truncate only to the available column width minus indicator length.
+      label = truncate(col.field, colW - sortIndicator.length) + sortIndicator
     }
     const color = isSelectedCol
       ? theme.primary
