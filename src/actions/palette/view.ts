@@ -1,17 +1,16 @@
 /** Palette handlers: view commands (preview, explain, indexes, column mode, filter bar) */
 
-import { ObjectId } from "mongodb"
 import type { PaletteContext } from "./types"
 import { resolveCurrentQuery } from "../../utils/query"
 import { openExplainInEditor } from "../explain"
 import { openEditorForIndexes } from "../index"
+import { filterBySelectedValue } from "../filterValue"
 import { explainFind, explainAggregate } from "../../providers/mongodb"
 import { editDocument } from "../edit"
 import { serializeDocument } from "../../utils/document"
 import { getNestedValue } from "../../utils/format"
 import { copyToClipboard } from "../../utils/clipboard"
 import { parseSimpleQueryFull, projectionToSimple } from "../../query/parser"
-import { stageOf } from "../../query/pipeline"
 
 export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
   const { state, dispatch, renderer } = ctx
@@ -68,59 +67,10 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
       dispatch({ type: "SHOW_MESSAGE", message: `Copied ${col.field} to clipboard`, kind: "info" })
       return true
     }
-    case "doc:filter-value": {
+    case "doc:filter-value":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
-      const doc = state.documents[state.selectedIndex]
-      const visCols = state.columns.filter((c) => c.visible)
-      const col = visCols[state.selectedColumnIndex]
-      if (!doc || !col) return true
-      const val = getNestedValue(doc as Record<string, unknown>, col.field) ?? null
-      if (state.pipelineMode) {
-        const matchStageDoc = state.pipeline.find((s) => "$match" in s)
-        if (!matchStageDoc) {
-          dispatch({ type: "SHOW_MESSAGE", message: "Cannot add filter: pipeline has no $match stage", kind: "warning" })
-          return true
-        }
-        const matchStage = stageOf(matchStageDoc)
-        if (col.field in (matchStage.$match ?? {})) {
-          dispatch({ type: "SHOW_MESSAGE", message: `${col.field} is already in $match — edit pipeline with Ctrl+F to change it`, kind: "warning" })
-          return true
-        }
-        const isSimpleValue = val === null || typeof val === "string" || typeof val === "number" || typeof val === "boolean"
-        if (!isSimpleValue) {
-          dispatch({ type: "SHOW_MESSAGE", message: `Cannot filter by ${col.field}: complex value — edit pipeline with Ctrl+F`, kind: "warning" })
-          return true
-        }
-        dispatch({ type: "ADD_PIPELINE_MATCH_CONDITION", field: col.field, value: val })
-      } else {
-        const alreadyFiltered = state.queryInput.split(" ").some(
-          (t) => t.startsWith(`${col.field}:`) || t.startsWith(`${col.field}>`) || t.startsWith(`${col.field}<`) || t.startsWith(`${col.field}!`),
-        )
-        if (alreadyFiltered) {
-          dispatch({ type: "SHOW_MESSAGE", message: `${col.field} is already in filter — use / to edit`, kind: "warning" })
-          return true
-        }
-        let formatted: string
-        if (val instanceof ObjectId) {
-          formatted = `ObjectId(${val.toHexString()})`
-        } else if (typeof val === "string") {
-          formatted = val.includes(" ") ? `"${val}"` : val
-        } else {
-          formatted = String(val)
-        }
-        const token = `${col.field}:${formatted}`
-        const existingTokens = state.queryInput.trim().split(/\s+/).filter(Boolean)
-        const filterTokens = existingTokens.filter(
-          (t: string) => !t.startsWith("+") && !(t.startsWith("-") && !/[><!:]/.test(t.slice(1))),
-        )
-        const projTokens = existingTokens.filter(
-          (t: string) => t.startsWith("+") || (t.startsWith("-") && !/[><!:]/.test(t.slice(1))),
-        )
-        dispatch({ type: "SET_QUERY_INPUT", input: [...filterTokens, token, ...projTokens].join(" ") })
-        dispatch({ type: "SUBMIT_QUERY" })
-      }
+      filterBySelectedValue(state, dispatch)
       return true
-    }
 
     case "view:toggle-preview":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
