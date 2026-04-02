@@ -31,6 +31,7 @@ All three columns should animate to create a fuller, more polished spinning effe
 ### P3 — Nice to Have
 
 - Smooth looping — the last frame transitions cleanly into the first without a visible jump
+- After the first loop start animating randomly. 
 
 ---
 
