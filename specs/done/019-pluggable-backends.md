@@ -1,6 +1,6 @@
 # Pluggable Data Source Backends
 
-**Status**: Draft
+**Status**: De-scoped
 
 ## Description
 
