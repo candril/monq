@@ -171,6 +171,16 @@ export function summarise(obj: object): string {
   return s.length > 60 ? s.slice(0, 57) + "\u2026" : s
 }
 
+/** Convert a cell value to a copyable plain-text string */
+export function formatCellValue(val: unknown): string {
+  if (val === undefined || val === null) return ""
+  if (typeof val === "object" && "toHexString" in val) {
+    return (val as { toHexString(): string }).toHexString()
+  }
+  if (typeof val === "object") return JSON.stringify(val, null, 2)
+  return String(val)
+}
+
 /** Resolve a dot-separated field path from a document object */
 export function getNestedValue(doc: Record<string, unknown>, field: string): unknown {
   const parts = field.split(".")
