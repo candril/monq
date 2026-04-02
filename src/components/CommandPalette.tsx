@@ -50,7 +50,9 @@ function buildPaletteItems(commands: Command[]): { items: PaletteItem[]; command
   let first = true
   for (const category of sortedCategories) {
     // Blank line between sections (except before the first)
-    if (!first) items.push({ type: "spacer" })
+    if (!first) {
+      items.push({ type: "spacer" })
+    }
     first = false
     items.push({ type: "header", category })
     for (const cmd of groups.get(category)!) {
@@ -58,7 +60,9 @@ function buildPaletteItems(commands: Command[]): { items: PaletteItem[]; command
     }
   }
   // Trailing spacer so the last row doesn't sit flush against the bottom edge
-  if (items.length > 0) items.push({ type: "spacer" })
+  if (items.length > 0) {
+    items.push({ type: "spacer" })
+  }
   return { items, commandCount: commandIndex }
 }
 
@@ -124,7 +128,9 @@ export function CommandPalette({
 
   // Fire onHighlight whenever the highlighted command changes
   useEffect(() => {
-    if (!visible || !onHighlight) return
+    if (!visible || !onHighlight) {
+      return
+    }
     const selected = items.find((it) => it.type === "command" && it.globalIndex === selectedIndex)
     onHighlight(selected?.type === "command" ? selected.command : null)
   }, [selectedIndex, visible, items, onHighlight])
@@ -132,13 +138,17 @@ export function CommandPalette({
   // Auto-scroll: need to map selectedIndex to visual row
   useEffect(() => {
     const scrollbox = scrollRef.current
-    if (!scrollbox) return
+    if (!scrollbox) {
+      return
+    }
 
     // Find the visual row for the selected command
     const visualRow = items.findIndex(
       (item) => item.type === "command" && item.globalIndex === selectedIndex,
     )
-    if (visualRow === -1) return
+    if (visualRow === -1) {
+      return
+    }
 
     const viewportHeight = scrollbox.viewport?.height ?? 20
     const scrollTop = scrollbox.scrollTop
@@ -156,7 +166,9 @@ export function CommandPalette({
   }, [selectedIndex, items])
 
   useKeyboard((key) => {
-    if (!visible) return
+    if (!visible) {
+      return
+    }
 
     if (key.name === "escape") {
       onHighlight?.(null)
@@ -190,7 +202,9 @@ export function CommandPalette({
     }
   })
 
-  if (!visible) return null
+  if (!visible) {
+    return null
+  }
 
   return (
     <box width="100%" height="100%" position="absolute" top={0} left={0}>

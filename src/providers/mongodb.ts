@@ -47,14 +47,18 @@ export function switchDatabase(dbName: string): void {
 
 /** List all databases on the server */
 export async function listDatabases(): Promise<string[]> {
-  if (!client) throw new Error("Not connected")
+  if (!client) {
+    throw new Error("Not connected")
+  }
   const result = await client.db().admin().listDatabases()
   return result.databases.map((d) => d.name).sort()
 }
 
 /** Get the database instance */
 function getDb(): Db {
-  if (!client) throw new Error("Not connected")
+  if (!client) {
+    throw new Error("Not connected")
+  }
   return client.db(activeDb ?? undefined)
 }
 
@@ -188,7 +192,9 @@ export async function createCollection(collectionName: string): Promise<void> {
 
 /** Create a new database by creating a first collection inside it */
 export async function createDatabase(dbName: string, firstCollection: string): Promise<void> {
-  if (!client) throw new Error("Not connected")
+  if (!client) {
+    throw new Error("Not connected")
+  }
   await client.db(dbName).createCollection(firstCollection)
 }
 
@@ -204,7 +210,9 @@ export async function dropCollection(collectionName: string): Promise<void> {
 
 /** Drop a database */
 export async function dropDatabase(dbName: string): Promise<void> {
-  if (!client) throw new Error("Not connected")
+  if (!client) {
+    throw new Error("Not connected")
+  }
   await client.db(dbName).dropDatabase()
 }
 

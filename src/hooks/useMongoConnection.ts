@@ -51,7 +51,9 @@ export function useMongoConnection({ uri, dispatch, dbName, state }: UseMongoCon
       dispatch({ type: "SET_DATABASES_LOADING", loading: true })
       listDatabases()
         .then((databases) => {
-          if (cancelled) return
+          if (cancelled) {
+            return
+          }
           dispatch({ type: "SET_DATABASES", databases })
           dispatch({ type: "OPEN_DB_PICKER" })
         })
@@ -65,10 +67,14 @@ export function useMongoConnection({ uri, dispatch, dbName, state }: UseMongoCon
       // db is in URI — load collections right away
       listCollections()
         .then((collections) => {
-          if (!cancelled) dispatch({ type: "SET_COLLECTIONS", collections })
+          if (!cancelled) {
+            dispatch({ type: "SET_COLLECTIONS", collections })
+          }
         })
         .catch((err: Error) => {
-          if (!cancelled) dispatch({ type: "SET_ERROR", error: err.message })
+          if (!cancelled) {
+            dispatch({ type: "SET_ERROR", error: err.message })
+          }
         })
     }
 
@@ -81,8 +87,12 @@ export function useMongoConnection({ uri, dispatch, dbName, state }: UseMongoCon
   // Reload collections when the user switches to a different database
   useEffect(() => {
     // Skip the initial render / URI-driven value (handled above)
-    if (!didInitRef.current) return
-    if (!dbName) return
+    if (!didInitRef.current) {
+      return
+    }
+    if (!dbName) {
+      return
+    }
     // If the URI already had a db, the first run of this effect is the initial
     // value set by SET_CONNECTION_INFO — skip it to avoid double-loading.
     if (uriHadDbRef.current) {
@@ -98,10 +108,14 @@ export function useMongoConnection({ uri, dispatch, dbName, state }: UseMongoCon
     let cancelled = false
     listCollections()
       .then((collections) => {
-        if (!cancelled) dispatch({ type: "SET_COLLECTIONS", collections })
+        if (!cancelled) {
+          dispatch({ type: "SET_COLLECTIONS", collections })
+        }
       })
       .catch((err: Error) => {
-        if (!cancelled) dispatch({ type: "SET_ERROR", error: err.message })
+        if (!cancelled) {
+          dispatch({ type: "SET_ERROR", error: err.message })
+        }
       })
     return () => {
       cancelled = true

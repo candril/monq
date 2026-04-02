@@ -37,7 +37,9 @@ function configPath(): string {
  */
 export async function loadProfiles(): Promise<ConnectionProfile[]> {
   const file = Bun.file(configPath())
-  if (!(await file.exists())) return []
+  if (!(await file.exists())) {
+    return []
+  }
 
   let raw: Record<string, unknown>
   try {

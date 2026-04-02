@@ -51,7 +51,9 @@ export function handleNavigationCommand(cmdId: string, ctx: PaletteContext): boo
       return true
     case "tabs:close":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
-      if (state.activeTabId) dispatch({ type: "CLOSE_TAB", tabId: state.activeTabId })
+      if (state.activeTabId) {
+        dispatch({ type: "CLOSE_TAB", tabId: state.activeTabId })
+      }
       return true
     case "tabs:undo-close":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
@@ -60,14 +62,17 @@ export function handleNavigationCommand(cmdId: string, ctx: PaletteContext): boo
     case "tabs:prev": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId)
-      if (currentIndex > 0) switchToTab(state.tabs[currentIndex - 1].id, dispatch)
+      if (currentIndex > 0) {
+        switchToTab(state.tabs[currentIndex - 1].id, dispatch)
+      }
       return true
     }
     case "tabs:next": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const currentIndex = state.tabs.findIndex((t) => t.id === state.activeTabId)
-      if (currentIndex < state.tabs.length - 1)
+      if (currentIndex < state.tabs.length - 1) {
         switchToTab(state.tabs[currentIndex + 1].id, dispatch)
+      }
       return true
     }
 
@@ -93,28 +98,34 @@ export function handleNavigationCommand(cmdId: string, ctx: PaletteContext): boo
     case "manage:create-collection":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       setPaletteMode("commands")
-      if (onCreateCollection) promptCreateCollection(dispatch, onCreateCollection)
+      if (onCreateCollection) {
+        promptCreateCollection(dispatch, onCreateCollection)
+      }
       return true
     case "manage:rename-collection": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       setPaletteMode("commands")
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (activeTab && onRenameCollection)
+      if (activeTab && onRenameCollection) {
         promptRenameCollection(dispatch, activeTab.collectionName, onRenameCollection)
+      }
       return true
     }
     case "manage:drop-collection": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       setPaletteMode("commands")
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (activeTab && onDropCollection)
+      if (activeTab && onDropCollection) {
         promptDropCollection(dispatch, activeTab.collectionName, onDropCollection)
+      }
       return true
     }
     case "manage:drop-database":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       setPaletteMode("commands")
-      if (state.dbName && onDropDatabase) promptDropDatabase(dispatch, state.dbName, onDropDatabase)
+      if (state.dbName && onDropDatabase) {
+        promptDropDatabase(dispatch, state.dbName, onDropDatabase)
+      }
       return true
 
     // Theme picker

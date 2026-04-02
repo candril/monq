@@ -140,7 +140,9 @@ function isValidCombo(combo: string): boolean {
   const key = parts[parts.length - 1]
   const validModifiers = new Set(["ctrl", "shift", "alt", "meta"])
   for (const mod of modifiers) {
-    if (!validModifiers.has(mod.toLowerCase())) return false
+    if (!validModifiers.has(mod.toLowerCase())) {
+      return false
+    }
   }
   // Key must be non-empty
   return key !== undefined && key.length > 0

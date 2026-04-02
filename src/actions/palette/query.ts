@@ -29,7 +29,9 @@ export function handleQueryCommand(cmdId: string, ctx: PaletteContext): boolean 
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const visCols = state.columns.filter((c) => c.visible)
       const sortCol = visCols[state.selectedColumnIndex]
-      if (sortCol) dispatch({ type: "CYCLE_SORT", field: sortCol.field })
+      if (sortCol) {
+        dispatch({ type: "CYCLE_SORT", field: sortCol.field })
+      }
       return true
     }
     case "query:clear-pipeline":
@@ -39,7 +41,9 @@ export function handleQueryCommand(cmdId: string, ctx: PaletteContext): boolean 
     case "query:open-pipeline": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       renderer.suspend()
       openPipelineEditor({
         collectionName: activeTab.collectionName,
@@ -53,7 +57,9 @@ export function handleQueryCommand(cmdId: string, ctx: PaletteContext): boolean 
         sortDirection: state.sortDirection,
       })
         .then((result) => {
-          if (!result) return
+          if (!result) {
+            return
+          }
           dispatch({
             type: "SET_PIPELINE",
             pipeline: result.pipeline,
@@ -77,7 +83,9 @@ export function handleQueryCommand(cmdId: string, ctx: PaletteContext): boolean 
     case "query:open-pipeline-tmux": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       writePipelineFile({
         collectionName: activeTab.collectionName,
         dbName: state.dbName,

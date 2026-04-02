@@ -30,18 +30,36 @@ export type SchemaMap = Map<string, FieldInfo>
 
 /** Detect the type of a value */
 function detectType(value: unknown): FieldType {
-  if (value === null || value === undefined) return "null"
-  if (typeof value === "string") return "string"
-  if (typeof value === "number") return "number"
-  if (typeof value === "boolean") return "boolean"
-  if (value instanceof Date) return "date"
+  if (value === null || value === undefined) {
+    return "null"
+  }
+  if (typeof value === "string") {
+    return "string"
+  }
+  if (typeof value === "number") {
+    return "number"
+  }
+  if (typeof value === "boolean") {
+    return "boolean"
+  }
+  if (value instanceof Date) {
+    return "date"
+  }
   if (typeof value === "object" && "_bsontype" in (value as object)) {
     const bson = (value as { _bsontype: string })._bsontype
-    if (bson === "ObjectId" || bson === "ObjectID") return "objectid"
-    if (bson === "Timestamp" || bson === "Date") return "date"
+    if (bson === "ObjectId" || bson === "ObjectID") {
+      return "objectid"
+    }
+    if (bson === "Timestamp" || bson === "Date") {
+      return "date"
+    }
   }
-  if (Array.isArray(value)) return "array"
-  if (typeof value === "object") return "object"
+  if (Array.isArray(value)) {
+    return "array"
+  }
+  if (typeof value === "object") {
+    return "object"
+  }
   return "string"
 }
 
@@ -53,7 +71,9 @@ export function buildSchemaMap(documents: Document[]): SchemaMap {
   const map: SchemaMap = new Map()
 
   function walk(obj: Record<string, unknown>, prefix: string, parentPath: string, depth: number) {
-    if (depth >= MAX_DEPTH) return
+    if (depth >= MAX_DEPTH) {
+      return
+    }
 
     for (const [key, value] of Object.entries(obj)) {
       const path = prefix ? `${prefix}.${key}` : key
@@ -115,7 +135,9 @@ export function getSubfieldSuggestions(schema: SchemaMap, prefix: string): strin
   // Remove trailing dot
   const parentPath = prefix.endsWith(".") ? prefix.slice(0, -1) : prefix
   const parent = schema.get(parentPath)
-  if (!parent) return []
+  if (!parent) {
+    return []
+  }
   return parent.children
 }
 

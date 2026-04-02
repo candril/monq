@@ -33,7 +33,9 @@ export interface RawKey {
  * Returns an empty string if the combo is undefined.
  */
 export function formatKeyHint(combo: KeyCombo | undefined): string {
-  if (!combo) return ""
+  if (!combo) {
+    return ""
+  }
 
   const isLetter = combo.name.length === 1 && /[a-z]/i.test(combo.name)
 
@@ -43,14 +45,22 @@ export function formatKeyHint(combo: KeyCombo | undefined): string {
   }
 
   const parts: string[] = []
-  if (combo.ctrl) parts.push("Ctrl")
-  if (combo.alt) parts.push("Alt")
-  if (combo.shift) parts.push("Shift")
+  if (combo.ctrl) {
+    parts.push("Ctrl")
+  }
+  if (combo.alt) {
+    parts.push("Alt")
+  }
+  if (combo.shift) {
+    parts.push("Shift")
+  }
 
   // Single letters stay lowercase; special key names kept as-is
   const key = isLetter ? combo.name.toLowerCase() : combo.name
 
-  if (parts.length === 0) return key
+  if (parts.length === 0) {
+    return key
+  }
   return parts.join("+") + "+" + key
 }
 

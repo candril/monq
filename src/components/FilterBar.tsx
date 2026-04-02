@@ -114,7 +114,9 @@ function BsonTextarea({
       }
     }
     taRef.current = ta
-    if (!ta) return
+    if (!ta) {
+      return
+    }
 
     ta.onContentChange = () => {
       const text = safeGetText(ta)
@@ -129,7 +131,9 @@ function BsonTextarea({
   // (version bump). Never on user-typed changes to avoid cursor reset + crash loops.
   useEffect(() => {
     const ta = taRef.current
-    if (!ta) return
+    if (!ta) {
+      return
+    }
     try {
       ta.replaceText(currentValue)
     } catch {
@@ -180,7 +184,9 @@ export function FilterBar({
   onBsonProjectionChange,
   onSubmit,
 }: FilterBarProps) {
-  if (!query && !editing) return null
+  if (!query && !editing) {
+    return null
+  }
 
   const badgeLabel = queryMode === "simple" ? "󰈲" : "BSON"
   const badgeBg = queryMode === "simple" ? theme.querySimple : theme.queryBson
@@ -260,20 +266,22 @@ export function FilterBar({
               .split(/\s+/)
               .map((tok, i) => {
                 const sep = i > 0 ? " " : ""
-                if (tok.startsWith("+"))
+                if (tok.startsWith("+")) {
                   return (
                     <span key={i} fg={theme.secondary}>
                       {sep}
                       {tok}
                     </span>
                   )
-                if (tok.startsWith("-") && !/[><!:]/.test(tok.slice(1)))
+                }
+                if (tok.startsWith("-") && !/[><!:]/.test(tok.slice(1))) {
                   return (
                     <span key={i} fg={theme.warning}>
                       {sep}
                       {tok}
                     </span>
                   )
+                }
                 return (
                   <span key={i} fg={theme.text}>
                     {sep}

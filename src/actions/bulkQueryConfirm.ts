@@ -30,7 +30,9 @@ export function runBulkQueryUpdate(
   openEditorForQueryUpdate(collectionName, dbName, activeFilter, schemaMap)
     .then((outcome) => {
       renderer.resume()
-      if (outcome.cancelled) return
+      if (outcome.cancelled) {
+        return
+      }
       if ("emptyUpdate" in outcome && outcome.emptyUpdate) {
         dispatch({
           type: "SHOW_MESSAGE",
@@ -57,7 +59,9 @@ export function runBulkQueryUpdate(
           matchedCount,
           emptyFilter: Object.keys(filter).length === 0,
           resolve: async (confirmed) => {
-            if (!confirmed) return
+            if (!confirmed) {
+              return
+            }
             try {
               const result = await apply()
               if (result.matchedCount === 0) {
@@ -70,8 +74,12 @@ export function runBulkQueryUpdate(
                 })
               } else {
                 const parts: string[] = []
-                if (result.modifiedCount > 0) parts.push(`Updated ${result.modifiedCount}`)
-                if (result.upsertedCount > 0) parts.push(`Upserted ${result.upsertedCount}`)
+                if (result.modifiedCount > 0) {
+                  parts.push(`Updated ${result.modifiedCount}`)
+                }
+                if (result.upsertedCount > 0) {
+                  parts.push(`Upserted ${result.upsertedCount}`)
+                }
                 parts.push(`/ matched ${result.matchedCount}`)
                 dispatch({ type: "SHOW_MESSAGE", message: parts.join(" "), kind: "success" })
               }
@@ -109,7 +117,9 @@ export function runBulkQueryDelete(
   openEditorForQueryDelete(collectionName, dbName, activeFilter, schemaMap)
     .then((outcome) => {
       renderer.resume()
-      if (outcome.cancelled) return
+      if (outcome.cancelled) {
+        return
+      }
       const { filter, matchedCount, apply, collectionName: resolvedCollection } = outcome
       dispatch({
         type: "SHOW_BULK_QUERY_DELETE_CONFIRM",
@@ -119,7 +129,9 @@ export function runBulkQueryDelete(
           matchedCount,
           emptyFilter: Object.keys(filter).length === 0,
           resolve: async (confirmed) => {
-            if (!confirmed) return
+            if (!confirmed) {
+              return
+            }
             try {
               const result = await apply()
               dispatch({

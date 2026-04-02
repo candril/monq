@@ -120,7 +120,9 @@ export function WelcomeScreen({
 
   useKeyboard((key) => {
     // Don't handle keys when dialogs are showing — let them handle input
-    if (showDropConfirm || showRename) return
+    if (showDropConfirm || showRename) {
+      return
+    }
 
     // ── Create flow ──────────────────────────────────────────────────────────
     if (createStep === "name") {
@@ -131,7 +133,9 @@ export function WelcomeScreen({
         return
       }
       if (key.name === "return") {
-        if (!newName.trim()) return
+        if (!newName.trim()) {
+          return
+        }
         if (step === 1) {
           // Database: go to second prompt for first collection name
           setCreateStep("first-collection")
@@ -183,7 +187,9 @@ export function WelcomeScreen({
       return
     }
 
-    if (createStep === "creating") return
+    if (createStep === "creating") {
+      return
+    }
 
     // ── Normal navigation ────────────────────────────────────────────────────
     // Move up
@@ -283,9 +289,15 @@ export function WelcomeScreen({
     if (!isLoading && (!isEmpty || (step === 2 && isEmpty))) {
       hintParts.push(step === 2 && isEmpty ? "Ctrl-D  drop database" : "Ctrl-D  drop")
     }
-    if (!isLoading && !isEmpty && step === 2) hintParts.push("Ctrl-R  rename")
-    if (!isLoading) hintParts.push("Tab  new")
-    if (step === 2 || onBackToUri) hintParts.push("⌫  back")
+    if (!isLoading && !isEmpty && step === 2) {
+      hintParts.push("Ctrl-R  rename")
+    }
+    if (!isLoading) {
+      hintParts.push("Tab  new")
+    }
+    if (step === 2 || onBackToUri) {
+      hintParts.push("⌫  back")
+    }
     hintParts.push("Esc  quit")
   }
   const hint = hintParts.join("  ·  ")

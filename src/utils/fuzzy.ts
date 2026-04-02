@@ -8,10 +8,14 @@ export function fuzzyScore(query: string, text: string): number {
   const t = text.toLowerCase()
 
   // Exact substring at start — best
-  if (t.startsWith(q)) return 100 + q.length / t.length
+  if (t.startsWith(q)) {
+    return 100 + q.length / t.length
+  }
 
   // Exact substring anywhere
-  if (t.includes(q)) return 50 + q.length / t.length
+  if (t.includes(q)) {
+    return 50 + q.length / t.length
+  }
 
   // Fuzzy: all query chars appear in order
   let qi = 0
@@ -31,7 +35,9 @@ export function fuzzyScore(query: string, text: string): number {
 
 /** Filter and sort items by fuzzy match against one or more fields. */
 export function fuzzyFilter<T>(query: string, items: T[], getFields: (item: T) => string[]): T[] {
-  if (!query) return items
+  if (!query) {
+    return items
+  }
 
   return items
     .map((item) => {

@@ -41,12 +41,16 @@ const KIND_ICON: Record<ToastKind, string> = {
 
 export function Toast({ message, onDismiss }: ToastProps) {
   useEffect(() => {
-    if (!message) return
+    if (!message) {
+      return
+    }
     const t = setTimeout(onDismiss, DURATION[message.kind])
     return () => clearTimeout(t)
   }, [message, onDismiss])
 
-  if (!message) return null
+  if (!message) {
+    return null
+  }
 
   const color = KIND_COLOR[message.kind]
   const icon = KIND_ICON[message.kind]

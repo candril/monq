@@ -30,7 +30,9 @@ export async function loadHistory(): Promise<string[]> {
 /** Append a query to the history file, deduplicating and capping at MAX_HISTORY. */
 export async function appendHistory(query: string): Promise<void> {
   const trimmed = query.trim()
-  if (!trimmed) return
+  if (!trimmed) {
+    return
+  }
 
   try {
     const path = historyPath()

@@ -22,7 +22,9 @@ function sanitizeProjection(projection: Record<string, 0 | 1> | undefined): {
   projection: Record<string, 0 | 1> | undefined
   idHidden: boolean
 } {
-  if (!projection) return { projection, idHidden: false }
+  if (!projection) {
+    return { projection, idHidden: false }
+  }
   if (!("_id" in projection) || projection["_id"] !== 0) {
     return { projection, idHidden: false }
   }
@@ -45,7 +47,9 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
 
   // Effect 1: initial load / reload (triggered by documentsLoading + reloadCounter)
   useEffect(() => {
-    if (!activeTab || !documentsLoading) return
+    if (!activeTab || !documentsLoading) {
+      return
+    }
 
     let cancelled = false
     const existingColumns = state.columns
@@ -79,7 +83,9 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
 
       fetchPipeline
         .then(({ documents, count }) => {
-          if (cancelled) return
+          if (cancelled) {
+            return
+          }
           const detectedFields = detectColumns(documents)
           const detectedSet = new Set(detectedFields)
 
@@ -116,7 +122,9 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
           dispatch({ type: "SET_SCHEMA", schemaMap: buildSchemaMap(documents) })
         })
         .catch((err: Error) => {
-          if (cancelled) return
+          if (cancelled) {
+            return
+          }
           // In watch mode, pipeline errors are non-fatal — show a toast so the
           // user can fix the file and the watcher will retry. Outside watch mode
           // use the full error screen.
@@ -152,7 +160,9 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
       limit: pageSize,
     })
       .then(({ documents, count, totalCount }) => {
-        if (cancelled) return
+        if (cancelled) {
+          return
+        }
         const detectedFields = detectColumns(documents)
         const detectedSet = new Set(detectedFields)
 
@@ -187,9 +197,15 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
             : null
 
         const preserved = existingColumns.filter((c) => {
-          if (detectedSet.has(c.field)) return false // already in newColumns
-          if (exclusions?.has(c.field)) return false // explicitly excluded
-          if (inclusions && !inclusions.has(c.field)) return false // not included
+          if (detectedSet.has(c.field)) {
+            return false
+          } // already in newColumns
+          if (exclusions?.has(c.field)) {
+            return false
+          } // explicitly excluded
+          if (inclusions && !inclusions.has(c.field)) {
+            return false
+          } // not included
           return true
         })
         let columns = [...newColumns, ...preserved]
@@ -208,14 +224,18 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
         // the pipeline JSON schema sidecar.
         if (hasSimpleProjection) {
           const merged = new Map(state.schemaMap)
-          for (const [key, val] of buildSchemaMap(documents)) merged.set(key, val)
+          for (const [key, val] of buildSchemaMap(documents)) {
+            merged.set(key, val)
+          }
           dispatch({ type: "SET_SCHEMA", schemaMap: merged })
         } else {
           dispatch({ type: "SET_SCHEMA", schemaMap: buildSchemaMap(documents) })
         }
       })
       .catch((err: Error) => {
-        if (!cancelled) dispatch({ type: "SET_ERROR", error: err.message })
+        if (!cancelled) {
+          dispatch({ type: "SET_ERROR", error: err.message })
+        }
       })
 
     return () => {
@@ -226,7 +246,9 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
 
   // Effect 2: load next page when LOAD_MORE is triggered
   useEffect(() => {
-    if (!activeTab || !state.loadingMore) return
+    if (!activeTab || !state.loadingMore) {
+      return
+    }
 
     let cancelled = false
 
@@ -246,11 +268,15 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
       limit: pageSize,
     })
       .then(({ documents }) => {
-        if (cancelled || documents.length === 0) return
+        if (cancelled || documents.length === 0) {
+          return
+        }
         dispatch({ type: "APPEND_DOCUMENTS", documents })
       })
       .catch(() => {
-        if (!cancelled) dispatch({ type: "APPEND_DOCUMENTS", documents: [] })
+        if (!cancelled) {
+          dispatch({ type: "APPEND_DOCUMENTS", documents: [] })
+        }
       })
 
     return () => {
@@ -264,7 +290,9 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
   // explain query runs in parallel with the document fetch instead of waiting
   // for it to start.
   useEffect(() => {
-    if (!activeTab || state.previewMode !== "explain") return
+    if (!activeTab || state.previewMode !== "explain") {
+      return
+    }
 
     let cancelled = false
     dispatch({ type: "SET_EXPLAIN_LOADING", loading: true })
@@ -280,10 +308,14 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
 
     promise
       .then(({ result, limited }) => {
-        if (!cancelled) dispatch({ type: "SET_EXPLAIN_RESULT", result, limited })
+        if (!cancelled) {
+          dispatch({ type: "SET_EXPLAIN_RESULT", result, limited })
+        }
       })
       .catch(() => {
-        if (!cancelled) dispatch({ type: "SET_EXPLAIN_LOADING", loading: false })
+        if (!cancelled) {
+          dispatch({ type: "SET_EXPLAIN_LOADING", loading: false })
+        }
       })
 
     return () => {

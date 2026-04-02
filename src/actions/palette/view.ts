@@ -50,10 +50,14 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
     case "doc:copy-cell": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const doc = state.documents[state.selectedIndex]
-      if (!doc) return true
+      if (!doc) {
+        return true
+      }
       const visCols = state.columns.filter((c) => c.visible)
       const col = visCols[state.selectedColumnIndex]
-      if (!col) return true
+      if (!col) {
+        return true
+      }
       const val = getNestedValue(doc as Record<string, unknown>, col.field)
       const text =
         val === undefined || val === null
@@ -83,12 +87,16 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
     case "view:explain": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       if (state.previewPosition && state.previewMode === "explain") {
         dispatch({ type: "TOGGLE_PREVIEW" })
         return true
       }
-      if (!state.previewPosition) dispatch({ type: "TOGGLE_PREVIEW" })
+      if (!state.previewPosition) {
+        dispatch({ type: "TOGGLE_PREVIEW" })
+      }
       dispatch({ type: "SET_PREVIEW_MODE", mode: "explain" })
       dispatch({ type: "SET_EXPLAIN_LOADING", loading: true })
       const query = resolveCurrentQuery(state)
@@ -117,7 +125,9 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
     case "view:explain-raw": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       const rawQuery = resolveCurrentQuery(state)
       renderer.suspend()
       const rawPromise =
@@ -143,12 +153,16 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
     case "view:manage-indexes": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       renderer.suspend()
       openEditorForIndexes(activeTab.collectionName, state.dbName, state.schemaMap)
         .then((outcome) => {
           renderer.resume()
-          if (outcome.cancelled) return
+          if (outcome.cancelled) {
+            return
+          }
           const { toCreate, toDrop, toReplace, apply } = outcome
           dispatch({
             type: "SHOW_INDEX_CREATE_CONFIRM",
@@ -157,7 +171,9 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
               toDrop,
               toReplace,
               resolve: async (confirmed) => {
-                if (!confirmed) return
+                if (!confirmed) {
+                  return
+                }
                 dispatch({
                   type: "SHOW_MESSAGE",
                   message: "Applying index changes...",
@@ -168,8 +184,12 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
                   dispatch({ type: "SHOW_MESSAGE", message: result.errors[0], kind: "error" })
                 } else {
                   const parts: string[] = []
-                  if (result.created > 0) parts.push(`Created ${result.created}`)
-                  if (result.dropped > 0) parts.push(`Dropped ${result.dropped}`)
+                  if (result.created > 0) {
+                    parts.push(`Created ${result.created}`)
+                  }
+                  if (result.dropped > 0) {
+                    parts.push(`Dropped ${result.dropped}`)
+                  }
                   dispatch({
                     type: "SHOW_MESSAGE",
                     message: parts.join(", ") || "No changes",
@@ -206,7 +226,9 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const visCols = state.columns.filter((c) => c.visible)
       const col = visCols[state.selectedColumnIndex]
-      if (!col) return true
+      if (!col) {
+        return true
+      }
       const { projection: projObj } = parseSimpleQueryFull(state.queryInput)
       const proj: Record<string, 0 | 1> = { ...(projObj ?? {}) }
       if (proj[col.field] === 0) {
@@ -219,9 +241,15 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
         .trim()
         .split(/\s+/)
         .filter((t: string) => {
-          if (!t) return false
-          if (t.startsWith("+")) return false
-          if (t.startsWith("-") && !/[><!:]/.test(t.slice(1))) return false
+          if (!t) {
+            return false
+          }
+          if (t.startsWith("+")) {
+            return false
+          }
+          if (t.startsWith("-") && !/[><!:]/.test(t.slice(1))) {
+            return false
+          }
           return true
         })
       const projStr = Object.keys(proj).length > 0 ? " " + projectionToSimple(proj) : ""

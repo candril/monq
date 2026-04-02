@@ -52,7 +52,9 @@ function computeColumnWidths(
   availableWidth: number,
 ): Map<string, number> {
   const visible = columns.filter((c) => c.visible)
-  if (visible.length === 0) return new Map()
+  if (visible.length === 0) {
+    return new Map()
+  }
 
   const widths = new Map<string, number>()
   const naturalWidths = new Map<string, number>() // uncapped natural width
@@ -90,15 +92,21 @@ function computeColumnWidths(
   // iterating until surplus is exhausted or no column can grow further.
   const totalGaps = Math.max(0, visible.length - 1) * COL_GAP
   let totalUsed = totalGaps
-  for (const col of visible) totalUsed += widths.get(col.field) ?? 0
+  for (const col of visible) {
+    totalUsed += widths.get(col.field) ?? 0
+  }
 
   let surplus = availableWidth - totalUsed
   while (surplus > 0) {
     const growable = visible.filter((col) => {
-      if (col.displayMode === "minimized" || col.displayMode === "full") return false
+      if (col.displayMode === "minimized" || col.displayMode === "full") {
+        return false
+      }
       return (naturalWidths.get(col.field) ?? 0) > (widths.get(col.field) ?? 0)
     })
-    if (growable.length === 0) break
+    if (growable.length === 0) {
+      break
+    }
 
     const perCol = Math.floor(surplus / growable.length)
     const remainder = surplus % growable.length
@@ -114,7 +122,9 @@ function computeColumnWidths(
       allocated += grant
     }
 
-    if (allocated === 0) break
+    if (allocated === 0) {
+      break
+    }
     surplus -= allocated
   }
 
@@ -129,7 +139,9 @@ function computeScrollLeft(
   viewportWidth: number,
 ): number {
   const visible = columns.filter((c) => c.visible)
-  if (visible.length === 0) return 0
+  if (visible.length === 0) {
+    return 0
+  }
 
   // Calculate total width
   let totalWidth = 0
@@ -143,11 +155,15 @@ function computeScrollLeft(
 
   // No scrolling needed if everything fits
   const available = viewportWidth - 2 // padding
-  if (totalWidth <= available) return 0
+  if (totalWidth <= available) {
+    return 0
+  }
 
   // Ensure selected column is visible
   const sel = colPositions[selectedColumnIndex]
-  if (!sel) return 0
+  if (!sel) {
+    return 0
+  }
 
   // If selected is to the right of the viewport, scroll right
   // If selected is to the left, scroll left
@@ -231,14 +247,18 @@ export function DocumentList({
   const { width: terminalWidth } = useTerminalDimensions()
   const [loadingMessage, setLoadingMessage] = useState(randomDocumentMessage)
   useEffect(() => {
-    if (!loading) return
+    if (!loading) {
+      return
+    }
     const timer = setInterval(() => setLoadingMessage(randomDocumentMessage()), 5000)
     return () => clearInterval(timer)
   }, [loading])
 
   useEffect(() => {
     const scrollbox = scrollRef.current
-    if (!scrollbox) return
+    if (!scrollbox) {
+      return
+    }
     const viewportHeight = scrollbox.viewport?.height ?? 20
     const scrollTop = scrollbox.scrollTop
     const scrollBottom = scrollTop + viewportHeight

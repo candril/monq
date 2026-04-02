@@ -38,7 +38,9 @@ export async function openEditorWithError(
     stderr: "inherit",
   })
   await proc.exited
-  if (proc.exitCode !== 0) return null
+  if (proc.exitCode !== 0) {
+    return null
+  }
   try {
     return await Bun.file(tmpFile).text()
   } catch {

@@ -73,10 +73,14 @@ function idKey(id: unknown): string {
 }
 
 function deriveSelectedRows(documents: Document[], selectedIds: Set<string>): Set<number> {
-  if (selectedIds.size === 0) return new Set()
+  if (selectedIds.size === 0) {
+    return new Set()
+  }
   const rows = new Set<number>()
   for (let i = 0; i < documents.length; i++) {
-    if (selectedIds.has(idKey(documents[i]._id))) rows.add(i)
+    if (selectedIds.has(idKey(documents[i]._id))) {
+      rows.add(i)
+    }
   }
   return rows
 }
@@ -140,7 +144,9 @@ export function tabsReducer(state: AppState, action: AppAction): AppState | null
 
     case "CLONE_TAB": {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return state
+      if (!activeTab) {
+        return state
+      }
 
       const savedTabs = state.tabs.map((t) =>
         t.id === state.activeTabId ? snapshotTab(state, t.id, t.collectionName) : t,
@@ -163,7 +169,9 @@ export function tabsReducer(state: AppState, action: AppAction): AppState | null
 
     case "CLOSE_TAB": {
       const closingTab = state.tabs.find((t) => t.id === action.tabId)
-      if (!closingTab) return state
+      if (!closingTab) {
+        return state
+      }
 
       const savedClosing =
         action.tabId === state.activeTabId
@@ -218,7 +226,9 @@ export function tabsReducer(state: AppState, action: AppAction): AppState | null
     }
 
     case "UNDO_CLOSE_TAB": {
-      if (state.closedTabs.length === 0) return state
+      if (state.closedTabs.length === 0) {
+        return state
+      }
 
       const restoredTab = state.closedTabs[state.closedTabs.length - 1]
       const closedTabs = state.closedTabs.slice(0, -1)
@@ -240,14 +250,18 @@ export function tabsReducer(state: AppState, action: AppAction): AppState | null
     }
 
     case "SWITCH_TAB": {
-      if (action.tabId === state.activeTabId) return state
+      if (action.tabId === state.activeTabId) {
+        return state
+      }
 
       const tabs = state.tabs.map((t) =>
         t.id === state.activeTabId ? snapshotTab(state, t.id, t.collectionName) : t,
       )
 
       const targetTab = tabs.find((t) => t.id === action.tabId)
-      if (!targetTab) return state
+      if (!targetTab) {
+        return state
+      }
 
       return {
         ...state,

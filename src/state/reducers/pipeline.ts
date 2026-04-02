@@ -57,7 +57,9 @@ export function pipelineReducer(state: AppState, action: AppAction): AppState | 
       if (state.sortField) {
         stages.push({ $sort: { [state.sortField]: state.sortDirection } })
       }
-      if (enterProj) stages.push({ $project: enterProj })
+      if (enterProj) {
+        stages.push({ $project: enterProj })
+      }
       return {
         ...state,
         pipelineMode: true,
@@ -110,10 +112,14 @@ export function pipelineReducer(state: AppState, action: AppAction): AppState | 
 
     case "ADD_PIPELINE_MATCH_CONDITION": {
       const matchIdx = state.pipeline.findIndex((s) => "$match" in s)
-      if (matchIdx === -1) return state
+      if (matchIdx === -1) {
+        return state
+      }
 
       const updatedPipeline = state.pipeline.map((stage, i) => {
-        if (i !== matchIdx) return stage
+        if (i !== matchIdx) {
+          return stage
+        }
         const existingMatch = stageOf(stage).$match ?? {}
         return { $match: { ...existingMatch, [action.field]: action.value } }
       })

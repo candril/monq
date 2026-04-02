@@ -30,7 +30,9 @@ export function documentsReducer(state: AppState, action: AppAction): AppState |
       }
 
     case "LOAD_MORE":
-      if (state.loadingMore || state.loadedCount >= state.documentCount) return state
+      if (state.loadingMore || state.loadedCount >= state.documentCount) {
+        return state
+      }
       return { ...state, loadingMore: true }
 
     case "SET_DOCUMENTS_LOADING":
@@ -147,7 +149,9 @@ export function documentsReducer(state: AppState, action: AppAction): AppState |
     case "CYCLE_COLUMN_MODE": {
       const visibleCols = state.columns.filter((c) => c.visible)
       const targetCol = visibleCols[state.selectedColumnIndex]
-      if (!targetCol) return state
+      if (!targetCol) {
+        return state
+      }
 
       const nextMode = { normal: "full", full: "minimized", minimized: "normal" } as const
       const columns = state.columns.map((c) =>
@@ -176,10 +180,14 @@ export function deriveSelectedRows(
   documents: import("mongodb").Document[],
   selectedIds: Set<string>,
 ): Set<number> {
-  if (selectedIds.size === 0) return new Set()
+  if (selectedIds.size === 0) {
+    return new Set()
+  }
   const rows = new Set<number>()
   for (let i = 0; i < documents.length; i++) {
-    if (selectedIds.has(idKey(documents[i]._id))) rows.add(i)
+    if (selectedIds.has(idKey(documents[i]._id))) {
+      rows.add(i)
+    }
   }
   return rows
 }

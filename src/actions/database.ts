@@ -18,7 +18,9 @@ export function promptCreateCollection(
     type: "SHOW_CREATE_INPUT",
     input: {
       resolve: async (name) => {
-        if (!name) return
+        if (!name) {
+          return
+        }
         const err = await onCreateCollection(name)
         if (err) {
           dispatch({ type: "SHOW_MESSAGE", message: err, kind: "error" })
@@ -43,7 +45,9 @@ export function promptRenameCollection(
       type: "collection",
       oldName,
       resolve: async (newName) => {
-        if (!newName) return
+        if (!newName) {
+          return
+        }
         const err = await onRenameCollection(oldName, newName)
         if (err) {
           dispatch({ type: "SHOW_MESSAGE", message: err, kind: "error" })
@@ -68,7 +72,9 @@ export function promptDropCollection(
       type: "collection",
       name: collectionName,
       resolve: async (confirmed) => {
-        if (!confirmed) return
+        if (!confirmed) {
+          return
+        }
         const err = await onDropCollection(collectionName)
         if (err) {
           dispatch({ type: "SHOW_MESSAGE", message: err, kind: "error" })
@@ -93,7 +99,9 @@ export function promptDropDatabase(
       type: "database",
       name: dbName,
       resolve: async (confirmed) => {
-        if (!confirmed) return
+        if (!confirmed) {
+          return
+        }
         const err = await onDropDatabase(dbName)
         if (err) {
           dispatch({ type: "SHOW_MESSAGE", message: err, kind: "error" })

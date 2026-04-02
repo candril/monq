@@ -81,7 +81,9 @@ export function resolveCurrentQuery(state: AppState): ResolvedQuery {
  */
 export function resolveActiveFilter(state: AppState): Filter<Document> {
   const query = resolveCurrentQuery(state)
-  if (query.mode === "find") return query.filter
+  if (query.mode === "find") {
+    return query.filter
+  }
   // Aggregate pipeline — extract $match filter if present
   const { filter } = extractFindParts(query.pipeline)
   return filter

@@ -12,7 +12,9 @@ import { copyToClipboard } from "../utils/clipboard"
 /** Copy the entire selected document (EJSON) to the clipboard. */
 export function yankDocument(state: AppState, dispatch: Dispatch<AppAction>): void {
   const doc = state.documents[state.selectedIndex]
-  if (!doc) return
+  if (!doc) {
+    return
+  }
   copyToClipboard(serializeDocument(doc)).catch(() => {})
   dispatch({ type: "SHOW_MESSAGE", message: "Document copied to clipboard", kind: "info" })
 }
@@ -20,10 +22,14 @@ export function yankDocument(state: AppState, dispatch: Dispatch<AppAction>): vo
 /** Copy the selected cell value to the clipboard. */
 export function yankCell(state: AppState, dispatch: Dispatch<AppAction>): void {
   const doc = state.documents[state.selectedIndex]
-  if (!doc) return
+  if (!doc) {
+    return
+  }
   const visCols = state.columns.filter((c) => c.visible)
   const col = visCols[state.selectedColumnIndex]
-  if (!col) return
+  if (!col) {
+    return
+  }
   const val = getNestedValue(doc as Record<string, unknown>, col.field)
   const text = formatCellValue(val)
   copyToClipboard(text).catch(() => {})

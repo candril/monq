@@ -25,7 +25,9 @@ async function getTempDir(collectionName: string): Promise<string> {
 /** Convert a schemaMap field type to a JSON Schema value schema. */
 function fieldTypeToSchema(path: string, schemaMap: SchemaMap): object {
   const info = schemaMap.get(path)
-  if (!info) return {}
+  if (!info) {
+    return {}
+  }
   switch (info.type) {
     case "string":
       return { type: "string" }
@@ -244,7 +246,9 @@ export interface ParsedQueryUpdate {
 /** Returns true if every operator in the update object is an empty {} */
 function isUpdateEmpty(update: Document): boolean {
   const keys = Object.keys(update)
-  if (keys.length === 0) return true
+  if (keys.length === 0) {
+    return true
+  }
   return keys.every((k) => {
     const v = update[k]
     return (
@@ -259,11 +263,14 @@ function isUpdateEmpty(update: Document): boolean {
 function parseTemplate(json: string): ParsedQueryUpdate {
   const clean = stripComments(json)
   const raw = JSON5.parse(clean) as Record<string, unknown>
-  if (typeof raw !== "object" || raw === null) throw new Error("Expected a JSON object")
+  if (typeof raw !== "object" || raw === null) {
+    throw new Error("Expected a JSON object")
+  }
   const filter = (raw.filter ?? {}) as Filter<Document>
   const update = raw.update as Document
-  if (!update || typeof update !== "object")
+  if (!update || typeof update !== "object") {
     throw new Error('Missing or invalid "update" key — must be a MongoDB update operator object')
+  }
   const upsert = raw.upsert === true
   return { filter, update, upsert }
 }
@@ -325,7 +332,9 @@ export async function openEditorForQueryUpdate(
     stderr: "inherit",
   })
   await proc.exited
-  if (proc.exitCode !== 0) return { cancelled: true }
+  if (proc.exitCode !== 0) {
+    return { cancelled: true }
+  }
 
   let content: string
   try {
@@ -338,14 +347,21 @@ export async function openEditorForQueryUpdate(
   let parsed: ParsedQueryUpdate
   while (true) {
     const clean = stripComments(stripErrorComment(content))
-    if (clean === "") return { cancelled: true }
+    if (clean === "") {
+      return { cancelled: true }
+    }
     try {
       parsed = parseTemplate(clean)
       break
     } catch (err) {
       const next = await openEditorWithError(tmpFile, content, (err as Error).message)
-      if (!next || stripComments(stripErrorComment(next)) === "" || next.trim() === content.trim())
+      if (
+        !next ||
+        stripComments(stripErrorComment(next)) === "" ||
+        next.trim() === content.trim()
+      ) {
         return { cancelled: true }
+      }
       content = next
     }
   }
@@ -353,7 +369,9 @@ export async function openEditorForQueryUpdate(
   const { filter, update, upsert } = parsed
 
   // Bail out early if the update has no actual field operations
-  if (isUpdateEmpty(update)) return { cancelled: false, emptyUpdate: true }
+  if (isUpdateEmpty(update)) {
+    return { cancelled: false, emptyUpdate: true }
+  }
 
   // Count matching documents before showing confirm dialog
   const matchedCount = await countDocuments(collectionName, filter)
@@ -386,7 +404,9 @@ function generateFilterSchema(collectionName: string, schemaMap?: SchemaMap): ob
   const filterProperties: Record<string, object> = {}
   if (schemaMap) {
     for (const path of schemaMap.keys()) {
-      if (path.includes(".")) continue
+      if (path.includes(".")) {
+        continue
+      }
       filterProperties[path] = {}
     }
   }
@@ -451,7 +471,9 @@ export async function openEditorForQueryDelete(
     stderr: "inherit",
   })
   await proc.exited
-  if (proc.exitCode !== 0) return { cancelled: true }
+  if (proc.exitCode !== 0) {
+    return { cancelled: true }
+  }
 
   let content: string
   try {
@@ -464,16 +486,25 @@ export async function openEditorForQueryDelete(
   let filter: Filter<Document>
   while (true) {
     const clean = stripComments(stripErrorComment(content))
-    if (clean === "") return { cancelled: true }
+    if (clean === "") {
+      return { cancelled: true }
+    }
     try {
       const raw = JSON5.parse(clean) as Record<string, unknown>
-      if (typeof raw !== "object" || raw === null) throw new Error("Expected a JSON object")
+      if (typeof raw !== "object" || raw === null) {
+        throw new Error("Expected a JSON object")
+      }
       filter = (raw.filter ?? {}) as Filter<Document>
       break
     } catch (err) {
       const next = await openEditorWithError(tmpFile, content, (err as Error).message)
-      if (!next || stripComments(stripErrorComment(next)) === "" || next.trim() === content.trim())
+      if (
+        !next ||
+        stripComments(stripErrorComment(next)) === "" ||
+        next.trim() === content.trim()
+      ) {
         return { cancelled: true }
+      }
       content = next
     }
   }

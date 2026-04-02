@@ -147,9 +147,15 @@ function buildTemplateBody(existing: IndexInfo[]): string {
   const items = existing
     .map((idx) => {
       const opts: Record<string, unknown> = { name: idx.name }
-      if (idx.unique) opts.unique = true
-      if (idx.sparse) opts.sparse = true
-      if (idx.expireAfterSeconds !== undefined) opts.expireAfterSeconds = idx.expireAfterSeconds
+      if (idx.unique) {
+        opts.unique = true
+      }
+      if (idx.sparse) {
+        opts.sparse = true
+      }
+      if (idx.expireAfterSeconds !== undefined) {
+        opts.expireAfterSeconds = idx.expireAfterSeconds
+      }
       const entry = { key: idx.key, options: opts }
       return `    ${JSON.stringify(entry, null, 2).replace(/\n/g, "\n    ")}`
     })
@@ -185,7 +191,9 @@ function parseIndexDefs(json: string): IndexDef[] {
       throw new Error(`Item ${i + 1}: expected an object`)
     }
     const entry = item as Record<string, unknown>
-    if (!("key" in entry)) throw new Error(`Item ${i + 1}: missing "key" field`)
+    if (!("key" in entry)) {
+      throw new Error(`Item ${i + 1}: missing "key" field`)
+    }
     const key = entry.key as IndexSpecification
     if (typeof key !== "object" || key === null || Array.isArray(key)) {
       throw new Error(`Item ${i + 1}: "key" must be an object, e.g. { email: 1 }`)
@@ -252,7 +260,9 @@ export async function openEditorForIndexes(
     })
     await proc.exited
 
-    if (proc.exitCode !== 0) return { cancelled: true }
+    if (proc.exitCode !== 0) {
+      return { cancelled: true }
+    }
 
     let edited: string
     try {
@@ -262,7 +272,9 @@ export async function openEditorForIndexes(
     }
 
     const body = stripComments(stripErrorComment(edited))
-    if (body === "") return { cancelled: true }
+    if (body === "") {
+      return { cancelled: true }
+    }
 
     let defs: IndexDef[]
     try {
@@ -289,10 +301,15 @@ export async function openEditorForIndexes(
       } else {
         // Exists — check if edited (key or relevant options changed)
         const origOpts: Record<string, unknown> = { name: orig.name }
-        if (orig.unique) origOpts.unique = true
-        if (orig.sparse) origOpts.sparse = true
-        if (orig.expireAfterSeconds !== undefined)
+        if (orig.unique) {
+          origOpts.unique = true
+        }
+        if (orig.sparse) {
+          origOpts.sparse = true
+        }
+        if (orig.expireAfterSeconds !== undefined) {
           origOpts.expireAfterSeconds = orig.expireAfterSeconds
+        }
 
         const origStr = JSON.stringify({ key: orig.key, options: origOpts })
         const editedStr = JSON.stringify({ key: def.key, options: def.options })

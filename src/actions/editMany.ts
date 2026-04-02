@@ -21,7 +21,9 @@ export type EditManyConfirmAction = "ignore" | "delete" | "insert"
 type MaybeObjectId = { toHexString?: () => string }
 
 function docIdKey(doc: Document): string | null {
-  if (doc._id === undefined || doc._id === null) return null
+  if (doc._id === undefined || doc._id === null) {
+    return null
+  }
   const id = doc._id as MaybeObjectId
   return typeof id.toHexString === "function" ? id.toHexString() : String(doc._id)
 }
@@ -36,7 +38,9 @@ async function getTempDir(collectionName: string): Promise<string> {
 
 function fieldToJsonSchema(path: string, schemaMap: SchemaMap): object {
   const info = schemaMap.get(path)
-  if (!info) return {}
+  if (!info) {
+    return {}
+  }
 
   switch (info.type) {
     case "string":
@@ -60,7 +64,9 @@ function fieldToJsonSchema(path: string, schemaMap: SchemaMap): object {
       return { type: "object", properties }
     }
     case "array": {
-      if (info.children.length === 0) return { type: "array" }
+      if (info.children.length === 0) {
+        return { type: "array" }
+      }
       // array-of-objects: build items schema from children
       const itemProperties: Record<string, object> = {}
       for (const child of info.children) {
@@ -74,7 +80,9 @@ function fieldToJsonSchema(path: string, schemaMap: SchemaMap): object {
 function generateSchema(collectionName: string, schemaMap: SchemaMap): object {
   const properties: Record<string, object> = {}
   for (const path of schemaMap.keys()) {
-    if (path.includes(".")) continue
+    if (path.includes(".")) {
+      continue
+    }
     properties[path] = fieldToJsonSchema(path, schemaMap)
   }
   return {
@@ -139,7 +147,9 @@ function buildInsertHeader(collectionName: string, dbName: string, schemaMap?: S
 
 function serializeArray(docs: Document[], schemaPath?: string): string {
   const serialized = EJSON.stringify(docs, undefined, 2, { relaxed: true })
-  if (!schemaPath) return serialized
+  if (!schemaPath) {
+    return serialized
+  }
   const parsed = JSON.parse(serialized)
   const wrapped = { $schema: schemaPath, documents: parsed }
   return JSON.stringify(wrapped, null, 2)
@@ -149,7 +159,9 @@ function parseArray(json: string): Document[] {
   const clean = stripComments(json)
   const raw = JSON5.parse(clean)
   const arr = Array.isArray(raw) ? raw : raw.documents
-  if (!Array.isArray(arr)) throw new Error("Expected a JSON array or { documents: [...] }")
+  if (!Array.isArray(arr)) {
+    throw new Error("Expected a JSON array or { documents: [...] }")
+  }
   return arr.map(
     (item: unknown) =>
       EJSON.deserialize(item as Parameters<typeof EJSON.deserialize>[0]) as Document,
@@ -172,7 +184,9 @@ export function diffDocs(originalDocs: Document[], editedDocs: Document[]): Diff
   const originalById = new Map<string, Document>()
   for (const doc of originalDocs) {
     const key = docIdKey(doc)
-    if (key) originalById.set(key, doc)
+    if (key) {
+      originalById.set(key, doc)
+    }
   }
 
   const toReplace: Array<{ originalId: unknown; newDoc: Document }> = []
@@ -206,7 +220,9 @@ export function diffDocs(originalDocs: Document[], editedDocs: Document[]): Diff
 
   const missing: Document[] = []
   for (const [key, doc] of originalById) {
-    if (!seenKeys.has(key)) missing.push(doc)
+    if (!seenKeys.has(key)) {
+      missing.push(doc)
+    }
   }
 
   return {
@@ -256,7 +272,9 @@ export async function openEditorForMany(
   })
   await proc.exited
 
-  if (proc.exitCode !== 0) return { cancelled: true }
+  if (proc.exitCode !== 0) {
+    return { cancelled: true }
+  }
 
   let edited: string
   try {
@@ -280,14 +298,17 @@ export async function openEditorForMany(
   // Retry loop: re-open editor on parse error with an inline error comment
   while (true) {
     const clean = stripComments(stripErrorComment(edited))
-    if (clean === "") return { cancelled: true }
+    if (clean === "") {
+      return { cancelled: true }
+    }
     try {
       editedDocs = parseArray(clean)
       break
     } catch (err) {
       const next = await openEditorWithError(tmpFile, edited, (err as Error).message)
-      if (!next || stripComments(stripErrorComment(next)) === "" || next.trim() === edited.trim())
+      if (!next || stripComments(stripErrorComment(next)) === "" || next.trim() === edited.trim()) {
         return { cancelled: true }
+      }
       edited = next
     }
   }
@@ -337,7 +358,9 @@ export async function openEditorForInsert(
   })
   await proc.exited
 
-  if (proc.exitCode !== 0) return { cancelled: true }
+  if (proc.exitCode !== 0) {
+    return { cancelled: true }
+  }
 
   let edited: string
   try {
@@ -347,21 +370,25 @@ export async function openEditorForInsert(
   }
 
   const editedBody = stripComments(stripErrorComment(edited))
-  if (editedBody === stripComments(bodyContent))
+  if (editedBody === stripComments(bodyContent)) {
     return { cancelled: false, inserted: 0, errors: [] }
+  }
 
   let newDocs: Document[]
   // Retry loop: re-open editor on parse error with an inline error comment
   while (true) {
     const clean = stripComments(stripErrorComment(edited))
-    if (clean === "") return { cancelled: true }
+    if (clean === "") {
+      return { cancelled: true }
+    }
     try {
       newDocs = parseArray(clean)
       break
     } catch (err) {
       const next = await openEditorWithError(tmpFile, edited, (err as Error).message)
-      if (!next || stripComments(stripErrorComment(next)) === "" || next.trim() === edited.trim())
+      if (!next || stripComments(stripErrorComment(next)) === "" || next.trim() === edited.trim()) {
         return { cancelled: true }
+      }
       edited = next
     }
   }
@@ -383,7 +410,9 @@ export async function openEditorForInsert(
 function buildTemplate(doc: Document): Document {
   const result: Document = {}
   for (const [key, value] of Object.entries(doc)) {
-    if (key === "_id") continue
+    if (key === "_id") {
+      continue
+    }
     if (value === null) {
       result[key] = null
       continue

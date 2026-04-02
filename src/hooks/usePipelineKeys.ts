@@ -30,11 +30,15 @@ interface UsePipelineKeysOptions {
 
 /** Build +field/-field projection suffix from a $project object */
 function buildProjSuffix(projection: Document | undefined): string {
-  if (!projection || typeof projection !== "object") return ""
+  if (!projection || typeof projection !== "object") {
+    return ""
+  }
   const entries = Object.entries(projection as Record<string, unknown>).filter(
     ([, v]) => v === 0 || v === 1,
   ) as [string, 0 | 1][]
-  if (entries.length === 0) return ""
+  if (entries.length === 0) {
+    return ""
+  }
   return " " + projectionToSimple(Object.fromEntries(entries) as Record<string, 0 | 1>)
 }
 
@@ -49,11 +53,15 @@ function switchToSimple(state: AppState, dispatch: Dispatch<AppAction>, openQuer
     dispatch({ type: "STOP_PIPELINE_WATCH" })
     dispatch({ type: "ENTER_SIMPLE_MODE", query: simpleQuery })
     if (openQuery) {
-      if (!state.filterBarVisible) dispatch({ type: "TOGGLE_FILTER_BAR" })
+      if (!state.filterBarVisible) {
+        dispatch({ type: "TOGGLE_FILTER_BAR" })
+      }
       dispatch({ type: "OPEN_QUERY" })
     }
   } else {
-    if (openQuery && !state.filterBarVisible) dispatch({ type: "TOGGLE_FILTER_BAR" })
+    if (openQuery && !state.filterBarVisible) {
+      dispatch({ type: "TOGGLE_FILTER_BAR" })
+    }
     dispatch({ type: "SHOW_PIPELINE_CONFIRM", simpleQuery })
   }
 }
@@ -65,12 +73,16 @@ export function usePipelineKeys({ state, dispatch, renderer, keymap }: UsePipeli
     shift?: boolean
     sequence?: string
   }): boolean {
-    if (state.view !== "documents" || !state.activeTabId) return false
+    if (state.view !== "documents" || !state.activeTabId) {
+      return false
+    }
 
     // pipeline.open: open pipeline editor (blocking)
     if (matches(key, keymap["pipeline.open"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       stopWatching()
       renderer.suspend()
       openPipelineEditor({
@@ -85,7 +97,9 @@ export function usePipelineKeys({ state, dispatch, renderer, keymap }: UsePipeli
         sortDirection: state.sortDirection,
       })
         .then((result) => {
-          if (!result) return
+          if (!result) {
+            return
+          }
           dispatch({
             type: "SET_PIPELINE",
             pipeline: result.pipeline,
@@ -110,7 +124,9 @@ export function usePipelineKeys({ state, dispatch, renderer, keymap }: UsePipeli
     // pipeline.open_full: open pipeline file in tmux split (non-blocking)
     if (matches(key, keymap["pipeline.open_full"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       writePipelineFile({
         collectionName: activeTab.collectionName,
         dbName: state.dbName,
@@ -163,7 +179,9 @@ export function usePipelineKeys({ state, dispatch, renderer, keymap }: UsePipeli
       if (state.pipelineMode) {
         switchToSimple(state, dispatch, true)
       } else {
-        if (!state.filterBarVisible) dispatch({ type: "TOGGLE_FILTER_BAR" })
+        if (!state.filterBarVisible) {
+          dispatch({ type: "TOGGLE_FILTER_BAR" })
+        }
         dispatch({ type: "OPEN_QUERY" })
       }
       return true

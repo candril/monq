@@ -13,7 +13,9 @@ import { classifyPipeline, stageOf } from "../query/pipeline"
 export function hideColumn(state: AppState, dispatch: Dispatch<AppAction>): void {
   const visCols = state.columns.filter((c) => c.visible)
   const col = visCols[state.selectedColumnIndex]
-  if (!col) return
+  if (!col) {
+    return
+  }
 
   if (state.pipelineMode) {
     hideColumnPipeline(state, dispatch, col.field)
@@ -74,9 +76,15 @@ function hideColumnSimple(state: AppState, dispatch: Dispatch<AppAction>, field:
     .trim()
     .split(/\s+/)
     .filter((t: string) => {
-      if (!t) return false
-      if (t.startsWith("+")) return false
-      if (t.startsWith("-") && !/[><!:]/.test(t.slice(1))) return false
+      if (!t) {
+        return false
+      }
+      if (t.startsWith("+")) {
+        return false
+      }
+      if (t.startsWith("-") && !/[><!:]/.test(t.slice(1))) {
+        return false
+      }
       return true
     })
   const projStr = Object.keys(proj).length > 0 ? " " + projectionToSimple(proj) : ""

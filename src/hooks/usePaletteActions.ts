@@ -83,11 +83,21 @@ export function usePaletteActions({
       }
 
       // Route to domain handlers
-      if (handleThemeCommand(cmd.id, ctx)) return
-      if (handleViewCommand(cmd.id, ctx)) return
-      if (handleQueryCommand(cmd.id, ctx)) return
-      if (handleDocumentCommand(cmd.id, ctx)) return
-      if (handleNavigationCommand(cmd.id, ctx)) return
+      if (handleThemeCommand(cmd.id, ctx)) {
+        return
+      }
+      if (handleViewCommand(cmd.id, ctx)) {
+        return
+      }
+      if (handleQueryCommand(cmd.id, ctx)) {
+        return
+      }
+      if (handleDocumentCommand(cmd.id, ctx)) {
+        return
+      }
+      if (handleNavigationCommand(cmd.id, ctx)) {
+        return
+      }
 
       // Fallback
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })

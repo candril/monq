@@ -21,7 +21,9 @@ export function CreateInputDialog({ onConfirm, onCancel }: CreateInputDialogProp
       return
     }
     if (key.name === "return") {
-      if (!name.trim()) return
+      if (!name.trim()) {
+        return
+      }
       onConfirm(name.trim())
       return
     }

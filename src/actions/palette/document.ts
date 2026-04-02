@@ -13,13 +13,17 @@ export function handleDocumentCommand(cmdId: string, ctx: PaletteContext): boole
     case "doc:insert": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       const templateDoc = state.documents[state.selectedIndex]
       renderer.suspend()
       openEditorForInsert(activeTab.collectionName, state.dbName, templateDoc, state.schemaMap)
         .then((outcome) => {
           renderer.resume()
-          if (outcome.cancelled) return
+          if (outcome.cancelled) {
+            return
+          }
           if (outcome.errors.length > 0) {
             dispatch({ type: "SHOW_MESSAGE", message: outcome.errors[0], kind: "error" })
           } else if (outcome.inserted > 0) {
@@ -46,19 +50,25 @@ export function handleDocumentCommand(cmdId: string, ctx: PaletteContext): boole
     case "doc:delete": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       const docsToDelete =
         state.selectedRows.size > 0
           ? state.documents.filter((_, i) => state.selectedRows.has(i))
           : [state.documents[state.selectedIndex]].filter(Boolean)
-      if (docsToDelete.length === 0) return true
+      if (docsToDelete.length === 0) {
+        return true
+      }
       showDeleteConfirm(activeTab.collectionName, docsToDelete, dispatch)
       return true
     }
     case "doc:bulk-query-update": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       const activeFilter = resolveActiveFilter(state)
       runBulkQueryUpdate(
         activeTab.collectionName,
@@ -73,7 +83,9 @@ export function handleDocumentCommand(cmdId: string, ctx: PaletteContext): boole
     case "doc:bulk-query-delete": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       const activeFilter = resolveActiveFilter(state)
       runBulkQueryDelete(
         activeTab.collectionName,

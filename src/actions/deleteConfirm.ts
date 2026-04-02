@@ -20,7 +20,9 @@ export function showDeleteConfirm(
     confirmation: {
       docs,
       resolve: async (confirmed) => {
-        if (!confirmed) return
+        if (!confirmed) {
+          return
+        }
         const errors: string[] = []
         for (const doc of docs) {
           try {

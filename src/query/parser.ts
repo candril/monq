@@ -67,11 +67,16 @@ const RELATIVE = /^(now|today|(ago|in)\((\d+)(d|w|m|h)\))$/
 
 function coerceRelativeDate(raw: string): Date | null {
   const m = RELATIVE.exec(raw)
-  if (!m) return null
+  if (!m) {
+    return null
+  }
   const now = new Date()
-  if (raw === "now") return now
-  if (raw === "today")
+  if (raw === "now") {
+    return now
+  }
+  if (raw === "today") {
     return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  }
   const direction = m[2] === "ago" ? -1 : 1
   const n = parseInt(m[3], 10)
   const unit = m[4]
@@ -116,30 +121,48 @@ function serializeValue(v: unknown): string {
       v.getUTCMilliseconds() === 999
     return isStartOfDay || isEndOfDay ? v.toISOString().slice(0, 10) : v.toISOString()
   }
-  if (v instanceof ObjectId) return `ObjectId(${v.toHexString()})`
+  if (v instanceof ObjectId) {
+    return `ObjectId(${v.toHexString()})`
+  }
   return String(v)
 }
 
 /** Coerce a string value to its natural type */
 function coerceValue(value: string): string | number | boolean | null | ObjectId | Date {
-  if (value === "null") return null
-  if (value === "true") return true
-  if (value === "false") return false
+  if (value === "null") {
+    return null
+  }
+  if (value === "true") {
+    return true
+  }
+  if (value === "false") {
+    return false
+  }
 
   // Relative date expressions (before numeric check to handle "now", "today" etc.)
   const relDate = coerceRelativeDate(value)
-  if (relDate) return relDate
+  if (relDate) {
+    return relDate
+  }
 
   // ObjectId
   const oidMatch = value.match(/^(?:ObjectId|oid)\(["']?([0-9a-fA-F]{24})["']?\)$/)
-  if (oidMatch) return new ObjectId(oidMatch[1])
+  if (oidMatch) {
+    return new ObjectId(oidMatch[1])
+  }
 
   // ISO 8601 dates — regex-first to avoid JS date coercion false positives
-  if (DATE_ONLY.test(value)) return new Date(value + "T00:00:00.000Z")
-  if (DATE_TIME.test(value)) return new Date(value)
+  if (DATE_ONLY.test(value)) {
+    return new Date(value + "T00:00:00.000Z")
+  }
+  if (DATE_TIME.test(value)) {
+    return new Date(value)
+  }
 
   const num = Number(value)
-  if (!isNaN(num) && value.trim() !== "") return num
+  if (!isNaN(num) && value.trim() !== "") {
+    return num
+  }
   if (
     (value.startsWith('"') && value.endsWith('"')) ||
     (value.startsWith("'") && value.endsWith("'"))
@@ -158,18 +181,24 @@ function tokenize(input: string): string[] {
   for (const ch of input) {
     if (inQuote) {
       current += ch
-      if (ch === inQuote) inQuote = null
+      if (ch === inQuote) {
+        inQuote = null
+      }
     } else if (ch === '"' || ch === "'") {
       inQuote = ch
       current += ch
     } else if (ch === " ") {
-      if (current) tokens.push(current)
+      if (current) {
+        tokens.push(current)
+      }
       current = ""
     } else {
       current += ch
     }
   }
-  if (current) tokens.push(current)
+  if (current) {
+    tokens.push(current)
+  }
   return tokens
 }
 
@@ -193,7 +222,9 @@ export function parseSimpleQuery(input: string, schemaMap?: SchemaMap): Filter<D
 
 export function parseSimpleQueryFull(input: string, schemaMap?: SchemaMap): ParsedSimpleQuery {
   const trimmed = input.trim()
-  if (!trimmed) return { filter: {}, projection: undefined }
+  if (!trimmed) {
+    return { filter: {}, projection: undefined }
+  }
 
   const tokens = tokenize(trimmed)
   const filter: Record<string, unknown> = {}
@@ -256,7 +287,9 @@ export function parseSimpleQueryFull(input: string, schemaMap?: SchemaMap): Pars
       } else if (rawValue.startsWith("size:")) {
         // field:size:N -> { field: { $size: N } }
         const n = Number(rawValue.slice(5))
-        if (!isNaN(n)) setFilterValue(filter, field, { $size: n }, schemaMap)
+        if (!isNaN(n)) {
+          setFilterValue(filter, field, { $size: n }, schemaMap)
+        }
       } else if (rawValue.startsWith("[") && rawValue.endsWith("]")) {
         // Bracket syntax: field:[a,b,c] -> $in / $nin
         const inner = rawValue.slice(1, -1)
@@ -272,9 +305,15 @@ export function parseSimpleQueryFull(input: string, schemaMap?: SchemaMap): Pars
         // Apply end-of-day to date-only upper bound
         const hi = hiRaw instanceof Date && isDateOnly(right) ? endOfDay(hiRaw) : hiRaw
         const range: Record<string, unknown> = {}
-        if (lo !== null) range.$gte = lo
-        if (hi !== null) range.$lte = hi
-        if (Object.keys(range).length > 0) setFilterValue(filter, field, range, schemaMap)
+        if (lo !== null) {
+          range.$gte = lo
+        }
+        if (hi !== null) {
+          range.$lte = hi
+        }
+        if (Object.keys(range).length > 0) {
+          setFilterValue(filter, field, range, schemaMap)
+        }
       } else {
         const val = coerceValue(rawValue)
         // Date-only token → day-range query (exact equality rarely matches)
@@ -391,7 +430,9 @@ export function projectionToSimple(proj: Record<string, 0 | 1>): string {
 /** Parse a BSON/JSON query string into a MongoDB filter */
 export function parseBsonQuery(input: string): Filter<Document> {
   const trimmed = input.trim()
-  if (!trimmed) return {}
+  if (!trimmed) {
+    return {}
+  }
   return JSON.parse(trimmed) as Filter<Document>
 }
 
@@ -496,7 +537,9 @@ export function bsonToSimple(bsonFilter: string, bsonProjection: string): string
         projOk = false
         break
       }
-      if (projOk && projTokens.length > 0) projTokenStr = " " + projTokens.join(" ")
+      if (projOk && projTokens.length > 0) {
+        projTokenStr = " " + projTokens.join(" ")
+      }
     } catch {
       /* skip */
     }

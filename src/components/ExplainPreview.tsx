@@ -37,17 +37,36 @@ interface StageInfo {
 
 function parseStageNode(s: Record<string, unknown>): StageInfo {
   const info: StageInfo = { stage: (s.stage as string) ?? "?" }
-  if (s.indexName) info.indexName = s.indexName as string
-  if (s.keyPattern) info.keyPattern = s.keyPattern as Record<string, unknown>
-  if (s.direction) info.direction = s.direction as string
-  if (typeof s.nReturned === "number") info.nReturned = s.nReturned as number
-  if (typeof s.executionTimeMillisEstimate === "number")
+  if (s.indexName) {
+    info.indexName = s.indexName as string
+  }
+  if (s.keyPattern) {
+    info.keyPattern = s.keyPattern as Record<string, unknown>
+  }
+  if (s.direction) {
+    info.direction = s.direction as string
+  }
+  if (typeof s.nReturned === "number") {
+    info.nReturned = s.nReturned as number
+  }
+  if (typeof s.executionTimeMillisEstimate === "number") {
     info.executionTimeMillisEstimate = s.executionTimeMillisEstimate as number
-  if (s.filter && typeof s.filter === "object") info.filter = s.filter as Record<string, unknown>
-  if (typeof s.isMultiKey === "boolean") info.isMultiKey = s.isMultiKey as boolean
-  if (typeof s.memUsage === "number") info.memUsage = s.memUsage as number
-  if (typeof s.memLimit === "number") info.memLimit = s.memLimit as number
-  if (s.sortPattern) info.sortPattern = s.sortPattern as Record<string, unknown>
+  }
+  if (s.filter && typeof s.filter === "object") {
+    info.filter = s.filter as Record<string, unknown>
+  }
+  if (typeof s.isMultiKey === "boolean") {
+    info.isMultiKey = s.isMultiKey as boolean
+  }
+  if (typeof s.memUsage === "number") {
+    info.memUsage = s.memUsage as number
+  }
+  if (typeof s.memLimit === "number") {
+    info.memLimit = s.memLimit as number
+  }
+  if (s.sortPattern) {
+    info.sortPattern = s.sortPattern as Record<string, unknown>
+  }
   return info
 }
 
@@ -85,7 +104,9 @@ function flattenStages(plan: Document): StageInfo[] {
           stages.push(...walkInputStages(cursorExec as Document))
         } else {
           const wp = (cursor as Record<string, Document>)?.queryPlanner?.winningPlan
-          if (wp) stages.push(...walkInputStages(wp as Document))
+          if (wp) {
+            stages.push(...walkInputStages(wp as Document))
+          }
         }
       } else {
         const stageName = keys.find((k) => k.startsWith("$")) ?? keys[0] ?? "?"
@@ -93,9 +114,12 @@ function flattenStages(plan: Document): StageInfo[] {
         const info: StageInfo = { stage: stageName }
         if (typeof stageData === "object" && stageData !== null) {
           const sd = stageData as Record<string, unknown>
-          if (typeof sd.nReturned === "number") info.nReturned = sd.nReturned as number
-          if (typeof sd.executionTimeMillisEstimate === "number")
+          if (typeof sd.nReturned === "number") {
+            info.nReturned = sd.nReturned as number
+          }
+          if (typeof sd.executionTimeMillisEstimate === "number") {
             info.executionTimeMillisEstimate = sd.executionTimeMillisEstimate as number
+          }
         }
         stages.push(info)
       }
@@ -171,14 +195,22 @@ function extractStats(plan: Document): ExplainStats | null {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function stageColor(stage: string): string {
-  if (stage === "COLLSCAN") return theme.error
-  if (stage === "IXSCAN") return theme.success
+  if (stage === "COLLSCAN") {
+    return theme.error
+  }
+  if (stage === "IXSCAN") {
+    return theme.success
+  }
   return theme.primary
 }
 
 function timeColor(ms: number): string {
-  if (ms >= 100) return theme.error
-  if (ms >= 10) return theme.warning
+  if (ms >= 100) {
+    return theme.error
+  }
+  if (ms >= 10) {
+    return theme.warning
+  }
   return theme.success
 }
 
@@ -467,14 +499,18 @@ export function ExplainPreview({
   }, [scrollOffset])
 
   const data = useMemo(() => {
-    if (!result) return null
+    if (!result) {
+      return null
+    }
     return {
       stages: flattenStages(result),
       stats: extractStats(result),
     }
   }, [result])
 
-  if (!position) return null
+  if (!position) {
+    return null
+  }
 
   const isRight = position === "right"
 

@@ -252,7 +252,9 @@ const reducers = [
 export function appReducer(state: AppState, action: AppAction): AppState {
   for (const reducer of reducers) {
     const result = reducer(state, action)
-    if (result !== null) return result
+    if (result !== null) {
+      return result
+    }
   }
   return state
 }

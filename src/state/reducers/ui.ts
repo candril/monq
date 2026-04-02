@@ -15,7 +15,9 @@ export function uiReducer(state: AppState, action: AppAction): AppState | null {
       }
 
     case "CYCLE_PREVIEW_POSITION":
-      if (!state.previewPosition) return state
+      if (!state.previewPosition) {
+        return state
+      }
       return {
         ...state,
         previewPosition: state.previewPosition === "right" ? "bottom" : "right",

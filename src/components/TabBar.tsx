@@ -13,13 +13,17 @@ interface TabBarProps {
 
 /** Condensed filter display */
 function filterSuffix(query: string): string {
-  if (!query) return ""
+  if (!query) {
+    return ""
+  }
   const short = query.trim().length > 20 ? query.trim().slice(0, 19) + "~" : query.trim()
   return ` [${short}]`
 }
 
 export function TabBar({ tabs, activeTabId }: TabBarProps) {
-  if (tabs.length <= 1) return null
+  if (tabs.length <= 1) {
+    return null
+  }
 
   return (
     <box height={1} backgroundColor={theme.headerBg} paddingX={1} flexDirection="row">

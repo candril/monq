@@ -33,19 +33,29 @@ export function useDocumentEditKeys({
   keymap,
 }: UseDocumentEditKeysOptions) {
   function handleKey(key: { name: string; ctrl?: boolean; shift?: boolean }): boolean {
-    if (state.view !== "documents") return false
-    if (state.commandPaletteVisible) return false
-    if (state.queryVisible) return false
+    if (state.view !== "documents") {
+      return false
+    }
+    if (state.commandPaletteVisible) {
+      return false
+    }
+    if (state.queryVisible) {
+      return false
+    }
 
     // doc.edit: edit document(s)
     if (matches(key, keymap["doc.edit"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       const cursorOnSelection = state.selectedRows.has(state.selectedIndex)
       const docsToEdit = cursorOnSelection
         ? state.documents.filter((_, i) => state.selectedRows.has(i))
         : [state.documents[state.selectedIndex]].filter(Boolean)
-      if (docsToEdit.length === 0) return true
+      if (docsToEdit.length === 0) {
+        return true
+      }
 
       renderer.suspend()
       openEditorForMany(
@@ -57,7 +67,9 @@ export function useDocumentEditKeys({
       )
         .then(async (outcome) => {
           renderer.resume()
-          if (outcome.cancelled) return
+          if (outcome.cancelled) {
+            return
+          }
           const { result, applyEdits, editedDocs } = outcome
           if (result.errors.length > 0) {
             dispatch({ type: "SHOW_MESSAGE", message: result.errors[0], kind: "error" })
@@ -88,13 +100,17 @@ export function useDocumentEditKeys({
     // doc.insert: insert document
     if (matches(key, keymap["doc.insert"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       const templateDoc = state.documents[state.selectedIndex]
       renderer.suspend()
       openEditorForInsert(activeTab.collectionName, state.dbName, templateDoc, state.schemaMap)
         .then((outcome) => {
           renderer.resume()
-          if (outcome.cancelled) return
+          if (outcome.cancelled) {
+            return
+          }
           if (outcome.errors.length > 0) {
             dispatch({ type: "SHOW_MESSAGE", message: outcome.errors[0], kind: "error" })
           } else if (outcome.inserted > 0) {
@@ -122,12 +138,16 @@ export function useDocumentEditKeys({
     // doc.delete: delete document(s)
     if (matches(key, keymap["doc.delete"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       const docsToDelete =
         state.selectedRows.size > 0
           ? state.documents.filter((_, i) => state.selectedRows.has(i))
           : [state.documents[state.selectedIndex]].filter(Boolean)
-      if (docsToDelete.length === 0) return true
+      if (docsToDelete.length === 0) {
+        return true
+      }
       showDeleteConfirm(activeTab.collectionName, docsToDelete, dispatch)
       return true
     }
@@ -135,7 +155,9 @@ export function useDocumentEditKeys({
     // doc.bulk_query_update: open $EDITOR for updateMany
     if (matches(key, keymap["doc.bulk_query_update"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       const activeFilter = resolveActiveFilter(state)
       runBulkQueryUpdate(
         activeTab.collectionName,
@@ -151,7 +173,9 @@ export function useDocumentEditKeys({
     // doc.bulk_query_delete: open $EDITOR for deleteMany
     if (matches(key, keymap["doc.bulk_query_delete"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       const activeFilter = resolveActiveFilter(state)
       runBulkQueryDelete(
         activeTab.collectionName,
@@ -167,12 +191,16 @@ export function useDocumentEditKeys({
     // index.open: open index editor
     if (matches(key, keymap["index.open"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
       renderer.suspend()
       openEditorForIndexes(activeTab.collectionName, state.dbName, state.schemaMap)
         .then((outcome) => {
           renderer.resume()
-          if (outcome.cancelled) return
+          if (outcome.cancelled) {
+            return
+          }
           const { toCreate, toDrop, toReplace, apply } = outcome
           dispatch({
             type: "SHOW_INDEX_CREATE_CONFIRM",
@@ -181,7 +209,9 @@ export function useDocumentEditKeys({
               toDrop,
               toReplace,
               resolve: async (confirmed) => {
-                if (!confirmed) return
+                if (!confirmed) {
+                  return
+                }
                 dispatch({
                   type: "SHOW_MESSAGE",
                   message: "Applying index changes...",
@@ -192,8 +222,12 @@ export function useDocumentEditKeys({
                   dispatch({ type: "SHOW_MESSAGE", message: result.errors[0], kind: "error" })
                 } else {
                   const parts: string[] = []
-                  if (result.created > 0) parts.push(`Created ${result.created}`)
-                  if (result.dropped > 0) parts.push(`Dropped ${result.dropped}`)
+                  if (result.created > 0) {
+                    parts.push(`Created ${result.created}`)
+                  }
+                  if (result.dropped > 0) {
+                    parts.push(`Dropped ${result.dropped}`)
+                  }
                   dispatch({
                     type: "SHOW_MESSAGE",
                     message: parts.join(", ") || "No changes",
@@ -218,7 +252,9 @@ export function useDocumentEditKeys({
     // explain.run: toggle explain panel
     if (matches(key, keymap["explain.run"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
 
       // If explain is visible, close the panel entirely
       if (state.previewPosition && state.previewMode === "explain") {
@@ -263,7 +299,9 @@ export function useDocumentEditKeys({
     // explain.raw: open full explain JSON in $EDITOR
     if (matches(key, keymap["explain.raw"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (!activeTab) return true
+      if (!activeTab) {
+        return true
+      }
 
       const query = resolveCurrentQuery(state)
       renderer.suspend()
@@ -305,7 +343,9 @@ export function useDocumentEditKeys({
     editedDocs: import("mongodb").Document[],
   ): void {
     const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
-    if (!activeTab) return
+    if (!activeTab) {
+      return
+    }
     dispatch({
       type: "SHOW_BULK_EDIT_CONFIRM",
       confirmation: {
@@ -322,7 +362,9 @@ export function useDocumentEditKeys({
           )
             .then(async (o2) => {
               renderer.resume()
-              if (o2.cancelled) return
+              if (o2.cancelled) {
+                return
+              }
               await o2.applyEdits()
               if (o2.result.missing.length === 0 && o2.result.added.length === 0) {
                 const n2 = o2.result.updated
@@ -357,11 +399,15 @@ export function useDocumentEditKeys({
             dispatch({ type: "SHOW_MESSAGE", message: errors[0], kind: "error" })
           } else {
             const parts: string[] = []
-            if (result.updated > 0) parts.push(`${result.updated} updated`)
-            if (missingAction === "delete" && result.missing.length > 0)
+            if (result.updated > 0) {
+              parts.push(`${result.updated} updated`)
+            }
+            if (missingAction === "delete" && result.missing.length > 0) {
               parts.push(`${result.missing.length} deleted`)
-            if (addedAction === "insert" && result.added.length > 0)
+            }
+            if (addedAction === "insert" && result.added.length > 0) {
               parts.push(`${result.added.length} inserted`)
+            }
             dispatch({ type: "SHOW_MESSAGE", message: parts.join(", ") || "Done", kind: "success" })
           }
           dispatch({ type: "FREEZE_SELECTION" })

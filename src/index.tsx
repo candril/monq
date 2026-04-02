@@ -63,8 +63,11 @@ const effectivePresetId = stateThemeId ?? resolvedConfig.configThemeId
 // Apply the effective preset (if any), then layer config.toml [theme] token overrides on top.
 if (effectivePresetId) {
   const preset = findPreset(effectivePresetId)
-  if (preset) setTheme(buildTheme({ ...preset.theme, ...resolvedConfig.theme }))
-  else setTheme(buildTheme(resolvedConfig.theme))
+  if (preset) {
+    setTheme(buildTheme({ ...preset.theme, ...resolvedConfig.theme }))
+  } else {
+    setTheme(buildTheme(resolvedConfig.theme))
+  }
 } else {
   setTheme(buildTheme(resolvedConfig.theme))
 }
@@ -97,7 +100,9 @@ const renderer = await createCliRenderer({
 type Screen = "picker" | "app"
 
 function initialScreen(): Screen {
-  if (initialUri) return "app"
+  if (initialUri) {
+    return "app"
+  }
   return "picker"
 }
 

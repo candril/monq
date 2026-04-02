@@ -14,10 +14,14 @@ function idKey(id: unknown): string {
 }
 
 function deriveSelectedRows(documents: Document[], selectedIds: Set<string>): Set<number> {
-  if (selectedIds.size === 0) return new Set()
+  if (selectedIds.size === 0) {
+    return new Set()
+  }
   const rows = new Set<number>()
   for (let i = 0; i < documents.length; i++) {
-    if (selectedIds.has(idKey(documents[i]._id))) rows.add(i)
+    if (selectedIds.has(idKey(documents[i]._id))) {
+      rows.add(i)
+    }
   }
   return rows
 }
@@ -25,12 +29,16 @@ function deriveSelectedRows(documents: Document[], selectedIds: Set<string>): Se
 export function selectionReducer(state: AppState, action: AppAction): AppState | null {
   switch (action.type) {
     case "ENTER_SELECTION_MODE": {
-      if (state.selectionMode === "selecting") return state
+      if (state.selectionMode === "selecting") {
+        return state
+      }
       const anchor = state.selectedIndex
       const doc = state.documents[anchor]
       const frozenIds = new Set(state.selectedIds)
       const selectedIds = new Set(frozenIds)
-      if (doc?._id !== undefined) selectedIds.add(idKey(doc._id))
+      if (doc?._id !== undefined) {
+        selectedIds.add(idKey(doc._id))
+      }
       const selectedRows = deriveSelectedRows(state.documents, selectedIds)
       return {
         ...state,
@@ -53,7 +61,9 @@ export function selectionReducer(state: AppState, action: AppAction): AppState |
       }
 
     case "FREEZE_SELECTION":
-      if (state.selectionMode !== "selecting") return state
+      if (state.selectionMode !== "selecting") {
+        return state
+      }
       return {
         ...state,
         selectionMode: "selected",
@@ -63,7 +73,9 @@ export function selectionReducer(state: AppState, action: AppAction): AppState |
 
     case "TOGGLE_CURRENT_ROW": {
       const doc = state.documents[state.selectedIndex]
-      if (!doc || doc._id === undefined) return state
+      if (!doc || doc._id === undefined) {
+        return state
+      }
       const key = idKey(doc._id)
       const selectedIds = new Set(state.selectedIds)
       const frozenIds = new Set(state.frozenIds)
@@ -92,7 +104,9 @@ export function selectionReducer(state: AppState, action: AppAction): AppState |
         const hi = Math.max(anchor, newIndex)
         for (let i = lo; i <= hi; i++) {
           const id = state.documents[i]?._id
-          if (id !== undefined) selectedIds.add(idKey(id))
+          if (id !== undefined) {
+            selectedIds.add(idKey(id))
+          }
         }
         const selectedRows = deriveSelectedRows(state.documents, selectedIds)
         return { ...state, selectedIndex: newIndex, selectedIds, selectedRows }
@@ -101,7 +115,9 @@ export function selectionReducer(state: AppState, action: AppAction): AppState |
     }
 
     case "JUMP_SELECTION_END": {
-      if (state.selectionMode !== "selecting" || state.selectionAnchor === null) return state
+      if (state.selectionMode !== "selecting" || state.selectionAnchor === null) {
+        return state
+      }
       return {
         ...state,
         selectedIndex: state.selectionAnchor,
@@ -112,7 +128,9 @@ export function selectionReducer(state: AppState, action: AppAction): AppState |
     case "SELECT_ALL": {
       const selectedIds = new Set(state.selectedIds)
       for (const doc of state.documents) {
-        if (doc._id !== undefined) selectedIds.add(idKey(doc._id))
+        if (doc._id !== undefined) {
+          selectedIds.add(idKey(doc._id))
+        }
       }
       const frozenIds = new Set(selectedIds)
       const selectedRows = deriveSelectedRows(state.documents, selectedIds)

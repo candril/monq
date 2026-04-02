@@ -6,7 +6,9 @@ import { buildTheme } from "../../theme"
 import { saveStateTheme, clearStateTheme } from "../../state/theme"
 
 export function handleThemeCommand(cmdId: string, ctx: PaletteContext): boolean {
-  if (!cmdId.startsWith("theme:") || cmdId === "theme:pick") return false
+  if (!cmdId.startsWith("theme:") || cmdId === "theme:pick") {
+    return false
+  }
   const {
     dispatch,
     setPaletteMode,

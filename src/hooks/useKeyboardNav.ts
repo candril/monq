@@ -74,14 +74,18 @@ export function useKeyboardNav({
       "tab.prev",
       () => {
         const idx = state.tabs.findIndex((t) => t.id === state.activeTabId)
-        if (idx > 0) switchToTab(state.tabs[idx - 1].id, dispatch)
+        if (idx > 0) {
+          switchToTab(state.tabs[idx - 1].id, dispatch)
+        }
       },
     ],
     [
       "tab.next",
       () => {
         const idx = state.tabs.findIndex((t) => t.id === state.activeTabId)
-        if (idx < state.tabs.length - 1) switchToTab(state.tabs[idx + 1].id, dispatch)
+        if (idx < state.tabs.length - 1) {
+          switchToTab(state.tabs[idx + 1].id, dispatch)
+        }
       },
     ],
 
@@ -92,8 +96,11 @@ export function useKeyboardNav({
     [
       "nav.down",
       () => {
-        if (state.selectionMode === "selecting") dispatch({ type: "MOVE_SELECTION", delta: 1 })
-        else dispatch({ type: "MOVE_DOCUMENT", delta: 1 })
+        if (state.selectionMode === "selecting") {
+          dispatch({ type: "MOVE_SELECTION", delta: 1 })
+        } else {
+          dispatch({ type: "MOVE_DOCUMENT", delta: 1 })
+        }
         if (
           !state.loadingMore &&
           state.loadedCount < state.documentCount &&
@@ -106,8 +113,11 @@ export function useKeyboardNav({
     [
       "nav.up",
       () => {
-        if (state.selectionMode === "selecting") dispatch({ type: "MOVE_SELECTION", delta: -1 })
-        else dispatch({ type: "MOVE_DOCUMENT", delta: -1 })
+        if (state.selectionMode === "selecting") {
+          dispatch({ type: "MOVE_SELECTION", delta: -1 })
+        } else {
+          dispatch({ type: "MOVE_DOCUMENT", delta: -1 })
+        }
       },
     ],
     ["nav.left", () => dispatch({ type: "MOVE_COLUMN", delta: -1 })],
@@ -137,7 +147,9 @@ export function useKeyboardNav({
       () => {
         const visCols = state.columns.filter((c) => c.visible)
         const sortCol = visCols[state.selectedColumnIndex]
-        if (sortCol) dispatch({ type: "CYCLE_SORT", field: sortCol.field })
+        if (sortCol) {
+          dispatch({ type: "CYCLE_SORT", field: sortCol.field })
+        }
       },
     ],
     ["doc.yank_document", () => yankDocument(state, dispatch)],
@@ -148,13 +160,17 @@ export function useKeyboardNav({
 
   /** Scroll half a page up or down, or scroll preview when preview is focused. */
   function halfPageScroll(dir: 1 | -1): void {
-    if (state.view !== "documents") return
+    if (state.view !== "documents") {
+      return
+    }
     if (state.previewPosition) {
       dispatch({ type: "SCROLL_PREVIEW", delta: dir * 10 })
       return
     }
     const scrollbox = docListScrollRef.current
-    if (!scrollbox) return
+    if (!scrollbox) {
+      return
+    }
     const viewportHeight = scrollbox.viewport?.height ?? 20
     const half = Math.floor(viewportHeight / 2)
     const newIndex = Math.max(
@@ -211,7 +227,9 @@ export function useKeyboardNav({
     }
 
     // Edit keys (e/i/D/Ctrl+U) — before nav so Ctrl+U can override nav.half_page_up
-    if (handleEditKey(key)) return
+    if (handleEditKey(key)) {
+      return
+    }
 
     // Half-page scroll
     if (matches(key, keymap["nav.half_page_down"]) || matches(key, keymap["nav.half_page_up"])) {
@@ -220,7 +238,9 @@ export function useKeyboardNav({
     }
 
     // Pipeline keys (pipeline.open, pipeline.open_full, query.toggle_mode, query.open)
-    if (handlePipelineKey(key)) return
+    if (handlePipelineKey(key)) {
+      return
+    }
 
     // Filter bar intercept
     if (state.queryVisible) {
@@ -237,10 +257,14 @@ export function useKeyboardNav({
     }
 
     // Don't handle keys when command palette is open
-    if (state.commandPaletteVisible) return
+    if (state.commandPaletteVisible) {
+      return
+    }
 
     // Dialog keys (pipeline confirm, bulk edit confirm, delete confirm)
-    if (handleDialogKey(key)) return
+    if (handleDialogKey(key)) {
+      return
+    }
 
     // Escape exits selection mode
     if (key.name === "escape" && state.selectionMode !== "none") {
@@ -262,12 +286,16 @@ export function useKeyboardNav({
 
     // query.clear: clear filter or pipeline
     if (matches(key, keymap["query.clear"]) && state.view === "documents") {
-      if (clearQuery()) return
+      if (clearQuery()) {
+        return
+      }
     }
 
     // ── Document view only ─────────────────────────────────────────────
 
-    if (state.view !== "documents") return
+    if (state.view !== "documents") {
+      return
+    }
 
     // Tab switch by number (tab.switch_1 … tab.switch_9)
     for (let n = 1; n <= 9; n++) {

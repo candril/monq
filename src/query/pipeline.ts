@@ -17,7 +17,9 @@ export function stageOf(stage: Document): PipelineStage {
 
 /** Returns true if the pipeline requires aggregate() rather than find() */
 export function classifyPipeline(pipeline: Document[]): boolean {
-  if (pipeline.length === 0) return false
+  if (pipeline.length === 0) {
+    return false
+  }
   return pipeline.some((stage) => !FIND_COMPATIBLE_STAGES.has(Object.keys(stage)[0]))
 }
 

@@ -39,7 +39,9 @@ export function HistoryPicker({ entries, onPick, onClose }: HistoryPickerProps) 
     }
     if (key.name === "return") {
       const entry = entries[selectedIndex]
-      if (entry) onPick(entry)
+      if (entry) {
+        onPick(entry)
+      }
       return
     }
     // Ctrl-R again toggles closed

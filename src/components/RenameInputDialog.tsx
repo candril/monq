@@ -24,7 +24,9 @@ export function RenameInputDialog({ type, oldName, onConfirm, onCancel }: Rename
     }
     if (key.name === "return") {
       const trimmed = name.trim()
-      if (!trimmed || trimmed === oldName) return
+      if (!trimmed || trimmed === oldName) {
+        return
+      }
       onConfirm(trimmed)
       return
     }

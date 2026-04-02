@@ -14,7 +14,9 @@ export function filterBySelectedValue(state: AppState, dispatch: Dispatch<AppAct
   const doc = state.documents[state.selectedIndex]
   const visCols = state.columns.filter((c) => c.visible)
   const col = visCols[state.selectedColumnIndex]
-  if (!doc || !col) return
+  if (!doc || !col) {
+    return
+  }
 
   const val = getNestedValue(doc as Record<string, unknown>, col.field) ?? null
 

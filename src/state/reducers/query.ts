@@ -95,8 +95,12 @@ export function queryReducer(state: AppState, action: AppAction): AppState | nul
 
     case "CYCLE_BSON_SECTION": {
       const sections: BsonSection[] = ["filter"]
-      if (state.bsonSortVisible) sections.push("sort")
-      if (state.bsonProjectionVisible) sections.push("projection")
+      if (state.bsonSortVisible) {
+        sections.push("sort")
+      }
+      if (state.bsonProjectionVisible) {
+        sections.push("projection")
+      }
       const currentIdx = sections.indexOf(state.bsonFocusedSection)
       const nextIdx = (currentIdx + 1) % sections.length
       return { ...state, bsonFocusedSection: sections[nextIdx] }
@@ -137,8 +141,12 @@ export function queryReducer(state: AppState, action: AppAction): AppState | nul
         // Not valid JSON yet — leave as-is
       }
       const ver = state.bsonExternalVersion + 1
-      if (section === "filter") return { ...state, queryInput: formatted, bsonExternalVersion: ver }
-      if (section === "sort") return { ...state, bsonSort: formatted, bsonExternalVersion: ver }
+      if (section === "filter") {
+        return { ...state, queryInput: formatted, bsonExternalVersion: ver }
+      }
+      if (section === "sort") {
+        return { ...state, bsonSort: formatted, bsonExternalVersion: ver }
+      }
       return { ...state, bsonProjection: formatted, bsonExternalVersion: ver }
     }
 

@@ -104,7 +104,9 @@ function buildTemplate(
 
   // Compose pipeline stages
   const pipelineStages: Document[] = [{ $match: matchObj }, { $sort: sortObj }]
-  if (projObj) pipelineStages.push({ $project: projObj })
+  if (projObj) {
+    pipelineStages.push({ $project: projObj })
+  }
 
   const doc = {
     $schema: "./.monq-pipeline-schema.json",
@@ -306,7 +308,9 @@ function buildJsonSchema(collectionName: string, schemaMap: SchemaMap): string {
  */
 function buildEditorArgs(editorBase: string, queryFile: string, content: string): string[] {
   const isVimLike = /^(nvim|vim|vi|gvim|view|rvim)$/.test(editorBase)
-  if (!isVimLike) return [editorBase, queryFile]
+  if (!isVimLike) {
+    return [editorBase, queryFile]
+  }
 
   const lines = content.split("\n")
   for (let i = 0; i < lines.length; i++) {

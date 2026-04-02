@@ -48,7 +48,9 @@ export function ConnectionScreen({ profiles, onConnect }: ConnectionScreenProps)
 
   // Cycle loading messages while resolving
   useEffect(() => {
-    if (mode !== "resolving") return
+    if (mode !== "resolving") {
+      return
+    }
     setLoadingMessage(randomConnectionMessage())
     const timer = setInterval(() => setLoadingMessage(randomConnectionMessage()), 5000)
     return () => clearInterval(timer)
@@ -82,7 +84,9 @@ export function ConnectionScreen({ profiles, onConnect }: ConnectionScreenProps)
   }
 
   useKeyboard((key) => {
-    if (mode === "resolving") return
+    if (mode === "resolving") {
+      return
+    }
 
     if (mode === "uri") {
       if (key.name === "tab") {
@@ -118,7 +122,9 @@ export function ConnectionScreen({ profiles, onConnect }: ConnectionScreenProps)
     }
     if (key.name === "return") {
       const profile = filtered[safeCursor]
-      if (profile) connectProfile(profile)
+      if (profile) {
+        connectProfile(profile)
+      }
       return
     }
     if (key.name === "tab") {
@@ -178,7 +184,9 @@ export function ConnectionScreen({ profiles, onConnect }: ConnectionScreenProps)
               if (mode === "uri") {
                 setUriValue(v)
                 setUriError(null)
-              } else setQuery(v)
+              } else {
+                setQuery(v)
+              }
             }}
             placeholder={mode === "uri" ? DEFAULT_URI : "type to filter..."}
             focused

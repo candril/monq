@@ -34,14 +34,18 @@ function handleDialogNav(
   if (key.name === "escape") {
     onEscape?.()
   } else if (key.name === "return") {
-    if (focusedIndex >= 0) opts[focusedIndex]?.exec()
+    if (focusedIndex >= 0) {
+      opts[focusedIndex]?.exec()
+    }
   } else if (key.name === "h" || key.name === "left") {
     setFocusedIndex((i) => Math.max(-1, i - 1))
   } else if (key.name === "l" || key.name === "right") {
     setFocusedIndex((i) => Math.min(opts.length - 1, i + 1))
   } else {
     const match = opts.findIndex((o) => o.key === key.name)
-    if (match !== -1) setFocusedIndex(() => match)
+    if (match !== -1) {
+      setFocusedIndex(() => match)
+    }
   }
 }
 
@@ -119,7 +123,7 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
           },
         },
       ]
-      if (missing.length > 0)
+      if (missing.length > 0) {
         opts.push({
           key: "d",
           exec: () => {
@@ -127,7 +131,8 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
             resolve("delete", "ignore")
           },
         })
-      if (added.length > 0)
+      }
+      if (added.length > 0) {
         opts.push({
           key: "a",
           exec: () => {
@@ -135,7 +140,8 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
             resolve("ignore", "insert")
           },
         })
-      if (missing.length > 0 && added.length > 0)
+      }
+      if (missing.length > 0 && added.length > 0) {
         opts.push({
           key: "x",
           exec: () => {
@@ -143,6 +149,7 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
             resolve("delete", "insert")
           },
         })
+      }
       opts.push({ key: "c", exec: reset })
       handleDialogNav(key, opts, bulkEditFocusedIndex, setBulkEditFocusedIndex)
       return true

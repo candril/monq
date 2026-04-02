@@ -24,7 +24,9 @@ function statePath(): string {
  */
 export async function loadStateTheme(): Promise<string | null> {
   const file = Bun.file(statePath())
-  if (!(await file.exists())) return null
+  if (!(await file.exists())) {
+    return null
+  }
   try {
     const raw = Bun.TOML.parse(await file.text()) as Record<string, unknown>
     const val = raw.theme_preset

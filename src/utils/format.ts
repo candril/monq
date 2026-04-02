@@ -8,19 +8,39 @@ import type { JsonValueType } from "../types"
 
 /** Detect the display type of a MongoDB value */
 export function detectValueType(value: unknown): JsonValueType {
-  if (value === null || value === undefined) return "null"
-  if (typeof value === "string") return "string"
-  if (typeof value === "number") return "number"
-  if (typeof value === "boolean") return "boolean"
-  if (value instanceof Date) return "date"
-  if (value instanceof ObjectId) return "objectid"
+  if (value === null || value === undefined) {
+    return "null"
+  }
+  if (typeof value === "string") {
+    return "string"
+  }
+  if (typeof value === "number") {
+    return "number"
+  }
+  if (typeof value === "boolean") {
+    return "boolean"
+  }
+  if (value instanceof Date) {
+    return "date"
+  }
+  if (value instanceof ObjectId) {
+    return "objectid"
+  }
   if (typeof value === "object" && "_bsontype" in (value as object)) {
     const bson = (value as { _bsontype: string })._bsontype
-    if (bson === "ObjectId" || bson === "ObjectID") return "objectid"
-    if (bson === "Timestamp" || bson === "Date") return "date"
+    if (bson === "ObjectId" || bson === "ObjectID") {
+      return "objectid"
+    }
+    if (bson === "Timestamp" || bson === "Date") {
+      return "date"
+    }
   }
-  if (Array.isArray(value)) return "array"
-  if (typeof value === "object") return "object"
+  if (Array.isArray(value)) {
+    return "array"
+  }
+  if (typeof value === "object") {
+    return "object"
+  }
   return "string"
 }
 
@@ -89,7 +109,9 @@ export function formatValue(value: unknown, maxWidth: number): string {
 function compactJson(value: unknown, maxWidth: number): string {
   try {
     const json = JSON.stringify(value)
-    if (json.length <= maxWidth) return json
+    if (json.length <= maxWidth) {
+      return json
+    }
     return truncate(json, maxWidth)
   } catch {
     return Array.isArray(value) ? `[${(value as unknown[]).length}]` : "{...}"
@@ -98,14 +120,20 @@ function compactJson(value: unknown, maxWidth: number): string {
 
 /** Truncate string to maxWidth */
 export function truncate(text: string, maxWidth: number): string {
-  if (text.length <= maxWidth) return text
-  if (maxWidth <= 3) return text.slice(0, maxWidth)
+  if (text.length <= maxWidth) {
+    return text
+  }
+  if (maxWidth <= 3) {
+    return text.slice(0, maxWidth)
+  }
   return text.slice(0, maxWidth - 1) + "~"
 }
 
 /** Pad string right to exact width */
 export function padRight(text: string, width: number): string {
-  if (text.length >= width) return text.slice(0, width)
+  if (text.length >= width) {
+    return text.slice(0, width)
+  }
   return text + " ".repeat(width - text.length)
 }
 
@@ -115,7 +143,9 @@ export function resolveSortField(
   pipeline: Array<Record<string, unknown>>,
   sortField: string | null,
 ): string | null {
-  if (!pipelineMode) return sortField
+  if (!pipelineMode) {
+    return sortField
+  }
   const sortStage = pipeline.find((s) => "$sort" in s)
   const entries = Object.entries((sortStage?.["$sort"] as Record<string, unknown>) ?? {})
   return entries.length === 1 ? entries[0][0] : null
@@ -127,7 +157,9 @@ export function resolveSortDirection(
   pipeline: Array<Record<string, unknown>>,
   sortDirection: 1 | -1,
 ): 1 | -1 {
-  if (!pipelineMode) return sortDirection
+  if (!pipelineMode) {
+    return sortDirection
+  }
   const sortStage = pipeline.find((s) => "$sort" in s)
   const entries = Object.entries((sortStage?.["$sort"] as Record<string, unknown>) ?? {})
   return entries.length === 1 ? (entries[0][1] as 1 | -1) : -1
@@ -154,13 +186,17 @@ export function docSummary(doc: Record<string, unknown>): string {
   const LABEL_FIELDS = ["name", "title", "label", "email", "username", "slug", "key"]
   for (const field of LABEL_FIELDS) {
     const val = doc[field]
-    if (val !== undefined && val !== null && typeof val !== "object")
+    if (val !== undefined && val !== null && typeof val !== "object") {
       return `${field}: ${String(val)}`
+    }
   }
   for (const [key, val] of Object.entries(doc)) {
-    if (key === "_id") continue
-    if (val !== undefined && val !== null && typeof val !== "object")
+    if (key === "_id") {
+      continue
+    }
+    if (val !== undefined && val !== null && typeof val !== "object") {
       return `${key}: ${String(val)}`
+    }
   }
   return `_id: ${String(doc._id)}`
 }
@@ -173,11 +209,15 @@ export function summarise(obj: object): string {
 
 /** Convert a cell value to a copyable plain-text string */
 export function formatCellValue(val: unknown): string {
-  if (val === undefined || val === null) return ""
+  if (val === undefined || val === null) {
+    return ""
+  }
   if (typeof val === "object" && "toHexString" in val) {
     return (val as { toHexString(): string }).toHexString()
   }
-  if (typeof val === "object") return JSON.stringify(val, null, 2)
+  if (typeof val === "object") {
+    return JSON.stringify(val, null, 2)
+  }
   return String(val)
 }
 
@@ -186,7 +226,9 @@ export function getNestedValue(doc: Record<string, unknown>, field: string): unk
   const parts = field.split(".")
   let current: unknown = doc
   for (const part of parts) {
-    if (current === null || typeof current !== "object") return undefined
+    if (current === null || typeof current !== "object") {
+      return undefined
+    }
     current = (current as Record<string, unknown>)[part]
   }
   return current

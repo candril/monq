@@ -41,7 +41,9 @@ export function DocumentPreview({ document, position, scrollOffset }: DocumentPr
 
   const json = useMemo(() => (document ? serializeDocument(document) : ""), [document])
 
-  if (!position || !document) return null
+  if (!position || !document) {
+    return null
+  }
 
   const isRight = position === "right"
 

@@ -36,7 +36,9 @@ interface FilterSuggestionsProps {
 function buildBsonSuggestions(columns: DetectedColumn[], schemaMap: SchemaMap): Suggestion[] {
   const fields = new Set(columns.map((c) => c.field))
   for (const [path, info] of schemaMap) {
-    if (!path.includes(".") && info.children.length > 0) fields.add(path)
+    if (!path.includes(".") && info.children.length > 0) {
+      fields.add(path)
+    }
   }
   return [...fields].map((field) => {
     const info = schemaMap.get(field)
@@ -57,7 +59,9 @@ function buildSuggestions(
   const isProjection = isProjectionInclude || isProjectionExclude
 
   // If it's a filter value token (has colon/operator) — no field suggestions
-  if (!isProjection && lastToken.includes(":")) return []
+  if (!isProjection && lastToken.includes(":")) {
+    return []
+  }
 
   // Strip prefix for search
   const projPrefix = isProjectionInclude ? "+" : isProjectionExclude ? "-" : ""
@@ -69,7 +73,9 @@ function buildSuggestions(
     const parentPath = search.slice(0, dotIndex)
     const subSearch = search.slice(dotIndex + 1)
     const subfields = getSubfieldSuggestions(schemaMap, parentPath)
-    if (subfields.length === 0) return []
+    if (subfields.length === 0) {
+      return []
+    }
     const filtered = subSearch ? fuzzyFilter(subSearch, subfields, (f) => [f]) : subfields
     return filtered.map((sub) => {
       const fullPath = `${parentPath}.${sub}`
@@ -88,7 +94,9 @@ function buildSuggestions(
   // Top-level field suggestions
   const allFields = new Set(columns.map((c) => c.field))
   for (const [path, info] of schemaMap) {
-    if (!path.includes(".") && info.children.length > 0) allFields.add(path)
+    if (!path.includes(".") && info.children.length > 0) {
+      allFields.add(path)
+    }
   }
 
   const candidates = [...allFields]
@@ -131,17 +139,23 @@ export function FilterSuggestions({
   }, [suggestions.length])
 
   useKeyboard((key) => {
-    if (!visible || suggestions.length === 0) return
+    if (!visible || suggestions.length === 0) {
+      return
+    }
     if (key.name === "up" || (key.ctrl && key.name === "p")) {
       setSelectedIndex((i) => Math.max(0, i - 1))
     } else if (key.name === "down" || (key.ctrl && key.name === "n")) {
       setSelectedIndex((i) => Math.min(suggestions.length - 1, i + 1))
     } else if (key.ctrl && key.name === "y") {
-      if (suggestions[selectedIndex]) onChange(suggestions[selectedIndex].value)
+      if (suggestions[selectedIndex]) {
+        onChange(suggestions[selectedIndex].value)
+      }
     }
   })
 
-  if (!visible || suggestions.length === 0) return null
+  if (!visible || suggestions.length === 0) {
+    return null
+  }
 
   const visibleSuggestions = suggestions.slice(0, MAX_VISIBLE)
 

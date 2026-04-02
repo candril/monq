@@ -22,7 +22,9 @@ export function configPath(): string {
  */
 export async function loadConfig(): Promise<UserConfig | null> {
   const file = Bun.file(configPath())
-  if (!(await file.exists())) return null
+  if (!(await file.exists())) {
+    return null
+  }
 
   const raw = Bun.TOML.parse(await file.text()) as Record<string, unknown>
 

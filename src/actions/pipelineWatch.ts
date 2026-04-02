@@ -31,8 +31,12 @@ export function startWatching(filePath: string, onReload: () => void) {
     // writes from nvim, vim, etc.) are detected reliably. Watching the file
     // directly loses the watch after the first atomic rename.
     activeWatcher = watch(dir, (_event, name) => {
-      if (name !== filename) return
-      if (debounceTimer) clearTimeout(debounceTimer)
+      if (name !== filename) {
+        return
+      }
+      if (debounceTimer) {
+        clearTimeout(debounceTimer)
+      }
       debounceTimer = setTimeout(onReload, 150)
     })
     // Ignore errors on the watcher itself (e.g. directory deleted)
@@ -89,7 +93,9 @@ export async function reloadFromFile(filePath: string, dispatch: Dispatch<AppAct
   // so that filters on typed fields like _id work correctly against MongoDB.
   const pipeline = EJSON.deserialize(rawPipeline) as Document[]
 
-  if (pipeline.length === 0) return
+  if (pipeline.length === 0) {
+    return
+  }
 
   const isAggregate = classifyPipeline(pipeline)
   dispatch({

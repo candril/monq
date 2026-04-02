@@ -110,7 +110,9 @@ export function App({
   // Also update in-memory historyEntries so Ctrl-K/J works within the same session.
   const prevReloadCounter = useRef(state.reloadCounter)
   useEffect(() => {
-    if (prevReloadCounter.current === state.reloadCounter) return
+    if (prevReloadCounter.current === state.reloadCounter) {
+      return
+    }
     prevReloadCounter.current = state.reloadCounter
     if (state.queryMode === "simple" && state.queryInput.trim()) {
       const query = state.queryInput.trim()
@@ -122,7 +124,9 @@ export function App({
 
   // Surface config warnings as toasts once on mount
   useEffect(() => {
-    if (configWarnings.length === 0) return
+    if (configWarnings.length === 0) {
+      return
+    }
     // Show warnings one at a time (first one immediately; subsequent ones via re-renders
     // would require a queue — for simplicity show only the first warning)
     dispatch({
@@ -287,7 +291,9 @@ export function App({
   const isInitialLoading = state.collectionsLoading && !state.activeTabId
 
   useEffect(() => {
-    if (!isInitialLoading) return
+    if (!isInitialLoading) {
+      return
+    }
     const timer = setInterval(() => setLoadingMessage(randomConnectionMessage()), 5000)
     return () => clearInterval(timer)
   }, [isInitialLoading])
@@ -301,7 +307,9 @@ export function App({
   }
 
   // Still loading but within hold-off window — render nothing yet
-  if (isInitialLoading) return null
+  if (isInitialLoading) {
+    return null
+  }
 
   return (
     <Shell>

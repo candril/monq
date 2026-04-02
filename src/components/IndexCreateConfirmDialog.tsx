@@ -29,7 +29,9 @@ export function IndexCreateConfirmDialog({
 
   // Replacements (drop + recreate)
   if (toReplace.length > 0) {
-    if (newIndexes.length > 0) lines.push({ text: "" })
+    if (newIndexes.length > 0) {
+      lines.push({ text: "" })
+    }
     lines.push({
       text: `${toReplace.length} index${toReplace.length === 1 ? "" : "es"} to replace (drop + recreate):`,
       dim: true,
@@ -47,7 +49,9 @@ export function IndexCreateConfirmDialog({
   // Drops (not replacements)
   const pureDrop = toDrop.filter((name) => !toReplace.includes(name))
   if (pureDrop.length > 0) {
-    if (newIndexes.length > 0 || toReplace.length > 0) lines.push({ text: "" })
+    if (newIndexes.length > 0 || toReplace.length > 0) {
+      lines.push({ text: "" })
+    }
     lines.push({
       text: `${pureDrop.length} index${pureDrop.length === 1 ? "" : "es"} to drop:`,
       dim: true,
