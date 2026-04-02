@@ -259,9 +259,12 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only triggered by loadingMore flag
   }, [activeTab?.id, state.loadingMore])
 
-  // Effect 3: re-run explain when documents reload and explain mode is active
+  // Effect 3: re-run explain when query changes and explain mode is active.
+  // Fires on reloadCounter directly — not gated by documentsLoading — so the
+  // explain query runs in parallel with the document fetch instead of waiting
+  // for it to start.
   useEffect(() => {
-    if (!activeTab || !documentsLoading || state.previewMode !== "explain") return
+    if (!activeTab || state.previewMode !== "explain") return
 
     let cancelled = false
     dispatch({ type: "SET_EXPLAIN_LOADING", loading: true })
@@ -286,6 +289,6 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- same triggers as document load
-  }, [activeTab?.id, documentsLoading, reloadCounter])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on query change (reloadCounter) independently of document loading
+  }, [activeTab?.id, state.previewMode, reloadCounter])
 }

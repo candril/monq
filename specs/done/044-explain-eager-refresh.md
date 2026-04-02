@@ -1,6 +1,6 @@
 # Explain: Eager Refresh on Query Change
 
-**Status**: Draft
+**Status**: Done
 
 ## Description
 

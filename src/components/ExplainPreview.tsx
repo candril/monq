@@ -8,6 +8,7 @@ import type { ScrollBoxRenderable } from "@opentui/core"
 import type { Document } from "mongodb"
 import type { PreviewPosition } from "../types"
 import { theme } from "../theme"
+import { Spinner } from "./Loading"
 
 interface ExplainPreviewProps {
   result: Document | null
@@ -391,6 +392,62 @@ function Summary({ stats, stages }: { stats: ExplainStats; stages: StageInfo[] }
   )
 }
 
+// ── Skeleton placeholders ─────────────────────────────────────────────────────
+
+const SKELETON_CHAR = "░"
+
+function SkeletonLine({ width }: { width: number }) {
+  return (
+    <text>
+      <span fg={theme.textMuted}>{SKELETON_CHAR.repeat(width)}</span>
+    </text>
+  )
+}
+
+function SkeletonStageCard() {
+  return (
+    <box border borderStyle="rounded" borderColor={theme.border} paddingX={1} marginX={2}>
+      <box flexDirection="column">
+        <SkeletonLine width={12} />
+        <SkeletonLine width={24} />
+        <SkeletonLine width={18} />
+      </box>
+    </box>
+  )
+}
+
+function SkeletonSummary() {
+  return (
+    <box
+      border
+      borderStyle="single"
+      borderColor={theme.border}
+      paddingX={1}
+      marginX={2}
+      marginTop={1}
+      flexDirection="column"
+    >
+      <SkeletonLine width={7} />
+      <SkeletonLine width={22} />
+      <SkeletonLine width={20} />
+      <SkeletonLine width={18} />
+      <SkeletonLine width={22} />
+      <SkeletonLine width={16} />
+    </box>
+  )
+}
+
+function ExplainSkeleton() {
+  return (
+    <>
+      <SkeletonStageCard />
+      <Arrow />
+      <SkeletonStageCard />
+      <SkeletonSummary />
+    </>
+  )
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function ExplainPreview({
@@ -431,12 +488,12 @@ export function ExplainPreview({
       borderColor={theme.border}
       overflow="hidden"
     >
-      <box paddingX={1} height={1}>
+      <box paddingX={1} height={1} flexDirection="row" gap={1}>
         <text>
           <span fg={theme.primary}>Explain</span>
           {collectionName && <span fg={theme.textMuted}> -- {collectionName}</span>}
-          {loading && <span fg={theme.textDim}> loading...</span>}
         </text>
+        {loading && <Spinner />}
       </box>
       <scrollbox ref={scrollRef} flexGrow={1}>
         <box flexDirection="column" paddingY={1}>
@@ -450,6 +507,9 @@ export function ExplainPreview({
             </box>
           )}
 
+          {/* Skeleton when loading with no previous result */}
+          {!data && loading && <ExplainSkeleton />}
+
           {data && data.stages.length === 0 && !data.stats && (
             <box paddingX={2}>
               <text>
@@ -461,21 +521,25 @@ export function ExplainPreview({
             </box>
           )}
 
-          {data &&
-            data.stages.map((stage, i) => (
-              <box key={i} flexDirection="column">
-                <StageCard stage={stage} />
-                {i < data.stages.length - 1 && <Arrow />}
-              </box>
-            ))}
+          {/* Dim previous result while refreshing so user can still read it */}
+          {data && (
+            <box flexDirection="column" opacity={loading ? 0.3 : 1}>
+              {data.stages.map((stage, i) => (
+                <box key={i} flexDirection="column">
+                  <StageCard stage={stage} />
+                  {i < data.stages.length - 1 && <Arrow />}
+                </box>
+              ))}
 
-          {data?.stats && <Summary stats={data.stats} stages={data?.stages ?? []} />}
+              {data.stats && <Summary stats={data.stats} stages={data.stages} />}
 
-          {data && limited && (
-            <box marginX={2} marginTop={1} paddingX={1}>
-              <text>
-                <span fg={theme.textMuted}>limited to 1000 docs for explain</span>
-              </text>
+              {limited && (
+                <box marginX={2} marginTop={1} paddingX={1}>
+                  <text>
+                    <span fg={theme.textMuted}>limited to 1000 docs for explain</span>
+                  </text>
+                </box>
+              )}
             </box>
           )}
         </box>
