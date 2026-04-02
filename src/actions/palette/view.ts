@@ -6,38 +6,18 @@ import { openExplainInEditor } from "../explain"
 import { openEditorForIndexes } from "../index"
 import { filterBySelectedValue } from "../filterValue"
 import { explainFind, explainAggregate } from "../../providers/mongodb"
-import { editDocument } from "../edit"
-import { serializeDocument } from "../../utils/document"
-import { getNestedValue } from "../../utils/format"
 import { copyToClipboard } from "../../utils/clipboard"
-import { parseSimpleQueryFull, projectionToSimple } from "../../query/parser"
+import { yankDocument, yankCell } from "../yank"
+import { hideColumn } from "../hideColumn"
 
 export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
   const { state, dispatch, renderer } = ctx
 
   switch (cmdId) {
-    case "doc:edit": {
+    case "doc:copy-json":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
-      const doc = state.documents[state.selectedIndex]
-      const tab = state.tabs.find((t) => t.id === state.activeTabId)
-      if (doc && tab) {
-        renderer.suspend()
-        editDocument(tab.collectionName, state.dbName, doc, state.schemaMap).finally(() => {
-          renderer.resume()
-          dispatch({ type: "RELOAD_DOCUMENTS" })
-        })
-      }
+      yankDocument(state, dispatch)
       return true
-    }
-    case "doc:copy-json": {
-      dispatch({ type: "CLOSE_COMMAND_PALETTE" })
-      const doc = state.documents[state.selectedIndex]
-      if (doc) {
-        copyToClipboard(serializeDocument(doc)).catch(() => {})
-        dispatch({ type: "SHOW_MESSAGE", message: "Copied to clipboard", kind: "info" })
-      }
-      return true
-    }
     case "doc:copy-id": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const doc = state.documents[state.selectedIndex]
@@ -47,30 +27,10 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
       }
       return true
     }
-    case "doc:copy-cell": {
+    case "doc:copy-cell":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
-      const doc = state.documents[state.selectedIndex]
-      if (!doc) {
-        return true
-      }
-      const visCols = state.columns.filter((c) => c.visible)
-      const col = visCols[state.selectedColumnIndex]
-      if (!col) {
-        return true
-      }
-      const val = getNestedValue(doc as Record<string, unknown>, col.field)
-      const text =
-        val === undefined || val === null
-          ? ""
-          : typeof val === "object" && "toHexString" in val
-            ? (val as { toHexString(): string }).toHexString()
-            : typeof val === "object"
-              ? JSON.stringify(val, null, 2)
-              : String(val)
-      copyToClipboard(text).catch(() => {})
-      dispatch({ type: "SHOW_MESSAGE", message: `Copied ${col.field} to clipboard`, kind: "info" })
+      yankCell(state, dispatch)
       return true
-    }
     case "doc:filter-value":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       filterBySelectedValue(state, dispatch)
@@ -222,41 +182,10 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       dispatch({ type: "CYCLE_COLUMN_MODE" })
       return true
-    case "view:toggle-column-exclude": {
+    case "view:toggle-column-exclude":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
-      const visCols = state.columns.filter((c) => c.visible)
-      const col = visCols[state.selectedColumnIndex]
-      if (!col) {
-        return true
-      }
-      const { projection: projObj } = parseSimpleQueryFull(state.queryInput)
-      const proj: Record<string, 0 | 1> = { ...(projObj ?? {}) }
-      if (proj[col.field] === 0) {
-        delete proj[col.field]
-      } else {
-        delete proj[col.field]
-        proj[col.field] = 0
-      }
-      const nonProjTokens = state.queryInput
-        .trim()
-        .split(/\s+/)
-        .filter((t: string) => {
-          if (!t) {
-            return false
-          }
-          if (t.startsWith("+")) {
-            return false
-          }
-          if (t.startsWith("-") && !/[><!:]/.test(t.slice(1))) {
-            return false
-          }
-          return true
-        })
-      const projStr = Object.keys(proj).length > 0 ? " " + projectionToSimple(proj) : ""
-      dispatch({ type: "SET_QUERY_INPUT", input: (nonProjTokens.join(" ") + projStr).trim() })
-      dispatch({ type: "SUBMIT_QUERY" })
+      hideColumn(state, dispatch)
       return true
-    }
     default:
       return false
   }
