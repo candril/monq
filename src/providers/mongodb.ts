@@ -10,6 +10,8 @@ import {
   type UpdateFilter,
   type IndexSpecification,
   type CreateIndexesOptions,
+  type FindCursor,
+  type AggregationCursor,
 } from "mongodb"
 import type { CollectionInfo, IndexInfo } from "../types"
 
@@ -270,6 +272,50 @@ export async function explainAggregate(
   const explainPipeline = hasLimit ? pipeline : [...pipeline, { $limit: EXPLAIN_LIMIT }]
   const result = (await collection.aggregate(explainPipeline).explain("executionStats")) as Document
   return { result, limited: !hasLimit }
+}
+
+// ── Export cursors ───────────────────────────────────────────────────────────
+
+/** Create a find cursor for streaming export (no limit, no skip) */
+export function createFindCursor(
+  collectionName: string,
+  filter: Filter<Document> = {},
+  options: {
+    sort?: Record<string, 1 | -1>
+    projection?: Record<string, 0 | 1>
+  } = {},
+): FindCursor<Document> {
+  const collection = getDb().collection(collectionName)
+  const cursor = collection.find(
+    filter,
+    options.projection ? { projection: options.projection } : undefined,
+  )
+  cursor.sort(options.sort ?? { _id: -1 })
+  return cursor
+}
+
+/** Create an aggregate cursor for streaming export (no page limit appended) */
+export function createAggregateCursor(
+  collectionName: string,
+  pipeline: Document[],
+): AggregationCursor<Document> {
+  const collection = getDb().collection(collectionName)
+  return collection.aggregate([...pipeline])
+}
+
+/** Count documents for export — uses countDocuments for find, $count pipeline for aggregate */
+export async function countForExport(
+  collectionName: string,
+  query: { mode: "find"; filter: Filter<Document> } | { mode: "aggregate"; pipeline: Document[] },
+): Promise<number> {
+  const collection = getDb().collection(collectionName)
+  if (query.mode === "find") {
+    const hasFilter = Object.keys(query.filter).length > 0
+    return hasFilter ? collection.countDocuments(query.filter) : collection.estimatedDocumentCount()
+  }
+  const countPipeline = [...query.pipeline, { $count: "__count" }]
+  const result = await collection.aggregate(countPipeline).toArray()
+  return (result[0] as Record<string, number>)?.__count ?? 0
 }
 
 /** Replace a document by its original _id */

@@ -28,6 +28,7 @@ import { HistoryPicker } from "./components/HistoryPicker"
 import { CommandPalette } from "./components/CommandPalette"
 import { IndexCreateConfirmDialog } from "./components/IndexCreateConfirmDialog"
 import { ExplainPreview } from "./components/ExplainPreview"
+import { ExportCancelDialog } from "./components/ExportCancelDialog"
 import { WelcomeScreen } from "./components/WelcomeScreen"
 import { TabBar } from "./components/TabBar"
 import { appReducer, createInitialState } from "./state"
@@ -155,6 +156,7 @@ export function App({
     bulkQueryDeleteFocusedIndex,
     bulkQueryDeleteAwaitingFinal,
     indexCreateFocusedIndex,
+    exportCancelFocusedIndex,
   } = useKeyboardNav({
     state,
     dispatch,
@@ -566,6 +568,13 @@ export function App({
         <IndexCreateConfirmDialog
           confirmation={state.indexCreateConfirmation}
           focusedIndex={indexCreateFocusedIndex}
+        />
+      )}
+
+      {state.exportCancelConfirmation && (
+        <ExportCancelDialog
+          confirmation={state.exportCancelConfirmation}
+          focusedIndex={exportCancelFocusedIndex}
         />
       )}
     </Shell>

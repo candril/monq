@@ -111,6 +111,19 @@ export function uiReducer(state: AppState, action: AppAction): AppState | null {
     case "CLEAR_INDEX_CREATE_CONFIRM":
       return { ...state, indexCreateConfirmation: null }
 
+    // Export
+    case "START_EXPORT":
+      return { ...state, exporting: true }
+
+    case "STOP_EXPORT":
+      return { ...state, exporting: false }
+
+    case "SHOW_EXPORT_CANCEL_CONFIRM":
+      return { ...state, exportCancelConfirmation: action.confirmation }
+
+    case "CLEAR_EXPORT_CANCEL_CONFIRM":
+      return { ...state, exportCancelConfirmation: null }
+
     default:
       return null
   }

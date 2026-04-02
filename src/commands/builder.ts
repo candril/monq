@@ -117,6 +117,16 @@ export function buildCommands(state: AppState, keymap: Keymap): Command[] {
       category: "document",
       shortcut: hintFor(keymap, "doc.filter_value"),
     })
+    commands.push({
+      id: "doc:export-json",
+      label: hasSelection ? "Export Selected as JSON" : "Export as JSON",
+      category: "document",
+    })
+    commands.push({
+      id: "doc:export-csv",
+      label: hasSelection ? "Export Selected as CSV" : "Export as CSV",
+      category: "document",
+    })
   }
 
   // View actions

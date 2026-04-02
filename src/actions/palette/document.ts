@@ -1,4 +1,4 @@
-/** Palette handlers: document operations (edit, insert, delete, bulk update/delete) */
+/** Palette handlers: document operations (edit, insert, delete, bulk update/delete, export) */
 
 import type { PaletteContext } from "./types"
 import type { EditManyResult } from "../editMany"
@@ -6,6 +6,7 @@ import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../
 import { showDeleteConfirm } from "../deleteConfirm"
 import { runBulkQueryUpdate, runBulkQueryDelete } from "../bulkQueryConfirm"
 import { resolveActiveFilter } from "../../utils/query"
+import { exportDocuments, type ExportFormat } from "../export"
 
 export function handleDocumentCommand(cmdId: string, ctx: PaletteContext): boolean {
   const { state, dispatch, renderer } = ctx
@@ -151,9 +152,67 @@ export function handleDocumentCommand(cmdId: string, ctx: PaletteContext): boole
       )
       return true
     }
+    case "doc:export-json":
+    case "doc:export-csv": {
+      dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+      const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+      if (!activeTab) {
+        return true
+      }
+      if (state.exporting) {
+        return true
+      }
+      const format: ExportFormat = cmdId === "doc:export-json" ? "json" : "csv"
+      const selectedDocs =
+        state.selectedRows.size > 0
+          ? state.documents.filter((_, i) => state.selectedRows.has(i))
+          : undefined
+      startExport(format, activeTab.collectionName, ctx, selectedDocs)
+      return true
+    }
     default:
       return false
   }
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+
+let activeExportAbort: AbortController | null = null
+
+/** Get the active export abort controller (used by dialog keys to cancel) */
+export function getExportAbort(): AbortController | null {
+  return activeExportAbort
+}
+
+function startExport(
+  format: ExportFormat,
+  collectionName: string,
+  ctx: PaletteContext,
+  selectedDocs?: import("mongodb").Document[],
+): void {
+  const { state, dispatch } = ctx
+  const abort = new AbortController()
+  activeExportAbort = abort
+
+  dispatch({ type: "START_EXPORT" })
+
+  exportDocuments({
+    format,
+    collectionName,
+    state,
+    dispatch,
+    signal: abort.signal,
+    selectedDocs,
+  })
+    .catch((err: Error) => {
+      if (!abort.signal.aborted) {
+        dispatch({ type: "SHOW_MESSAGE", message: `Export failed: ${err.message}`, kind: "error" })
+      }
+    })
+    .finally(() => {
+      activeExportAbort = null
+      dispatch({ type: "STOP_EXPORT" })
+    })
 }
 
 /** Show the bulk-edit side-effect confirmation dialog (missing/added docs). */

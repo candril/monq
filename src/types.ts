@@ -105,6 +105,12 @@ export interface IndexDef {
   options: import("mongodb").CreateIndexesOptions
 }
 
+/** Pending export cancel confirmation */
+export interface ExportCancelConfirmation {
+  format: "json" | "csv"
+  resolve: (confirmed: boolean) => void
+}
+
 /** Pending index create confirmation */
 export interface IndexCreateConfirmation {
   /** Indexes to create (new or replacements) */
@@ -327,4 +333,9 @@ export interface AppState {
 
   // Index create confirmation dialog (null = not showing)
   indexCreateConfirmation: IndexCreateConfirmation | null
+
+  // Export cancel confirmation dialog (null = not showing)
+  exportCancelConfirmation: ExportCancelConfirmation | null
+  /** True while an export is in progress */
+  exporting: boolean
 }

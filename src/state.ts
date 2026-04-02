@@ -15,6 +15,7 @@ import type {
   CollectionInfo,
   DeleteConfirmation,
   DetectedColumn,
+  ExportCancelConfirmation,
   IndexCreateConfirmation,
   QueryMode,
   View,
@@ -160,6 +161,11 @@ export type AppAction =
   // Index create confirmation
   | { type: "SHOW_INDEX_CREATE_CONFIRM"; confirmation: IndexCreateConfirmation }
   | { type: "CLEAR_INDEX_CREATE_CONFIRM" }
+  // Export
+  | { type: "START_EXPORT" }
+  | { type: "STOP_EXPORT" }
+  | { type: "SHOW_EXPORT_CANCEL_CONFIRM"; confirmation: ExportCancelConfirmation }
+  | { type: "CLEAR_EXPORT_CANCEL_CONFIRM" }
 
 // ============================================================================
 // Initial State
@@ -232,6 +238,8 @@ export function createInitialState(): AppState {
     historyEntries: [],
     historyPickerOpen: false,
     indexCreateConfirmation: null,
+    exportCancelConfirmation: null,
+    exporting: false,
   }
 }
 

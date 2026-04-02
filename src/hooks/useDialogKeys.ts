@@ -58,6 +58,7 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
   const [bulkQueryDeleteFocusedIndex, setBulkQueryDeleteFocusedIndex] = useState(-1)
   const [bulkQueryDeleteAwaitingFinal, setBulkQueryDeleteAwaitingFinal] = useState(false)
   const [indexCreateFocusedIndex, setIndexCreateFocusedIndex] = useState(-1)
+  const [exportCancelFocusedIndex, setExportCancelFocusedIndex] = useState(-1)
 
   function handleKey(key: Key): boolean {
     // Pipeline→simple confirmation dialog
@@ -315,6 +316,29 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
       return true
     }
 
+    // Export cancel confirmation dialog
+    if (state.exportCancelConfirmation) {
+      const { resolve } = state.exportCancelConfirmation
+      const dismiss = () => {
+        dispatch({ type: "CLEAR_EXPORT_CANCEL_CONFIRM" })
+        setExportCancelFocusedIndex(-1)
+        resolve(false)
+      }
+      const opts: DialogOption[] = [
+        { key: "k", exec: dismiss },
+        {
+          key: "c",
+          exec: () => {
+            dispatch({ type: "CLEAR_EXPORT_CANCEL_CONFIRM" })
+            setExportCancelFocusedIndex(-1)
+            resolve(true)
+          },
+        },
+      ]
+      handleDialogNav(key, opts, exportCancelFocusedIndex, setExportCancelFocusedIndex, dismiss)
+      return true
+    }
+
     return false
   }
 
@@ -328,5 +352,6 @@ export function useDialogKeys({ state, dispatch }: UseDialogKeysOptions) {
     bulkQueryDeleteFocusedIndex,
     bulkQueryDeleteAwaitingFinal,
     indexCreateFocusedIndex,
+    exportCancelFocusedIndex,
   }
 }

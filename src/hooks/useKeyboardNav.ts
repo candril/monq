@@ -17,6 +17,7 @@ import { matches } from "../utils/keymap"
 import { disconnect } from "../providers/mongodb"
 import { stopWatching } from "../actions/pipelineWatch"
 import { switchToTab } from "../utils/tabs"
+import { getExportAbort } from "../actions/palette/document"
 import { filterBySelectedValue } from "../actions/filterValue"
 import { yankDocument, yankCell } from "../actions/yank"
 import { hideColumn } from "../actions/hideColumn"
@@ -48,6 +49,7 @@ export function useKeyboardNav({
     bulkQueryDeleteFocusedIndex,
     bulkQueryDeleteAwaitingFinal,
     indexCreateFocusedIndex,
+    exportCancelFocusedIndex,
   } = useDialogKeys({ state, dispatch })
   const { handleKey: handlePipelineKey } = usePipelineKeys({ state, dispatch, renderer, keymap })
   const { handleKey: handleEditKey } = useDocumentEditKeys({ state, dispatch, renderer, keymap })
@@ -278,6 +280,26 @@ export function useKeyboardNav({
       return
     }
 
+    // Escape during export → show cancel confirmation (low priority — after
+    // dialog keys, selection mode exit, and query close have all been checked)
+    if (key.name === "escape" && state.exporting) {
+      const abort = getExportAbort()
+      if (abort) {
+        dispatch({
+          type: "SHOW_EXPORT_CANCEL_CONFIRM",
+          confirmation: {
+            format: "json",
+            resolve: (confirmed) => {
+              if (confirmed) {
+                abort.abort()
+              }
+            },
+          },
+        })
+        return
+      }
+    }
+
     // app.quit — skip when welcome screen is active (user may be typing in search)
     if (matches(key, keymap["app.quit"]) && state.activeTabId) {
       quitApp()
@@ -327,5 +349,6 @@ export function useKeyboardNav({
     bulkQueryDeleteFocusedIndex,
     bulkQueryDeleteAwaitingFinal,
     indexCreateFocusedIndex,
+    exportCancelFocusedIndex,
   }
 }
