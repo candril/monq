@@ -16,5 +16,4 @@ function devVersion(): string {
   return "dev"
 }
 
-export const version: string =
-  typeof MONQ_VERSION !== "undefined" ? MONQ_VERSION : devVersion()
+export const version: string = typeof MONQ_VERSION !== "undefined" ? MONQ_VERSION : devVersion()
