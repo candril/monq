@@ -1,60 +1,40 @@
 # Monq
 
-A terminal-based MongoDB browser and query tool built with OpenTUI React. Browse collections, query documents, and modify data with a keyboard-first interface.
+A terminal-based MongoDB browser and query tool built with OpenTUI React. Keyboard-first interface for browsing collections, querying documents, and modifying data.
 
 ## Architecture Decisions
 
-Before making structural changes, read the ADRs in `docs/adr/`. They capture the key decisions and their rationale. ADR-000 defines the format.
+Before making structural changes, read the ADRs in `docs/adr/`. ADR-000 defines the format.
+
+## Code Quality
+
+**Run `just check` before finishing any task.** This runs typecheck + lint + format check. Fix all errors before creating a new change or considering work done. The goal is every change is clean.
+
+- `just check` — run all checks (typecheck, lint, fmt)
+- `just lint-fix` — auto-fix lint issues
+- `just fmt` — auto-format files
+
+## Keep Files Focused
+
+Do not let files grow into catch-alls. Every file should have a single, clear responsibility. When a file starts doing too many things or gets hard to navigate, split it.
+
+**Guidelines:**
+
+- **No god files.** Don't pile unrelated logic into a convenient existing file (e.g. dumping everything into `App.tsx`, `state.ts`, `types.ts`, or `index.ts`). If you're adding something that doesn't belong to the file's core purpose, create a new file.
+- **Extract when responsibilities diverge.** If a component handles its own complex state, keyboard bindings, data fetching, AND rendering — the non-rendering parts should be hooks or utilities.
+- **Colocate by domain, not by kind.** Prefer putting related code together (e.g. `actions/pipeline.ts` next to `actions/pipelineWatch.ts`) over dumping all types into one `types.ts` or all utils into one `utils.ts`.
+- **Watch file length as a signal.** Files over ~300 lines deserve a look — not an automatic split, but ask whether the file is doing more than one thing.
 
 ## Spec-Driven Development
 
 **All features must have a spec before implementation.**
 
-### Workflow
+1. **Write the spec first** — Create `specs/NNN-feature-name.md` following the template in `specs/`
+2. **Implement by priority** — P1 first, then P2, then P3
+3. **Mark progress** — Update spec status as you work
+4. **Update docs** — After implementation, update `README.md`, relevant `docs/`, and `site/src/`
 
-1. **Write the spec first** - Create `specs/NNN-feature-name.md` following the template
-2. **Review the spec** - Ensure it covers capabilities, technical notes, and file structure
-3. **Implement by priority** - P1 first, then P2, then P3
-4. **Mark progress** - Update spec status as you work
-5. **Update docs** - After implementation, update `README.md`, any relevant files in `docs/`, and the site (`site/src/`) to reflect the new feature
-
-### Spec Structure
-
-```markdown
-# Feature Name
-
-**Status**: Draft | Ready | In Progress | Done
-
-## Description
-What this feature does in 2-3 sentences.
-
-## Out of Scope
-What this feature explicitly does NOT do.
-
-## Capabilities
-
-### P1 - Must Have
-- Core functionality
-
-### P2 - Should Have
-- Important enhancements
-
-### P3 - Nice to Have
-- Polish and extras
-
-## Technical Notes
-Implementation details, code examples, API usage.
-
-## File Structure
-Which files to create/modify.
-```
-
-### Spec Status Flow
-
-1. `Draft` - Being written, not ready
-2. `Ready` - Reviewed, ready for implementation
-3. `In Progress` - Currently being implemented
-4. `Done` - Complete, move to `specs/done/`
+Status flow: `Draft` → `Ready` → `In Progress` → `Done` (move to `specs/done/`)
 
 ## Commands
 
@@ -65,24 +45,29 @@ Use `just` for common tasks:
 | `just run` | Run the app |
 | `just dev` | Run with hot reload |
 | `just test` | Run tests |
-| `just typecheck` | Type check |
+| `just check` | Run all checks (typecheck + lint + fmt) |
+| `just lint-fix` | Lint and auto-fix |
+| `just fmt` | Format source files |
 | `just build` | Build standalone binary |
 
 ## Version Control (jj)
 
-> **SUPER IMPORTANT**: Before starting ANY new task or topic, you MUST create a new jj change!
-> Run `jj new -m "Description of what you're about to do"` FIRST, before making any edits.
-> This keeps changes atomic and easy to review. NO EXCEPTIONS!
+> **Before starting ANY new task, create a new jj change first.**
+> Run `jj new -m "Description of what you're about to do"` BEFORE making any edits.
 
-### Before starting a task
+1. Run `jj status` first
+2. If the current change is empty and unnamed, `jj abandon` it before creating a new one
+3. Create a new change: `jj new -m "Description of task"`
+4. Make edits
+5. Run `just check` and fix any issues before moving on
 
-1. **ALWAYS** run `jj status` first
-2. **ALWAYS** create a new change: `jj new -m "Description of task"`
-3. Only then start making edits
+Do not leave stray empty changes. If you created a change with `jj new` but haven't made any edits yet, use `jj abandon` before creating a different change. Check `jj log` — there should be no empty unnamed changes in the history.
 
 ## Tech Stack
 
 - **Runtime**: Bun
 - **UI**: OpenTUI React — load the `opentui` skill for full component/API reference
 - **Database**: MongoDB Node.js driver (`mongodb` package)
-- **State**: `useReducer` in `src/state.ts` — all app actions live here
+- **Typecheck**: `tsgo` (native Go port of TypeScript)
+- **Lint/Format**: oxlint, oxfmt
+- **State**: Single `useReducer` in `App.tsx` with a router in `src/state.ts` that delegates to domain sub-reducers in `src/state/reducers/` (connection, tabs, documents, query, pipeline, selection, ui)
