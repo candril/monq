@@ -1,6 +1,6 @@
 # Pipeline watcher tab lifecycle
 
-**Status**: Ready
+**Status**: Done
 
 ## Description
 
