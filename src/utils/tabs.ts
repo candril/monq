@@ -1,15 +1,14 @@
 /**
  * Shared tab-switching helper.
- * Stops any active pipeline watcher and dispatches SWITCH_TAB.
+ * Pipeline state (including pipelineWatching) is saved/restored per-tab
+ * via snapshotTab/restoreFromTab. The actual fs watcher is started/stopped
+ * by usePipelineWatcher() in App.tsx based on the restored state.
  */
 
 import type { Dispatch } from "react"
 import type { AppAction } from "../state"
-import { stopWatching } from "../actions/pipelineWatch"
 
-/** Stop pipeline watching and switch to the given tab. */
+/** Switch to the given tab. Pipeline watcher lifecycle is managed by effect. */
 export function switchToTab(tabId: string, dispatch: Dispatch<AppAction>): void {
-  stopWatching()
-  dispatch({ type: "STOP_PIPELINE_WATCH" })
   dispatch({ type: "SWITCH_TAB", tabId })
 }

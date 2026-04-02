@@ -68,6 +68,11 @@ describe("SUBMIT_QUERY", () => {
           totalDocumentCount: 0,
           selectionMode: "none",
           selectedIds: new Set(),
+          pipelineMode: false,
+          pipeline: [],
+          pipelineSource: "",
+          pipelineIsAggregate: false,
+          pipelineWatching: false,
         },
       ],
     })
@@ -108,6 +113,11 @@ describe("CLEAR_QUERY", () => {
           totalDocumentCount: 0,
           selectionMode: "none",
           selectedIds: new Set(),
+          pipelineMode: false,
+          pipeline: [],
+          pipelineSource: "",
+          pipelineIsAggregate: false,
+          pipelineWatching: false,
         },
       ],
     })

@@ -157,6 +157,12 @@ export interface Tab {
   totalDocumentCount: number
   selectionMode: SelectionMode
   selectedIds: Set<string>
+  // Pipeline state (saved/restored on tab switch)
+  pipelineMode: boolean
+  pipeline: Document[]
+  pipelineSource: string
+  pipelineIsAggregate: boolean
+  pipelineWatching: boolean
 }
 
 // ============================================================================

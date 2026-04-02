@@ -46,6 +46,7 @@ import { useApplyTheme } from "./hooks/useApplyTheme"
 import { usePaletteActions } from "./hooks/usePaletteActions"
 import { formatDocumentCount, resolveSortField, resolveSortDirection } from "./utils/format"
 import { randomConnectionMessage } from "./utils/loadingMessages"
+import { usePipelineWatcher } from "./hooks/usePipelineWatcher"
 import type { Keymap, ThemeConfig } from "./config/types"
 
 type PaletteMode = "commands" | "collections" | "databases" | "themes"
@@ -73,6 +74,7 @@ export function App({
   onBackToUri,
 }: AppProps) {
   const [state, dispatch] = useReducer(appReducer, null, createInitialState)
+  usePipelineWatcher(state, dispatch)
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("commands")
   // Active theme preset ID — used to show a checkmark in the theme picker
   const [activeThemeId, setActiveThemeId] = useState(initialThemeId)

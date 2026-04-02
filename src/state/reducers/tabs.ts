@@ -32,6 +32,11 @@ export function snapshotTab(state: AppState, tabId: string, collectionName: stri
     totalDocumentCount: state.totalDocumentCount,
     selectionMode: state.selectionMode === "selecting" ? "selected" : state.selectionMode,
     selectedIds: new Set(state.selectedIds),
+    pipelineMode: state.pipelineMode,
+    pipeline: state.pipeline,
+    pipelineSource: state.pipelineSource,
+    pipelineIsAggregate: state.pipelineIsAggregate,
+    pipelineWatching: state.pipelineWatching,
   }
 }
 
@@ -60,6 +65,11 @@ export function restoreFromTab(_state: AppState, tab: Tab): Partial<AppState> {
     frozenIds: new Set(tab.selectedIds),
     selectedRows: deriveSelectedRows(tab.documents, tab.selectedIds),
     selectionAnchor: null,
+    pipelineMode: tab.pipelineMode,
+    pipeline: tab.pipeline,
+    pipelineSource: tab.pipelineSource,
+    pipelineIsAggregate: tab.pipelineIsAggregate,
+    pipelineWatching: tab.pipelineWatching,
   }
 }
 
@@ -116,6 +126,11 @@ export function tabsReducer(state: AppState, action: AppAction): AppState | null
         totalDocumentCount: 0,
         selectionMode: "none",
         selectedIds: new Set(),
+        pipelineMode: false,
+        pipeline: [],
+        pipelineSource: "",
+        pipelineIsAggregate: false,
+        pipelineWatching: false,
       }
       return {
         ...state,
@@ -139,6 +154,11 @@ export function tabsReducer(state: AppState, action: AppAction): AppState | null
         frozenIds: new Set(),
         selectedRows: new Set(),
         selectionAnchor: null,
+        pipelineMode: false,
+        pipeline: [],
+        pipelineSource: "",
+        pipelineIsAggregate: false,
+        pipelineWatching: false,
       }
     }
 

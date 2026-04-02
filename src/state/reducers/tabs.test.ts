@@ -28,6 +28,11 @@ function makeTab(id: string, collection: string, overrides: Partial<Tab> = {}): 
     totalDocumentCount: 0,
     selectionMode: "none",
     selectedIds: new Set(),
+    pipelineMode: false,
+    pipeline: [],
+    pipelineSource: "",
+    pipelineIsAggregate: false,
+    pipelineWatching: false,
     ...overrides,
   }
 }
