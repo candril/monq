@@ -9,6 +9,8 @@ Browse, query, edit. MongoDB without leaving the terminal.
 monq --uri mongodb://localhost:27017/mydb
 ```
 
+<img src="site/src/assets/monq-demo.gif" alt="monq demo" width="100%" />
+
 ---
 
 ### Browse collections with smart columns
