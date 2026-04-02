@@ -9,7 +9,7 @@ import { SyntaxStyle, RGBA, type ScrollBoxRenderable } from "@opentui/core"
 import type { Document } from "mongodb"
 import type { PreviewPosition } from "../types"
 import { theme } from "../theme"
-import { serializeDocument } from "../utils/document"
+import { serializeDocumentRelaxed } from "../utils/document"
 
 // JSON syntax style matching our Tokyo Night theme
 const jsonSyntaxStyle = SyntaxStyle.fromStyles({
@@ -39,7 +39,7 @@ export function DocumentPreview({ document, position, scrollOffset }: DocumentPr
     }
   }, [scrollOffset])
 
-  const json = useMemo(() => (document ? serializeDocument(document) : ""), [document])
+  const json = useMemo(() => (document ? serializeDocumentRelaxed(document) : ""), [document])
 
   if (!position || !document) {
     return null

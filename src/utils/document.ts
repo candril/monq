@@ -6,9 +6,14 @@
 import { EJSON } from "bson"
 import type { Document } from "mongodb"
 
-/** Serialize a document to EJSON string (preserves BSON types) */
+/** Serialize a document to strict EJSON (lossless, round-trippable) */
 export function serializeDocument(doc: Document): string {
   return EJSON.stringify(doc, undefined, 2, { relaxed: false })
+}
+
+/** Serialize a document to relaxed EJSON for display (matches editor format) */
+export function serializeDocumentRelaxed(doc: Document): string {
+  return EJSON.stringify(doc, undefined, 2, { relaxed: true })
 }
 
 /** Deserialize EJSON string back to a document */
