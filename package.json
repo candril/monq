@@ -1,6 +1,6 @@
 {
   "name": "monq",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Terminal-based MongoDB browser and query tool",
   "license": "MIT",
   "repository": {
