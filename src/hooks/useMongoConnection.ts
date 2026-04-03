@@ -12,6 +12,7 @@ import type { AppState } from "../types"
 import {
   parseUri,
   init,
+  disconnect,
   listCollections,
   listDatabases,
   switchDatabase,
@@ -40,7 +41,13 @@ export function useMongoConnection({ uri, dispatch, dbName, state }: UseMongoCon
   useEffect(() => {
     const { host, dbName: uriDbName } = parseUri(uri)
     dispatch({ type: "SET_CONNECTION_INFO", dbName: uriDbName, host })
-    init(uri, uriDbName || undefined)
+    // Tear down any existing client before creating a new one so we don't
+    // accumulate orphaned clients with background heartbeat timers.
+    disconnect()
+      .catch(() => {})
+      .finally(() => {
+        init(uri, uriDbName || undefined)
+      })
     uriHadDbRef.current = !!uriDbName
     didInitRef.current = true
 

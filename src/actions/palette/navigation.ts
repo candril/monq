@@ -27,6 +27,7 @@ export function handleNavigationCommand(cmdId: string, ctx: PaletteContext): boo
   switch (cmdId) {
     case "nav:switch-connection":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+      disconnect().catch(() => {})
       switchConnection()
       return true
     case "nav:switch-database":

@@ -7,6 +7,7 @@ import { ConnectionScreen } from "./components/ConnectionScreen"
 import { Shell } from "./components/Shell"
 import { registerSyntaxParsers } from "./syntax-parsers"
 import { stopWatching } from "./actions/pipelineWatch"
+import { disconnect } from "./providers/mongodb"
 import { loadProfiles } from "./config/connections"
 import type { ConnectionProfile } from "./config/connections"
 import { registerSwitchConnection } from "./navigation"
@@ -121,6 +122,7 @@ function Root() {
         configThemeId={resolvedConfig.configThemeId}
         configThemeOverrides={resolvedConfig.theme}
         onBackToUri={() => {
+          disconnect().catch(() => {})
           setUri(null)
           setScreen("picker")
         }}
