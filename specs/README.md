@@ -30,7 +30,6 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 000 | [Vision](./000-vision.md) | Ready | Product vision and core philosophy |
 | 004 | [Query Bar](./004-query-bar.md) | In Progress | Simple and BSON query modes — P1 done, P2 partially done |
 | 009 | [Export](./009-export.md) | Draft | Export results as JSON/CSV |
-| 019 | [Pluggable Backends](./019-pluggable-backends.md) | Draft | CSV/NDJSON/SQLite data source abstraction |
 | 043 | [Loading Spinner Animation](./043-loading-spinner-animation.md) | Draft | Animate all columns of the big braille spinner |
 | 044 | [Explain Eager Refresh](./044-explain-eager-refresh.md) | Draft | Fire explain immediately on query change, not after doc fetch |
 
