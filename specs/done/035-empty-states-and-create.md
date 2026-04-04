@@ -1,6 +1,6 @@
 # Empty States, Create Database, Create Collection
 
-**Status**: Draft
+**Status**: Done
 
 ## Description
 

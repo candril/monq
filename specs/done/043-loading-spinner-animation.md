@@ -1,6 +1,6 @@
 # Loading Spinner: Animate All Columns
 
-**Status**: Draft
+**Status**: Done
 
 ## Description
 
