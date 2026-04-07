@@ -4,6 +4,7 @@
 
 import type { Document } from "mongodb"
 import type { SchemaMap } from "./query/schema"
+import type { HistoryEntry } from "./utils/history"
 
 // ============================================================================
 // Selection
@@ -326,8 +327,9 @@ export interface AppState {
   // Rename input dialog (null = not showing)
   renameInput: RenameInput | null
 
-  // Query history (simple mode, newest-first, loaded from disk at startup)
-  historyEntries: string[]
+  // Query history (simple mode, newest-first, loaded from disk at startup).
+  // Entries carry their source db so the picker can scope to the current db.
+  historyEntries: HistoryEntry[]
   /** Whether the history picker overlay is open */
   historyPickerOpen: boolean
 

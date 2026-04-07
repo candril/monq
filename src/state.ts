@@ -20,6 +20,7 @@ import type {
   QueryMode,
   View,
 } from "./types"
+import type { HistoryEntry } from "./utils/history"
 
 // Sub-reducers
 import { connectionReducer } from "./state/reducers/connection"
@@ -154,8 +155,8 @@ export type AppAction =
   | { type: "CLEAR_RENAME_INPUT" }
   | { type: "RENAME_COLLECTION_TABS"; oldName: string; newName: string }
   // History
-  | { type: "LOAD_HISTORY"; entries: string[] }
-  | { type: "APPEND_HISTORY_ENTRY"; entry: string }
+  | { type: "LOAD_HISTORY"; entries: HistoryEntry[] }
+  | { type: "APPEND_HISTORY_ENTRY"; entry: HistoryEntry }
   | { type: "OPEN_HISTORY_PICKER" }
   | { type: "CLOSE_HISTORY_PICKER" }
   // Index create confirmation

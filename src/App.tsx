@@ -111,16 +111,18 @@ export function App({
 
   // Append to history whenever a non-empty simple query is submitted.
   // Also update in-memory historyEntries so Ctrl-K/J works within the same session.
+  // Entries are tagged with the current dbName so the picker can scope to it.
   const prevReloadCounter = useRef(state.reloadCounter)
   useEffect(() => {
     if (prevReloadCounter.current === state.reloadCounter) {
       return
     }
     prevReloadCounter.current = state.reloadCounter
-    if (state.queryMode === "simple" && state.queryInput.trim()) {
-      const query = state.queryInput.trim()
-      appendHistory(query)
-      dispatch({ type: "APPEND_HISTORY_ENTRY", entry: query })
+    if (state.queryMode === "simple" && state.queryInput.trim() && state.dbName) {
+      const q = state.queryInput.trim()
+      const entry = { db: state.dbName, q }
+      appendHistory(q, state.dbName)
+      dispatch({ type: "APPEND_HISTORY_ENTRY", entry })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.reloadCounter])
@@ -414,10 +416,12 @@ export function App({
         )}
       </box>
 
-      {/* History picker — Ctrl-R while simple bar is open */}
+      {/* History picker — Ctrl-R while simple bar is open. Scoped to current db. */}
       {state.historyPickerOpen && state.queryVisible && (
         <HistoryPicker
-          entries={state.historyEntries}
+          entries={state.historyEntries
+            .filter((e) => e.db === state.dbName)
+            .map((e) => e.q)}
           onPick={(entry) => {
             dispatch({ type: "SET_QUERY_INPUT", input: entry })
             dispatch({ type: "CLOSE_HISTORY_PICKER" })

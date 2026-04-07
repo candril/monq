@@ -185,8 +185,11 @@ export function queryReducer(state: AppState, action: AppAction): AppState | nul
       return { ...state, historyEntries: action.entries }
 
     case "APPEND_HISTORY_ENTRY": {
-      const deduped = state.historyEntries.filter((e) => e !== action.entry)
-      const entries = [action.entry, ...deduped].slice(0, 100)
+      const { entry } = action
+      const deduped = state.historyEntries.filter(
+        (e) => !(e.db === entry.db && e.q === entry.q),
+      )
+      const entries = [entry, ...deduped].slice(0, 100)
       return { ...state, historyEntries: entries }
     }
 

@@ -150,17 +150,45 @@ describe("OPEN_QUERY", () => {
 })
 
 describe("APPEND_HISTORY_ENTRY", () => {
-  test("prepends and deduplicates", () => {
-    const s = state({ historyEntries: ["a", "b", "c"] })
-    const result = queryReducer(s, { type: "APPEND_HISTORY_ENTRY", entry: "b" })!
-    expect(result.historyEntries).toEqual(["b", "a", "c"])
+  test("prepends and deduplicates within the same db", () => {
+    const s = state({
+      historyEntries: [
+        { db: "app", q: "a" },
+        { db: "app", q: "b" },
+        { db: "app", q: "c" },
+      ],
+    })
+    const result = queryReducer(s, {
+      type: "APPEND_HISTORY_ENTRY",
+      entry: { db: "app", q: "b" },
+    })!
+    expect(result.historyEntries).toEqual([
+      { db: "app", q: "b" },
+      { db: "app", q: "a" },
+      { db: "app", q: "c" },
+    ])
+  })
+
+  test("same query in a different db is not deduplicated", () => {
+    const s = state({ historyEntries: [{ db: "app", q: "a" }] })
+    const result = queryReducer(s, {
+      type: "APPEND_HISTORY_ENTRY",
+      entry: { db: "logs", q: "a" },
+    })!
+    expect(result.historyEntries).toEqual([
+      { db: "logs", q: "a" },
+      { db: "app", q: "a" },
+    ])
   })
 
   test("caps at 100 entries", () => {
-    const entries = Array.from({ length: 100 }, (_, i) => `q${i}`)
+    const entries = Array.from({ length: 100 }, (_, i) => ({ db: "app", q: `q${i}` }))
     const s = state({ historyEntries: entries })
-    const result = queryReducer(s, { type: "APPEND_HISTORY_ENTRY", entry: "new" })!
+    const result = queryReducer(s, {
+      type: "APPEND_HISTORY_ENTRY",
+      entry: { db: "app", q: "new" },
+    })!
     expect(result.historyEntries).toHaveLength(100)
-    expect(result.historyEntries[0]).toBe("new")
+    expect(result.historyEntries[0]).toEqual({ db: "app", q: "new" })
   })
 })
