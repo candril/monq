@@ -439,7 +439,9 @@ export function App({
         queryMode={state.queryMode}
         columns={state.columns}
         schemaMap={state.schemaMap}
+        documents={state.documents}
         onChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
+        onSubmit={() => dispatch({ type: "SUBMIT_QUERY" })}
       />
 
       {/* Pipeline bar — shown in pipeline mode */}

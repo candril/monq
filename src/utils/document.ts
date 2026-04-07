@@ -21,6 +21,44 @@ export function deserializeDocument(json: string): Document {
   return EJSON.deserialize(JSON.parse(json)) as Document
 }
 
+/** Walk a dot-notation path to retrieve a nested value from a document */
+export function getNestedValue(doc: Document, fieldPath: string): unknown {
+  const parts = fieldPath.split(".")
+  let current: unknown = doc
+  for (const part of parts) {
+    if (current === null || current === undefined || typeof current !== "object") {
+      return undefined
+    }
+    current = (current as Record<string, unknown>)[part]
+  }
+  return current
+}
+
+/** Collect distinct values for a field path from loaded documents (capped at `max`) */
+export function sampleValues(documents: Document[], fieldPath: string, max = 20): unknown[] {
+  const seen = new Set<string>()
+  const result: unknown[] = []
+  for (const doc of documents) {
+    const val = getNestedValue(doc, fieldPath)
+    if (val === undefined) {
+      continue
+    }
+    // Use a string key for deduplication — handles ObjectId, Date, primitives
+    const key =
+      typeof val === "object" && val !== null && "_bsontype" in val
+        ? String(val)
+        : JSON.stringify(val)
+    if (!seen.has(key)) {
+      seen.add(key)
+      result.push(val)
+    }
+    if (result.length >= max) {
+      break
+    }
+  }
+  return result
+}
+
 /** Detect columns from a sample of documents, sorted: _id first, scalars before complex, then alphabetically */
 export function detectColumns(documents: Document[]): string[] {
   if (documents.length === 0) {
