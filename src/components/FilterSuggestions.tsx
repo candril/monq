@@ -167,6 +167,25 @@ function buildValueSuggestions(
     })
   }
 
+  // in() aggregate for fields with multiple sampled values
+  const inTypes: (FieldType | undefined)[] = ["string", "number", "objectid"]
+  if (inTypes.includes(fieldType) && valueSuggestions.length >= 2) {
+    const inValues = valueSuggestions.slice(0, 5).map((s) => s.label)
+    const inSuggestion: Suggestion = {
+      label: `in(${inValues.join(",")})`,
+      value: prefix + ctx.field + ctx.op + `in(${inValues.join(",")})`,
+      hint: `match any of ${inValues.length}`,
+      submit: true,
+    }
+    // Filter by partial before returning
+    if (ctx.partial) {
+      const lower = ctx.partial.toLowerCase()
+      const all = [inSuggestion, ...helpers, ...valueSuggestions]
+      return all.filter((s) => s.label.toLowerCase().includes(lower))
+    }
+    return [inSuggestion, ...helpers, ...valueSuggestions]
+  }
+
   const all = [...helpers, ...valueSuggestions]
 
   // Filter by partial input if the user has started typing a value
@@ -190,6 +209,36 @@ function buildBsonSuggestions(columns: DetectedColumn[], schemaMap: SchemaMap): 
     const info = schemaMap.get(field)
     return { label: field, value: field, hint: info?.type }
   })
+}
+
+// ---- Operator suggestions for exact field match ----
+
+function buildOperatorSuggestions(
+  field: string,
+  prefix: string,
+  schemaMap: SchemaMap,
+): Suggestion[] {
+  const info = schemaMap.get(field)
+  const fieldType = info?.type
+
+  // All types get : and !=
+  const suggestions: Suggestion[] = [
+    { label: `${field}:`, value: `${prefix}${field}:`, hint: "exact match" },
+    { label: `${field}!=`, value: `${prefix}${field}!=`, hint: "not equal" },
+  ]
+
+  // Comparison + range for date and number
+  if (fieldType === "date" || fieldType === "number") {
+    suggestions.push(
+      { label: `${field}>`, value: `${prefix}${field}>`, hint: "greater than" },
+      { label: `${field}>=`, value: `${prefix}${field}>=`, hint: "greater than or equal" },
+      { label: `${field}<`, value: `${prefix}${field}<`, hint: "less than" },
+      { label: `${field}<=`, value: `${prefix}${field}<=`, hint: "less than or equal" },
+      { label: `${field}:..`, value: `${prefix}${field}:`, hint: "range (fill in bounds)" },
+    )
+  }
+
+  return suggestions
 }
 
 // ---- Field suggestions (simple mode) ----
@@ -224,7 +273,12 @@ function buildFieldSuggestions(
   if (dotIndex >= 0) {
     const parentPath = search.slice(0, dotIndex)
     const subSearch = search.slice(dotIndex + 1)
+
+    // Exact subfield match → show operator suggestions for full path
     const subfields = getSubfieldSuggestions(schemaMap, parentPath)
+    if (!isProjection && subSearch && subfields.includes(subSearch)) {
+      return buildOperatorSuggestions(search, prefix + projPrefix, schemaMap)
+    }
     if (subfields.length === 0) {
       return []
     }
@@ -249,6 +303,11 @@ function buildFieldSuggestions(
     if (!path.includes(".") && info.children.length > 0) {
       allFields.add(path)
     }
+  }
+
+  // Exact field match without operator → show operator suggestions
+  if (!isProjection && search && allFields.has(search)) {
+    return buildOperatorSuggestions(search, prefix + projPrefix, schemaMap)
   }
 
   const candidates = [...allFields]

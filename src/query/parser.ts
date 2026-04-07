@@ -290,6 +290,11 @@ export function parseSimpleQueryFull(input: string, schemaMap?: SchemaMap): Pars
         if (!isNaN(n)) {
           setFilterValue(filter, field, { $size: n }, schemaMap)
         }
+      } else if (/^in\((.+)\)$/.test(rawValue)) {
+        // in() syntax: field:in(a,b,c) -> $in / $nin
+        const inInner = rawValue.match(/^in\((.+)\)$/)![1]
+        const parts = inInner.split(",").map((v) => coerceValue(v.trim()))
+        setFilterValue(filter, field, negated ? { $nin: parts } : { $in: parts }, schemaMap)
       } else if (rawValue.startsWith("[") && rawValue.endsWith("]")) {
         // Bracket syntax: field:[a,b,c] -> $in / $nin
         const inner = rawValue.slice(1, -1)
@@ -399,9 +404,11 @@ export function filterToSimple(filter: Record<string, unknown>): {
       } else if (entries.length === 1 && entries[0][0] === "$size") {
         tokens.push(`${key}:size:${entries[0][1]}`)
       } else if (entries.length === 1 && entries[0][0] === "$in" && Array.isArray(entries[0][1])) {
-        tokens.push(`${key}:[${(entries[0][1] as unknown[]).join(",")}]`)
+        const values = (entries[0][1] as unknown[]).map((v) => serializeValue(v))
+        tokens.push(`${key}:in(${values.join(",")})`)
       } else if (entries.length === 1 && entries[0][0] === "$nin" && Array.isArray(entries[0][1])) {
-        tokens.push(`-${key}:[${(entries[0][1] as unknown[]).join(",")}]`)
+        const values = (entries[0][1] as unknown[]).map((v) => serializeValue(v))
+        tokens.push(`-${key}:in(${values.join(",")})`)
       } else if ("$regex" in ops) {
         const pattern = ops.$regex as string
         const options = ops.$options as string | undefined
@@ -508,6 +515,14 @@ export function bsonToSimple(bsonFilter: string, bsonProjection: string): string
         const entries = Object.entries(ops)
         if (entries.length === 1 && opMap[entries[0][0]]) {
           tokens.push(`${key}${opMap[entries[0][0]]}${entries[0][1]}`)
+          continue
+        }
+        if (entries.length === 1 && entries[0][0] === "$in" && Array.isArray(entries[0][1])) {
+          tokens.push(`${key}:in(${(entries[0][1] as unknown[]).join(",")})`)
+          continue
+        }
+        if (entries.length === 1 && entries[0][0] === "$nin" && Array.isArray(entries[0][1])) {
+          tokens.push(`-${key}:in(${(entries[0][1] as unknown[]).join(",")})`)
           continue
         }
       }

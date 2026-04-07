@@ -275,7 +275,7 @@ describe("filterToSimple", () => {
   test("$in array", () => {
     const { query } = filterToSimple({ status: { $in: ["open", "closed"] } })
 
-    expect(query).toBe("status:[open,closed]")
+    expect(query).toBe("status:in(open,closed)")
   })
 
   test("Date value (start-of-day) round-trips to YYYY-MM-DD", () => {
@@ -361,6 +361,12 @@ describe("bsonToSimple", () => {
 
     expect(bsonToSimple(bad, "")).toBe(bad)
   })
+
+  test("$in operator converts to in() syntax", () => {
+    expect(bsonToSimple('{"status": {"$in": ["open", "closed"]}}', "")).toBe(
+      "status:in(open,closed)",
+    )
+  })
 })
 
 describe("simpleToBson", () => {
@@ -423,5 +429,50 @@ describe("projectionToSimple", () => {
 
   test("empty projection", () => {
     expect(projectionToSimple({})).toBe("")
+  })
+})
+
+describe("in() syntax", () => {
+  test("field:in(a,b,c) → $in", () => {
+    const { filter } = parseSimpleQueryFull("status:in(open,closed,pending)", emptySchema)
+    expect(filter).toEqual({ status: { $in: ["open", "closed", "pending"] } })
+  })
+
+  test("negated -field:in(a,b) → $nin", () => {
+    const { filter } = parseSimpleQueryFull("-status:in(open,closed)", emptySchema)
+    expect(filter).toEqual({ status: { $nin: ["open", "closed"] } })
+  })
+
+  test("in() with numeric values", () => {
+    const { filter } = parseSimpleQueryFull("age:in(18,25,30)", emptySchema)
+    expect(filter).toEqual({ age: { $in: [18, 25, 30] } })
+  })
+
+  test("bracket syntax still works", () => {
+    const { filter } = parseSimpleQueryFull("status:[open,closed]", emptySchema)
+    expect(filter).toEqual({ status: { $in: ["open", "closed"] } })
+  })
+
+  test("in() round-trips through parse→serialize", () => {
+    const input = "status:in(open,closed,pending)"
+    const { filter } = parseSimpleQueryFull(input, emptySchema)
+    const { query } = filterToSimple(filter as Record<string, unknown>)
+    expect(query).toBe(input)
+  })
+
+  test("$nin serializes with negation prefix", () => {
+    const { query } = filterToSimple({ status: { $nin: ["open", "closed"] } })
+    expect(query).toBe("-status:in(open,closed)")
+  })
+
+  test("bracket [a,b] parses and serializes as in()", () => {
+    const { filter } = parseSimpleQueryFull("status:[open,closed]", emptySchema)
+    const { query } = filterToSimple(filter as Record<string, unknown>)
+    expect(query).toBe("status:in(open,closed)")
+  })
+
+  test("in() with whitespace around values", () => {
+    const { filter } = parseSimpleQueryFull("status:in( open , closed )", emptySchema)
+    expect(filter).toEqual({ status: { $in: ["open", "closed"] } })
   })
 })
