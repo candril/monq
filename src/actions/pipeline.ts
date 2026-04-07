@@ -106,7 +106,7 @@ function buildTemplate(
   // serialize the live pipeline stages so the user can edit what's actually running
   if (currentPipeline.length > 0) {
     const doc = { $schema: "./.monq-pipeline-schema.json", pipeline: currentPipeline }
-    return header + EJSON.stringify(doc, { relaxed: false }, 2) + "\n"
+    return header + EJSON.stringify(doc, undefined, 2) + "\n"
   }
 
   // Parse filter + projection from simple query string
@@ -136,7 +136,7 @@ function buildTemplate(
     pipeline: pipelineStages,
   }
 
-  return header + EJSON.stringify(doc, { relaxed: false }, 2) + "\n"
+  return header + EJSON.stringify(doc, undefined, 2) + "\n"
 }
 
 // ── JSON Schema sidecar ─────────────────────────────────────────────────────

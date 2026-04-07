@@ -125,7 +125,7 @@ export function pipelineReducer(state: AppState, action: AppAction): AppState | 
         return { $match: { ...existingMatch, [action.field]: action.value } }
       })
 
-      const newSource = EJSON.stringify({ pipeline: updatedPipeline }, { relaxed: false }, 2)
+      const newSource = EJSON.stringify({ pipeline: updatedPipeline }, undefined, 2)
 
       return {
         ...state,
