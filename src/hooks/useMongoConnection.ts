@@ -43,47 +43,54 @@ export function useMongoConnection({ uri, dispatch, dbName, state }: UseMongoCon
     dispatch({ type: "SET_CONNECTION_INFO", dbName: uriDbName, host })
     // Tear down any existing client before creating a new one so we don't
     // accumulate orphaned clients with background heartbeat timers.
-    disconnect()
-      .catch(() => {})
-      .finally(() => {
-        init(uri, uriDbName || undefined)
-      })
+    // IMPORTANT: init() and the first query (listDatabases/listCollections)
+    // must both run inside the .finally() callback — otherwise the query
+    // fires before the client is set and fails with "Not connected".
     uriHadDbRef.current = !!uriDbName
     didInitRef.current = true
 
     let cancelled = false
 
-    if (!uriDbName) {
-      // No db in URI — list databases so user can pick one
-      dispatch({ type: "SET_DATABASES_LOADING", loading: true })
-      listDatabases()
-        .then((databases) => {
-          if (cancelled) {
-            return
-          }
-          dispatch({ type: "SET_DATABASES", databases })
-          dispatch({ type: "OPEN_DB_PICKER" })
-        })
-        .catch((err: Error) => {
-          if (!cancelled) {
-            dispatch({ type: "SET_DATABASES_LOADING", loading: false })
-            dispatch({ type: "SET_ERROR", error: `Failed to list databases: ${err.message}` })
-          }
-        })
-    } else {
-      // db is in URI — load collections right away
-      listCollections()
-        .then((collections) => {
-          if (!cancelled) {
-            dispatch({ type: "SET_COLLECTIONS", collections })
-          }
-        })
-        .catch((err: Error) => {
-          if (!cancelled) {
-            dispatch({ type: "SET_ERROR", error: err.message })
-          }
-        })
-    }
+    disconnect()
+      .catch(() => {})
+      .finally(() => {
+        if (cancelled) {
+          return
+        }
+        init(uri, uriDbName || undefined)
+
+        if (!uriDbName) {
+          // No db in URI — list databases so user can pick one
+          dispatch({ type: "SET_DATABASES_LOADING", loading: true })
+          listDatabases()
+            .then((databases) => {
+              if (cancelled) {
+                return
+              }
+              dispatch({ type: "SET_DATABASES", databases })
+              dispatch({ type: "OPEN_DB_PICKER" })
+            })
+            .catch((err: Error) => {
+              if (!cancelled) {
+                dispatch({ type: "SET_DATABASES_LOADING", loading: false })
+                dispatch({ type: "SET_ERROR", error: `Failed to list databases: ${err.message}` })
+              }
+            })
+        } else {
+          // db is in URI — load collections right away
+          listCollections()
+            .then((collections) => {
+              if (!cancelled) {
+                dispatch({ type: "SET_COLLECTIONS", collections })
+              }
+            })
+            .catch((err: Error) => {
+              if (!cancelled) {
+                dispatch({ type: "SET_ERROR", error: err.message })
+              }
+            })
+        }
+      })
 
     return () => {
       cancelled = true
