@@ -16,7 +16,11 @@ export function ErrorView({ message }: ErrorViewProps) {
       </text>
       <box marginTop={1}>
         <text>
-          <span fg={theme.textDim}>Press q to quit</span>
+          <span fg={theme.textDim}>Press </span>
+          <span fg={theme.text}>Esc</span>
+          <span fg={theme.textDim}> to reconnect or </span>
+          <span fg={theme.text}>q</span>
+          <span fg={theme.textDim}> to quit</span>
         </text>
       </box>
     </box>

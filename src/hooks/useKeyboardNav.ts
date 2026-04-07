@@ -16,6 +16,7 @@ import type { Keymap } from "../config/types"
 import { matches } from "../utils/keymap"
 import { disconnect } from "../providers/mongodb"
 import { stopWatching } from "../actions/pipelineWatch"
+import { switchConnection } from "../navigation"
 import { switchToTab } from "../utils/tabs"
 import { getExportAbort } from "../actions/palette/document"
 import { filterBySelectedValue } from "../actions/filterValue"
@@ -215,6 +216,20 @@ export function useKeyboardNav({
   }
 
   useKeyboard((key) => {
+    // ── Error screen ───────────────────────────────────────────────────
+    // When stuck on the error view, only quit and back-to-connection work.
+    if (state.error) {
+      if (matches(key, keymap["app.quit"])) {
+        quitApp()
+        return
+      }
+      if (key.name === "escape") {
+        switchConnection()
+        return
+      }
+      return
+    }
+
     // ── Global intercepts (order-dependent) ────────────────────────────
 
     // palette.open: only when a collection is open and query bar is closed
