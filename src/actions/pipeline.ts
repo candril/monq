@@ -61,6 +61,29 @@ function buildHeader(collectionName: string, dbName: string, schemaMap: SchemaMa
   ].join("\n")
 }
 
+/** Exported for testing only — use writePipelineFile in production code. */
+export function _buildPipelineTemplate(
+  collectionName: string,
+  dbName: string,
+  currentPipelineSource: string,
+  currentPipeline: Document[],
+  simpleQuery: string,
+  schemaMap: SchemaMap,
+  sortField: string | null,
+  sortDirection: 1 | -1,
+): string {
+  return buildTemplate(
+    collectionName,
+    dbName,
+    currentPipelineSource,
+    currentPipeline,
+    simpleQuery,
+    schemaMap,
+    sortField,
+    sortDirection,
+  )
+}
+
 function buildTemplate(
   collectionName: string,
   dbName: string,
@@ -83,7 +106,7 @@ function buildTemplate(
   // serialize the live pipeline stages so the user can edit what's actually running
   if (currentPipeline.length > 0) {
     const doc = { $schema: "./.monq-pipeline-schema.json", pipeline: currentPipeline }
-    return header + JSON.stringify(doc, null, 2) + "\n"
+    return header + EJSON.stringify(doc, { relaxed: false }, 2) + "\n"
   }
 
   // Parse filter + projection from simple query string
@@ -113,7 +136,7 @@ function buildTemplate(
     pipeline: pipelineStages,
   }
 
-  return header + JSON.stringify(doc, null, 2) + "\n"
+  return header + EJSON.stringify(doc, { relaxed: false }, 2) + "\n"
 }
 
 // ── JSON Schema sidecar ─────────────────────────────────────────────────────

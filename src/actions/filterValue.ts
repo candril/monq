@@ -56,7 +56,8 @@ function filterByValuePipeline(
     typeof val === "string" ||
     typeof val === "number" ||
     typeof val === "boolean" ||
-    val instanceof Date
+    val instanceof Date ||
+    val instanceof ObjectId
   if (!isSimpleValue) {
     dispatch({
       type: "SHOW_MESSAGE",

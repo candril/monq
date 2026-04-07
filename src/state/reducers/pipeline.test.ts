@@ -1,4 +1,6 @@
 import { describe, test, expect } from "bun:test"
+import { ObjectId } from "mongodb"
+import { EJSON } from "bson"
 import { pipelineReducer } from "./pipeline"
 import { createInitialState } from "../../state"
 import type { AppState } from "../../types"
@@ -89,6 +91,33 @@ describe("ADD_PIPELINE_MATCH_CONDITION", () => {
     })!
     expect(result.pipelineSource).toContain('"name"')
     expect(result.pipelineSource).toContain('"Alice"')
+  })
+
+  test("ObjectId value is serialized as EJSON $oid in pipelineSource, not as {}", () => {
+    // regression: JSON.stringify turns ObjectId into {} — must use EJSON instead
+    const id = new ObjectId("aaaaaaaaaaaaaaaaaaaaaaaa")
+    const s = state({
+      pipelineMode: true,
+      pipeline: [{ $match: {} }],
+      pipelineSource: "",
+    })
+    const result = pipelineReducer(s, {
+      type: "ADD_PIPELINE_MATCH_CONDITION",
+      field: "_id",
+      value: id,
+    })!
+
+    // pipeline state holds the live ObjectId instance
+    expect(result.pipeline[0].$match._id).toBeInstanceOf(ObjectId)
+
+    // pipelineSource must round-trip via EJSON, not produce {}
+    const parsed = EJSON.parse(result.pipelineSource)
+    const parsedId = parsed.pipeline[0].$match._id
+    // Use toHexString() rather than instanceof — EJSON.parse and mongodb may use
+    // different ObjectId class instances depending on which bson copy is loaded
+    expect(typeof parsedId.toHexString).toBe("function")
+    expect(parsedId.toHexString()).toBe("aaaaaaaaaaaaaaaaaaaaaaaa")
+    expect(result.pipelineSource).not.toContain('"_id": {}')
   })
 })
 

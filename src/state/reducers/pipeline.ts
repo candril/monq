@@ -2,6 +2,7 @@
 
 import type { AppState } from "../../types"
 import type { AppAction } from "../../state"
+import { EJSON } from "bson"
 import { parseSimpleQueryFull } from "../../query/parser"
 import { stageOf } from "../../query/pipeline"
 
@@ -124,7 +125,7 @@ export function pipelineReducer(state: AppState, action: AppAction): AppState | 
         return { $match: { ...existingMatch, [action.field]: action.value } }
       })
 
-      const newSource = JSON.stringify({ pipeline: updatedPipeline }, null, 2)
+      const newSource = EJSON.stringify({ pipeline: updatedPipeline }, { relaxed: false }, 2)
 
       return {
         ...state,
