@@ -481,7 +481,7 @@ function DocumentRow({
             {markLetter ? (
               <span fg={getMarkColor(markLetter)}>{markLetter}</span>
             ) : (
-              <span fg={theme.textDim}>{" "}</span>
+              <span fg={theme.textDim}> </span>
             )}
           </text>
         </box>

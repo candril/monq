@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-08
+
 ### Added
 - **Document marks** — vim-style letter marks (`m<letter>`) on individual documents, scoped per `(host, db, collection)` and persisted to `~/.local/share/monq/marks`. Marked rows show a colored letter in the leftmost gutter.
 - `'<letter>` applies a mark filter to the active query mode: toggles `@<letter>` in simple mode, sets `_id: { $in }` in BSON / pipeline. `''` clears it.
@@ -14,7 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Suggestion panel surfaces every used `@<letter>` register when you type `@`, with doc count and color.
 - Command palette: "Clear All Marks (current collection)" and per-letter "Clear Mark [a] (3 docs)" entries (only shown when marks exist).
 - Selection-mode marking: in selection mode, `m<letter>` marks all selected rows at once.
-- Per-collection query history — each `(database, collection)` pair has its own `Ctrl+R` history list, instead of sharing across all collections in a database.
+- **Value suggestions** in the simple query bar — sampled values from loaded documents and quick-filter helpers. After typing `field:`, the panel suggests real values from the current result set plus type-aware helpers (`>ago(7d)`, `:today`, `oid(...)`, `null`).
+- **Operator suggestions** for typed fields — typing a known field name surfaces `:`, `!=`, `>`, `>=`, `<`, `<=`, and the `:..` range stub for date and number fields.
+- `field:in(a,b,c)` shorthand for `$in` queries, parseable in the simple query bar.
+- **Per-collection query history** — each `(database, collection)` pair has its own `Ctrl+R` history list, instead of sharing across all collections in a database.
 
 ### Fixed
 - BSON-mode queries with ObjectId values now match correctly. `parseBsonQuery` was using plain `JSON.parse`, which decoded `{"$oid":"..."}` as a plain object the driver couldn't match against. Switched to `EJSON.parse` (with `JSON.parse` fallback for backward compat).
