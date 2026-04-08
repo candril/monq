@@ -1,8 +1,14 @@
 /**
  * Query history — persisted to ~/.local/share/monq/history (XDG).
- * JSON-lines: one {db, q} per line, capped at MAX_HISTORY entries globally.
- * Only simple-mode queries are stored. Entries are scoped to the database
- * they were submitted against; the picker filters by current db at render time.
+ * JSON-lines: one {db, col, q} per line, capped at MAX_HISTORY entries globally.
+ * Only simple-mode queries are stored. Entries are scoped to the (database,
+ * collection) pair they were submitted against; the picker filters by both at
+ * render time.
+ *
+ * Backward compat: legacy entries written before the per-collection scope
+ * (`{db, q}` only) are still loaded — `col` is read as `""` so they don't
+ * surface in any picker. They age out via dedupe + the MAX_HISTORY cap as
+ * new entries are appended.
  */
 
 import { homedir } from "os"
@@ -13,6 +19,7 @@ const MAX_HISTORY = 100
 
 export interface HistoryEntry {
   db: string
+  col: string
   q: string
 }
 
@@ -34,7 +41,15 @@ function parseLine(line: string): HistoryEntry | null {
       typeof (obj as HistoryEntry).db === "string" &&
       typeof (obj as HistoryEntry).q === "string"
     ) {
-      return { db: (obj as HistoryEntry).db, q: (obj as HistoryEntry).q }
+      // Legacy entries (pre-collection scope) have no `col` — read as "" so
+      // they don't match any active collection in the picker filter, and get
+      // pushed out by dedupe + MAX_HISTORY cap as new entries land.
+      const e = obj as Partial<HistoryEntry>
+      return {
+        db: e.db as string,
+        col: typeof e.col === "string" ? e.col : "",
+        q: e.q as string,
+      }
     }
   } catch {
     // Legacy plain-text entry (pre-scoping) — drop it; can't be safely attributed.
@@ -60,8 +75,12 @@ export async function loadHistory(): Promise<HistoryEntry[]> {
   }
 }
 
-/** Append a query to the history file, deduplicating per (db, q) and capping at MAX_HISTORY. */
-export async function appendHistory(query: string, db: string): Promise<void> {
+/**
+ * Append a query to the history file, deduplicating per (db, col, q) and
+ * capping at MAX_HISTORY. Caller passes the active collection name so the
+ * picker can scope per-collection.
+ */
+export async function appendHistory(query: string, db: string, col: string): Promise<void> {
   const trimmed = query.trim()
   if (!trimmed) {
     return
@@ -85,9 +104,9 @@ export async function appendHistory(query: string, db: string): Promise<void> {
       // file doesn't exist yet — start fresh
     }
 
-    // Remove duplicate within the same db (keep latest position)
-    const deduped = existing.filter((e) => !(e.db === db && e.q === trimmed))
-    deduped.push({ db, q: trimmed })
+    // Remove duplicate within the same (db, col) (keep latest position)
+    const deduped = existing.filter((e) => !(e.db === db && e.col === col && e.q === trimmed))
+    deduped.push({ db, col, q: trimmed })
 
     // Cap at MAX_HISTORY (keep most recent)
     const capped = deduped.slice(-MAX_HISTORY)

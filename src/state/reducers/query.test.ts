@@ -150,45 +150,61 @@ describe("OPEN_QUERY", () => {
 })
 
 describe("APPEND_HISTORY_ENTRY", () => {
-  test("prepends and deduplicates within the same db", () => {
+  test("prepends and deduplicates within the same (db, col)", () => {
     const s = state({
       historyEntries: [
-        { db: "app", q: "a" },
-        { db: "app", q: "b" },
-        { db: "app", q: "c" },
+        { db: "app", col: "users", q: "a" },
+        { db: "app", col: "users", q: "b" },
+        { db: "app", col: "users", q: "c" },
       ],
     })
     const result = queryReducer(s, {
       type: "APPEND_HISTORY_ENTRY",
-      entry: { db: "app", q: "b" },
+      entry: { db: "app", col: "users", q: "b" },
     })!
     expect(result.historyEntries).toEqual([
-      { db: "app", q: "b" },
-      { db: "app", q: "a" },
-      { db: "app", q: "c" },
+      { db: "app", col: "users", q: "b" },
+      { db: "app", col: "users", q: "a" },
+      { db: "app", col: "users", q: "c" },
     ])
   })
 
   test("same query in a different db is not deduplicated", () => {
-    const s = state({ historyEntries: [{ db: "app", q: "a" }] })
+    const s = state({ historyEntries: [{ db: "app", col: "users", q: "a" }] })
     const result = queryReducer(s, {
       type: "APPEND_HISTORY_ENTRY",
-      entry: { db: "logs", q: "a" },
+      entry: { db: "logs", col: "users", q: "a" },
     })!
     expect(result.historyEntries).toEqual([
-      { db: "logs", q: "a" },
-      { db: "app", q: "a" },
+      { db: "logs", col: "users", q: "a" },
+      { db: "app", col: "users", q: "a" },
+    ])
+  })
+
+  test("same query in a different collection is not deduplicated", () => {
+    const s = state({ historyEntries: [{ db: "app", col: "users", q: "a" }] })
+    const result = queryReducer(s, {
+      type: "APPEND_HISTORY_ENTRY",
+      entry: { db: "app", col: "orders", q: "a" },
+    })!
+    expect(result.historyEntries).toEqual([
+      { db: "app", col: "orders", q: "a" },
+      { db: "app", col: "users", q: "a" },
     ])
   })
 
   test("caps at 100 entries", () => {
-    const entries = Array.from({ length: 100 }, (_, i) => ({ db: "app", q: `q${i}` }))
+    const entries = Array.from({ length: 100 }, (_, i) => ({
+      db: "app",
+      col: "users",
+      q: `q${i}`,
+    }))
     const s = state({ historyEntries: entries })
     const result = queryReducer(s, {
       type: "APPEND_HISTORY_ENTRY",
-      entry: { db: "app", q: "new" },
+      entry: { db: "app", col: "users", q: "new" },
     })!
     expect(result.historyEntries).toHaveLength(100)
-    expect(result.historyEntries[0]).toEqual({ db: "app", q: "new" })
+    expect(result.historyEntries[0]).toEqual({ db: "app", col: "users", q: "new" })
   })
 })

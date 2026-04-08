@@ -119,17 +119,21 @@ export function App({
 
   // Append to history whenever a non-empty simple query is submitted.
   // Also update in-memory historyEntries so Ctrl-K/J works within the same session.
-  // Entries are tagged with the current dbName so the picker can scope to it.
+  // Entries are tagged with (dbName, collectionName) so the picker can scope
+  // per-collection — different collections in the same db have independent
+  // query histories, since the schema and useful filters are usually different.
   const prevReloadCounter = useRef(state.reloadCounter)
   useEffect(() => {
     if (prevReloadCounter.current === state.reloadCounter) {
       return
     }
     prevReloadCounter.current = state.reloadCounter
-    if (state.queryMode === "simple" && state.queryInput.trim() && state.dbName) {
+    const submittingTab = state.tabs.find((t) => t.id === state.activeTabId)
+    const col = submittingTab?.collectionName ?? ""
+    if (state.queryMode === "simple" && state.queryInput.trim() && state.dbName && col) {
       const q = state.queryInput.trim()
-      const entry = { db: state.dbName, q }
-      appendHistory(q, state.dbName)
+      const entry = { db: state.dbName, col, q }
+      appendHistory(q, state.dbName, col)
       dispatch({ type: "APPEND_HISTORY_ENTRY", entry })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -462,10 +466,12 @@ export function App({
         )}
       </box>
 
-      {/* History picker — Ctrl-R while simple bar is open. Scoped to current db. */}
+      {/* History picker — Ctrl-R while simple bar is open. Scoped to (db, col). */}
       {state.historyPickerOpen && state.queryVisible && (
         <HistoryPicker
-          entries={state.historyEntries.filter((e) => e.db === state.dbName).map((e) => e.q)}
+          entries={state.historyEntries
+            .filter((e) => e.db === state.dbName && e.col === activeCollectionName)
+            .map((e) => e.q)}
           onPick={(entry) => {
             dispatch({ type: "SET_QUERY_INPUT", input: entry })
             dispatch({ type: "CLOSE_HISTORY_PICKER" })
