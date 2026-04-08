@@ -46,13 +46,35 @@ A mark `a` in `users` is independent from a mark `a` in `orders`.
 
 #### Filtering by mark
 
-- **`'<letter>`** shows only documents marked with that letter in the current collection.
+`'<letter>` writes a mark filter into **whichever query mode is currently active**, in a form the user can see and edit afterwards. The mechanism differs per mode but the keystroke is the same.
+
+- **`'<letter>`** applies a mark filter for the given letter to the active query.
   - First press of `'` enters "jump to mark" mode (waits for a letter).
-  - Pressing `a-z` activates the filter (queries the collection for those `_id`s).
-  - Pressing `'` while the same letter's filter is already active toggles it off.
-  - **`''`** (a second `'` while jump-pending) clears the active mark filter and restores the previous query. A lone `'` always waits for a letter, so this is the only one-handed way to clear.
+  - Pressing `a-z` writes the filter into the current query mode (see modes below).
+  - **`''`** (a second `'` while jump-pending) clears any mark filter from the current query.
   - Pressing `Escape` cancels jump pending mode.
-  - The filter must coexist with — but visually replace — the current simple/pipeline query while active. Restoring (via `''`, `query.clear`, etc.) brings the previous query back.
+
+**Per-mode behaviour**:
+
+- **Simple mode** (live, composable):
+  - `'<letter>` toggles a `@<letter>` token in the simple query string and submits.
+  - The token is resolved to `_id: { $in: [...] }` at parse time via the existing `parseSimpleQueryFull` path. Newly marked docs surface automatically on the next reload (live binding).
+  - Composes naturally with other simple tokens: `@a Author:Peter +Name`.
+  - `''` strips every `@<letter>` token from the query.
+
+- **BSON mode** (snapshot):
+  - `'<letter>` parses the current `bsonFilter`, sets `_id: { $in: [<EJSON-encoded ObjectIds>] }`, re-serialises with EJSON, and submits.
+  - The ids are concrete at the moment `'<letter>` is pressed — newly marked docs require pressing `'<letter>` again to refresh.
+  - Existing top-level keys are preserved; an existing `_id` constraint is overwritten (last-write-wins).
+  - If the BSON filter is unparseable, a toast tells the user to fix it first; the filter is never silently destroyed.
+  - `''` removes the `_id` key from the BSON filter (and clears the filter entirely if `_id` was the only key).
+
+- **Pipeline mode** (snapshot, stage-aware):
+  - `'<letter>` finds the first `$match` stage and sets `_id: { $in: [...] }` inside it. If no `$match` stage exists, prepends a new one.
+  - Other keys in the existing `$match` are preserved; an existing `_id` is overwritten.
+  - `''` strips `_id` from the first `$match`. If that leaves the stage empty, the whole stage is removed.
+
+**EJSON note**: BSON mode now uses `EJSON.parse` and `EJSON.stringify` so ObjectId values round-trip as actual `ObjectId` instances (not raw `{$oid: …}` plain objects). This was a pre-existing gap in `parseBsonQuery` that surfaced when implementing per-mode mark filters and was fixed in the same change.
 
 #### Persistence and scope
 
@@ -68,42 +90,37 @@ A mark `a` in `users` is independent from a mark `a` in `orders`.
 - The gutter character is the **letter itself** (`a`, `b`, …), color-coded from a fixed Catppuccin Mocha palette — **same approach as presto** (`../presto/src/theme.ts` `MARK_PALETTE` / `getMarkColor`). Each letter is deterministically mapped to a colour by index (`a → red`, `b → peach`, `c → yellow`, …), cycling through the palette for letters beyond its length. The mapping is stable so the same letter always renders the same colour everywhere it appears.
 - The gutter is **always reserved** in the documents view. The original draft of this spec proposed collapsing it to zero width when no marks existed, but that caused a jarring layout shift the moment the user set their first mark (every column moved 2 chars right). Reserving the 2 chars permanently is a cheap price for a stable layout.
 
-#### Filter behaviour (the surprising bit)
+#### Why this matters
 
-When the user activates `'<letter>`, monq does **not** filter the in-memory result
-set. It runs a fresh query against MongoDB:
+The mark filter doesn't filter the in-memory result set — it runs a fresh
+query against MongoDB. This is critical because the user may have marked
+documents earlier under a different query, paged past them, or be browsing a
+large collection where the marked docs aren't currently loaded. By writing
+into the active query (rather than overlaying a separate filter), the user
+can compose the mark filter with everything else and the document loader's
+existing query path handles it without special cases.
 
-```js
-db.<collection>.find({ _id: { $in: [<all _ids marked with letter>] } })
-```
+#### `@<letter>` simple-query token (P1)
 
-This is important because the user may have marked documents earlier under a
-different query, paged past them, or be browsing a large collection where the
-marked docs aren't currently loaded. The mark filter must surface them
-regardless of the current query state.
+The simple-mode behaviour of `'<letter>` is to write a `@<letter>` token into the query string. The parser then handles it. This is its own subsystem worth describing:
 
-Implementation: the existing `pipelineMode` / simple-query plumbing already
-supports running an arbitrary filter, so the mark filter is just another filter
-source — see Technical Notes.
+- Uses an `@` sigil rather than `marks:<letter>` so it can never collide with a user field literally called `marks`. Mirrors vim's `@a` (run macro from register `a`); symmetric with `'a` (jump to mark `a`).
+- Parser detects `@<letter>` (single lowercase a-z only) and rewrites it to `_id: { $in: [...] }` at query-build time, ANDed with the rest of the parsed filter. Unknown letters resolve to an empty `$in` (matches nothing) — explicit "no marks for this letter" instead of silently dropping the constraint.
+- Combines with all other simple-query token types: `@a +Name -State`, `@a status:active createdAt>2026-01-01`, etc.
+- When both `@a` and `_id:...` appear in the same query, last-write wins (matches the parser's existing behaviour for repeated field tokens).
+- Marks are resolved at parse time via an optional `markIds: Map<letter, ids[]>` argument to `parseSimpleQueryFull`. Call sites that have `AppState` build the map via `buildMarkIdMap(state)` (see `src/utils/query.ts`).
+- `@a` resolution is also propagated through pipeline-template generation (Ctrl+F / Ctrl+E), so opening a `@a Author:Peter` query in the editor produces a `$match` with the resolved ids — not a silently dropped token.
+- Uppercase letters (`@A-@Z`) and multi-char tokens (`@ab`) are not recognised — reserved for future use.
+- Suggestions panel surfaces `@<letter>` entries when the user types `@`, listing each used register in the active scope with its doc count and the mark's color (see `FilterSuggestions.buildMarkRegisterSuggestions`).
 
 ### P2 — Should Have
 
-> **Note on `''`**: P1 reassigns `''` to "clear active mark filter" because that's the only one-handed way to undo a filter (a lone `'` always opens jump pending). The "list used marks" overlay therefore needs a different entry point — most likely a command palette entry, since the keyboard space around `'` is now spoken for.
-
-- **List-marks overlay**: a small palette overlay that lists all used mark letters for the current collection with the count of docs each one tags. Selecting one applies that filter. Surfaced via a command palette entry (no dedicated key) — see below.
-- **`@<letter>` mark register token** in the simple query bar — composable with other tokens (e.g. `@a Author:Peter`).
-  - Uses an `@` sigil rather than `marks:<letter>` so it can never collide with a user field literally called `marks`. Mirrors vim's `@a` (run macro from register `a`); symmetric with `'a` (jump to mark `a`).
-  - Parser detects `@<letter>` (single lowercase a-z only) and rewrites it to `_id: { $in: [...] }` at query-build time, ANDed with the rest of the parsed filter. Unknown letters resolve to an empty `$in` (matches nothing) — explicit "no marks for this letter" instead of silently dropping the constraint.
-  - Combines with all other simple-query token types: `@a +Name -State`, `@a status:active createdAt>2026-01-01`, etc.
-  - When both `@a` and `_id:...` appear in the same query, last-write wins (matches the parser's existing behaviour for repeated field tokens).
-  - Marks are resolved at parse time via an optional `markIds: Map<letter, ids[]>` argument to `parseSimpleQueryFull`. Call sites that have `AppState` build the map via `buildMarkIdMap(state)` (see `src/utils/query.ts`).
-  - `@a` resolution is also propagated through pipeline-template generation (Ctrl+F / Ctrl+E), so opening a `@a Author:Peter` query in the editor produces a `$match` with the resolved ids — not a silently dropped token.
-  - Uppercase letters (`@A-@Z`) and multi-char tokens (`@ab`) are not recognised — reserved for future use.
-- **Command palette entries**:
-  - "Show marks for current collection" (opens the list-marks overlay)
-  - "Clear all marks for current collection"
-  - "Clear mark [letter]"
-- **Toast on stale mark**: if a marked `_id` no longer exists when the filter runs, the filter still completes (it just returns fewer rows). After the result lands, prune the dangling id from storage and show `Pruned 2 stale marks`. The helper `pruneMarks(scope, ids)` already exists in `src/utils/marks.ts`; the loader needs to compare returned `_id`s against the requested set and call it.
+- **List-marks overlay**: a small palette overlay that lists all used mark letters for the current collection with the count of docs each one tags. Selecting one applies that filter. Surfaced via a command palette entry (no dedicated key).
+- **Command palette entries** (already implemented):
+  - "Show marks for current collection" (opens the list-marks overlay) — pending the overlay component
+  - "Clear all marks for current collection" — done
+  - "Clear mark [letter]" — done
+- **Toast on stale mark**: if a marked `_id` no longer exists when the filter runs, the filter still completes (it just returns fewer rows). After the result lands, prune the dangling id from storage and show `Pruned 2 stale marks`. The helper `pruneMarks(scope, ids)` exists in `src/utils/marks.ts` but is not yet wired — when `'<letter>` was mode-aware (via the dedicated override path) we pruned in `useDocumentLoader`; with the new design the prune logic needs to live somewhere mode-agnostic (probably as a post-fetch hook keyed on "this query came from a `@<letter>` resolution").
 
 ### P3 — Nice to Have
 
@@ -191,25 +208,14 @@ compound `_id`s all work uniformly.
 marks: MarkEntry[]
 
 /** Mark/jump pending modes — exclusive. */
-markPending: boolean       // true after `m`, waiting for letter
-jumpPending: boolean       // true after `'`, waiting for letter
-
-/** Active mark filter on the current tab — null when not filtering by mark. */
-activeMarkFilter: string | null  // e.g. "a"
-
-/** Saved query to restore when the mark filter is cleared. */
-markFilterSavedQuery: { query: string; mode: QueryMode } | null
+markPending: boolean // true after `m`, waiting for letter
+jumpPending: boolean // true after `'`, waiting for letter
 ```
 
-`activeMarkFilter` and `markFilterSavedQuery` likely belong on the `Tab` rather
-than top-level `AppState`, so each tab can independently filter by a mark.
-Suggested placement on `Tab`:
-
-```typescript
-// src/types.ts (Tab)
-activeMarkFilter: string | null
-markFilterSavedQuery: { query: string; mode: QueryMode } | null
-```
+There is intentionally **no per-tab `activeMarkFilter` or saved-query state**.
+The mark filter lives inside the active query itself (a `@<letter>` token in
+simple mode, or a literal `_id: { $in: [...] }` in BSON / pipeline mode), so
+the existing query plumbing handles it without any special state.
 
 ### State actions
 
@@ -220,36 +226,45 @@ markFilterSavedQuery: { query: string; mode: QueryMode } | null
 | { type: "ENTER_JUMP_PENDING" }
 | { type: "EXIT_JUMP_PENDING" }
 | { type: "SET_MARKS"; marks: MarkEntry[] }
-| { type: "TOGGLE_MARK"; letter: string }                // sets/clears on selected doc
-| { type: "ACTIVATE_MARK_FILTER"; letter: string }
-| { type: "CLEAR_MARK_FILTER" }
 ```
 
-`TOGGLE_MARK` reads the selected doc's `_id` from `state.documents[state.selectedIndex]`,
-computes the `MarkScope` from `state.host` / `state.dbName` / active tab's
-`collectionName`, calls `setMark` or `clearMark`, dispatches `SET_MARKS` with
-the new in-memory snapshot, and surfaces a toast.
+There are no `ACTIVATE_MARK_FILTER` / `CLEAR_MARK_FILTER` actions. Both
+`'<letter>` and `''` are dispatched via plain action helpers (`jumpToMark` /
+`clearMarkJump` in `src/actions/marks.ts`) which compute the new query string
+or pipeline, then dispatch the standard `SET_QUERY_INPUT` + `SUBMIT_QUERY` (or
+`SET_PIPELINE`) actions. The reducer is unaware of marks beyond storing the
+in-memory mark list via `SET_MARKS`.
 
 ### Query integration
 
-The mark filter is implemented as a special filter source that overrides the
-tab's regular query while active. When `ACTIVATE_MARK_FILTER` fires:
+The keyboard handler routes `'<letter>` to one of three pure helpers in
+`src/query/markToken.ts`, depending on the active query mode:
 
-1. Save the current `query` + `queryMode` into `markFilterSavedQuery`.
-2. Build a filter `{ _id: { $in: ids } }` where `ids` come from
-   `idsForLetter(state.marks, scope, letter)` — converted from canonical strings
-   back to `ObjectId` (or other native types) using a small inverse helper.
-3. Dispatch a regular `SET_QUERY` (or equivalent) that runs the find with that
-   filter. The simplest hookup is to switch the tab into BSON mode with
-   `bsonFilter` set to the JSON form, since BSON mode already supports arbitrary
-   `_id` filters cleanly. Alternatively, add an explicit `tab.markFilter` field
-   that the document loader checks before falling back to the user's query.
+| Mode     | Helper               | Produces                                                  |
+| -------- | -------------------- | --------------------------------------------------------- |
+| Simple   | `toggleMarkToken`    | New query string with `@<letter>` toggled in/out          |
+| BSON     | `mergeMarkIntoBson`  | EJSON-encoded filter with `_id: { $in: [ObjectIds] }` set |
+| Pipeline | `mergeMarkIntoPipeline` | New pipeline with `_id` set in the first `$match` stage |
 
-Spec authors should pick whichever hookup is least invasive after reading
-`useDocumentLoader.ts` — both options are viable.
+Each helper is pure (no React, no async, no state). The action helper
+(`jumpToMark`) calls the right one, then dispatches plain `SET_QUERY_INPUT` /
+`SET_PIPELINE` + `SUBMIT_QUERY`. There is no document-loader special case;
+the resulting query goes through the normal `resolveCurrentQuery` →
+`fetchDocuments` path.
 
-When `CLEAR_MARK_FILTER` fires, restore `query` + `queryMode` from
-`markFilterSavedQuery`, clear it, and reload.
+`''` (clear) routes through symmetric helpers: `removeAnyMarkToken`,
+`removeIdFromBson`, `removeIdFromPipeline`.
+
+**Live vs snapshot semantics**: only simple mode is live. The `@<letter>`
+token resolves through `parseSimpleQueryFull` at every reload, so newly marked
+docs surface on the next refresh. BSON and pipeline mode store concrete
+ObjectIds — newly marked docs require pressing `'<letter>` again.
+
+**EJSON in BSON mode**: `parseBsonQuery` was switched from plain `JSON.parse`
+to `EJSON.parse` (with a `JSON.parse` fallback for backward compat) so that
+`{"$oid":"…"}` extended-JSON forms deserialise to real `ObjectId` instances
+the driver can match against. Without this, the BSON-mode mark filter would
+write a syntactically-valid filter that returned zero rows.
 
 ### Keyboard wiring
 
@@ -259,41 +274,39 @@ In `useKeyboardNav.ts`, intercept `m` and `'` **before** the docHandlers table
 ```typescript
 // Pending modes win over everything except Escape
 if (state.markPending) {
-  if (key.name === "escape" || !/^[a-z]$/.test(key.name ?? "")) {
+  if (key.name && /^[a-z]$/.test(key.name)) {
+    const letter = key.name
     dispatch({ type: "EXIT_MARK_PENDING" })
-    return
+    void toggleMarkOnSelection(state, dispatch, letter)
+  } else {
+    dispatch({ type: "EXIT_MARK_PENDING" })
   }
-  dispatch({ type: "TOGGLE_MARK", letter: key.name! })
-  dispatch({ type: "EXIT_MARK_PENDING" })
   return
 }
 
 if (state.jumpPending) {
-  if (key.name === "escape") {
+  // `''` clears any mark filter from the current query mode.
+  if (matches(key, keymap["mark.jump"])) {
     dispatch({ type: "EXIT_JUMP_PENDING" })
+    clearMarkJump(state, dispatch)
     return
   }
-  if (!/^[a-z]$/.test(key.name ?? "")) {
+  if (key.name && /^[a-z]$/.test(key.name)) {
+    const letter = key.name
     dispatch({ type: "EXIT_JUMP_PENDING" })
-    return
-  }
-  // If already filtering by this letter, clear; otherwise activate.
-  const tab = activeTab(state)
-  if (tab?.activeMarkFilter === key.name) {
-    dispatch({ type: "CLEAR_MARK_FILTER" })
+    jumpToMark(state, dispatch, letter)
   } else {
-    dispatch({ type: "ACTIVATE_MARK_FILTER", letter: key.name! })
+    dispatch({ type: "EXIT_JUMP_PENDING" })
   }
-  dispatch({ type: "EXIT_JUMP_PENDING" })
   return
 }
 
 // Enter pending modes
-if (matches(key, keymap["mark.set"])) {       // default: m
+if (matches(key, keymap["mark.set"]) && state.activeTabId) {
   dispatch({ type: "ENTER_MARK_PENDING" })
   return
 }
-if (matches(key, keymap["mark.jump"])) {      // default: '
+if (matches(key, keymap["mark.jump"]) && state.activeTabId) {
   dispatch({ type: "ENTER_JUMP_PENDING" })
   return
 }
@@ -365,48 +378,52 @@ toast/status area: `mark: _` or `jump to mark: _`. Cancelled on the next keypres
 
 ### File structure
 
-| File | Change |
-|---|---|
-| `src/utils/marks.ts` | **New** — storage, canonical id, scope helpers |
-| `src/utils/marks.test.ts` | **New** — round-trip + scope isolation tests |
-| `src/types.ts` | Add `marks`, `markPending`, `jumpPending` to `AppState`; add `activeMarkFilter`, `markFilterSavedQuery` to `Tab` |
-| `src/state.ts` | New action types + router entries |
-| `src/state/reducers/ui.ts` | Handle pending-mode transitions |
-| `src/state/reducers/tabs.ts` | Handle `ACTIVATE_MARK_FILTER` / `CLEAR_MARK_FILTER` per-tab |
-| `src/state/reducers/documents.ts` | Handle `SET_MARKS` (just stores the array) |
-| `src/hooks/useKeyboardNav.ts` | Intercept `m` and `'`, manage pending modes |
-| `src/hooks/useDocumentLoader.ts` | When `tab.activeMarkFilter` is set, run `{ _id: { $in: [...] } }` instead of the regular query |
-| `src/components/DocumentList.tsx` | Optional 1-char mark gutter, header alignment |
-| `src/theme.ts` | `MARK_PALETTE` + `getMarkColor()` (ported from presto) |
-| `src/App.tsx` | Load marks on startup; thread `marksForScope` map down to `DocumentList`; show pending hints |
-| `src/config/types.ts` | Add `mark.set` and `mark.jump` to `ActionName` |
-| `src/config/keymap.ts` | Default bindings: `mark.set: ["m"]`, `mark.jump: ["'"]` |
-| `src/commands/...` | P2: command palette entries for "show marks", "clear all marks", "clear mark [letter]" |
-| `src/query/parser.ts` | P2: parse `marks:<letter>` token (resolves to `_id: { $in: [...] }` at query-build time, requires marks map at parse time — pass through `parseSimpleQuery` options) |
+| File                              | Change                                                                                                |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `src/utils/marks.ts`              | **New** — storage, canonical id, scope helpers, `decodeMarkId`, `pruneMarks`                          |
+| `src/utils/marks.test.ts`         | **New** — round-trip + scope isolation tests                                                          |
+| `src/query/markToken.ts`          | **New** — pure helpers: toggle/remove `@<letter>` (simple), merge/remove `_id` (BSON / pipeline)      |
+| `src/query/markToken.test.ts`     | **New** — helper tests                                                                                |
+| `src/actions/marks.ts`            | **New** — `toggleMarkOnSelection`, `jumpToMark`, `clearMarkJump`. All disk I/O lives here.             |
+| `src/actions/palette/marks.ts`    | **New** — palette handlers for "Clear All Marks" and "Clear Mark [letter]"                            |
+| `src/types.ts`                    | Add `marks`, `markPending`, `jumpPending` to `AppState`                                               |
+| `src/state.ts`                    | New action types: `ENTER_*`, `EXIT_*` mark/jump pending, `SET_MARKS`                                   |
+| `src/state/reducers/ui.ts`        | Handle pending-mode transitions                                                                       |
+| `src/state/reducers/documents.ts` | Handle `SET_MARKS` (just stores the array)                                                            |
+| `src/hooks/useKeyboardNav.ts`     | Intercept `m` and `'`, manage pending modes, route to `toggleMarkOnSelection` / `jumpToMark`          |
+| `src/components/DocumentList.tsx` | Always-reserved 2-char mark gutter, header alignment                                                  |
+| `src/components/FilterSuggestions.tsx` | `@<letter>` suggestions panel — color-coded, prefix-matched                                       |
+| `src/theme.ts`                    | `MARK_PALETTE` + `getMarkColor()` (ported from presto)                                                |
+| `src/App.tsx`                     | Load marks on startup; thread `marksForRow` and `markCounts` maps to `DocumentList` / suggestions     |
+| `src/config/types.ts`             | Add `mark.set` and `mark.jump` to `ActionName`                                                        |
+| `src/config/keymap.ts`            | Default bindings: `mark.set: ["m"]`, `mark.jump: ["'"]`                                               |
+| `src/commands/builder.ts`         | Marks palette entries (only when there are marks in the active scope)                                 |
+| `src/query/parser.ts`             | New `MarkIdMap` type and optional 3rd arg to `parseSimpleQueryFull`; `@<letter>` token recognition; `parseBsonQuery` switched to EJSON |
+| `src/utils/query.ts`              | New `buildMarkIdMap(state)` helper; threads marks through `resolveCurrentQuery`                       |
+| `src/state/reducers/pipeline.ts`  | `ENTER_PIPELINE_MODE` resolves `@<letter>` via `buildMarkIdMap`                                       |
+| `src/actions/pipeline.ts`         | `_buildPipelineTemplate` / `writePipelineFile` / `openPipelineEditor` accept and propagate `markIds`  |
 
 ### Edge cases and pitfalls
 
 - **Selected doc has no `_id`** (e.g. result of an aggregation pipeline that drops `_id`): show toast `Cannot mark — document has no _id` and do nothing. Don't crash.
-- **Mark filter on aggregation tabs**: if `tab.pipelineMode` is true when `'<letter>` is pressed, the mark filter takes over (saves the pipeline source the same way it saves the simple query) and switches the tab to a temporary find. Clearing the mark filter restores the pipeline.
-- **Reload while mark filter active**: `r` (`doc.reload`) re-runs the find with the same `_id: { $in: [...] }` — i.e. it picks up newly marked docs from other sessions on disk if `loadMarks()` is called as part of reload, otherwise stays stable. Recommended: re-read the marks file on `doc.reload` so cross-tab/cross-session updates flow in.
+- **Mark filter on pipeline tabs**: `'<letter>` injects `_id: { $in: [...] }` into the first `$match` stage (or prepends a new `$match` if none exists). Pipeline mode is unchanged otherwise — the user can still edit other stages. `''` strips `_id` from the first `$match`, removing the stage entirely if it becomes empty.
+- **Mark filter on BSON tabs**: `'<letter>` parses the BSON filter, sets `_id: { $in: [...] }`, re-serialises with EJSON, and submits. Existing keys are preserved; an existing `_id` is overwritten. If the BSON is unparseable, a toast tells the user to fix it first; the filter is never silently destroyed.
+- **Reload while mark filter active**: in simple mode this is live — newly marked docs from other sessions flow in via `parseSimpleQueryFull`'s next call to `buildMarkIdMap`. In BSON / pipeline mode the ids are concrete and frozen at the moment `'<letter>` was pressed; the user must press `'<letter>` again to refresh.
 - **Letter collision with vim-style motions**: presto uses `m` for mark and `'` for jump exactly because of vim parity. Both keys are currently free in monq's keymap (see `DEFAULT_BINDINGS`). No conflict.
-- **`m` while in selection mode**: `m` should still enter mark pending mode — but since selection mode marks multiple rows, we have a choice:
-  - **P1 behaviour:** in selection mode, `m<letter>` marks **all** selected rows with that letter. Toggle semantics: if every selected row already has that letter, remove from all; otherwise set on all. This is the most useful behaviour and requires no extra UI.
-  - Cancel selection mode after the mark op completes (same as bulk delete flow).
+- **`m` while in selection mode**: `m` still enters mark pending mode. In selection mode, `m<letter>` marks **all** selected rows with that letter. Toggle semantics: if every selected row already has that letter, remove from all; otherwise set on all. Selection mode is dropped after the mark op completes (same as bulk delete flow).
 - **Marking inside the welcome screen / collection picker**: ignore — only active in the documents view (mirrors how other doc-view actions are gated).
 
 ---
 
 ## Keyboard summary
 
-| Key | Action |
-|---|---|
-| `m<letter>` | Toggle mark `<letter>` on selected doc (or selected rows) |
-| `'<letter>` | Filter to docs marked `<letter>` in the current collection |
-| `''` | Clear active mark filter, restore previous query |
-| `'<same letter>` | Toggle the active filter off (same as `''` when the letter matches the current filter) |
-| `@<letter>` (simple query token) | Mark register — composes with other filter tokens |
-| `Escape` (during pending mode) | Cancel mark/jump pending |
+| Key                              | Action                                                                               |
+| -------------------------------- | ------------------------------------------------------------------------------------ |
+| `m<letter>`                      | Toggle mark `<letter>` on selected doc (or selected rows)                            |
+| `'<letter>`                      | Apply mark filter to the current query mode (toggle in simple, set in BSON/pipeline) |
+| `''`                             | Clear any mark filter from the current query                                         |
+| `@<letter>` (simple query token) | Mark register — composes with other filter tokens                                    |
+| `Escape` (during pending mode)   | Cancel mark/jump pending                                                             |
 
 ## UX notes
 

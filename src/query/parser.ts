@@ -468,13 +468,24 @@ export function projectionToSimple(proj: Record<string, 0 | 1>): string {
     .join(" ")
 }
 
-/** Parse a BSON/JSON query string into a MongoDB filter */
+/**
+ * Parse a BSON/JSON query string into a MongoDB filter.
+ *
+ * Uses EJSON so extended-JSON forms like `{"$oid":"..."}` deserialise to real
+ * `ObjectId` instances (and `{"$date":"..."}` to `Date`, etc.). Falls back to
+ * plain `JSON.parse` if EJSON rejects the input — keeps backward compat with
+ * pre-EJSON BSON-mode queries that the user may have stored in history.
+ */
 export function parseBsonQuery(input: string): Filter<Document> {
   const trimmed = input.trim()
   if (!trimmed) {
     return {}
   }
-  return JSON.parse(trimmed) as Filter<Document>
+  try {
+    return EJSON.parse(trimmed) as Filter<Document>
+  } catch {
+    return JSON.parse(trimmed) as Filter<Document>
+  }
 }
 
 /**

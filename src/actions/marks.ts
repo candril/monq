@@ -9,7 +9,23 @@
 import type { Dispatch } from "react"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
-import { markDocId, marksForScope, setMark, clearMark, type MarkScope } from "../utils/marks"
+import {
+  decodeMarkId,
+  idsForLetter,
+  markDocId,
+  marksForScope,
+  setMark,
+  clearMark,
+  type MarkScope,
+} from "../utils/marks"
+import {
+  toggleMarkToken,
+  removeAnyMarkToken,
+  mergeMarkIntoBson,
+  removeIdFromBson,
+  mergeMarkIntoPipeline,
+  removeIdFromPipeline,
+} from "../query/markToken"
 
 /** Resolve the active tab's mark scope. Returns null if there's no active tab. */
 function activeScope(state: AppState): MarkScope | null {
@@ -139,4 +155,120 @@ function selectionIdKey(id: unknown): string {
   return id != null && typeof maybeId.toHexString === "function"
     ? maybeId.toHexString()
     : String(id)
+}
+
+// ── Jump-to-mark (`'<letter>`) ─────────────────────────────────────────────
+
+/**
+ * Apply or toggle a mark filter for `letter`, writing into whichever query
+ * mode is currently active:
+ *
+ *   • Simple   → toggle `@<letter>` token in queryInput, submit
+ *   • BSON     → set `_id: { $in: [...] }` in queryInput (literal ObjectIds)
+ *   • Pipeline → set `_id: { $in: [...] }` in the first $match stage
+ *
+ * Each mode produces something the user can see and edit afterwards.
+ */
+export function jumpToMark(state: AppState, dispatch: Dispatch<AppAction>, letter: string): void {
+  const scope = activeScope(state)
+  if (!scope) {
+    return
+  }
+  if (state.view !== "documents") {
+    return
+  }
+
+  // Resolve the letter's ids once. An empty register still works (the user
+  // gets an `_id: { $in: [] }` filter that matches nothing — explicit feedback
+  // rather than silent no-op).
+  const ids = idsForLetter(state.marks, scope, letter).map(decodeMarkId)
+
+  // ── Pipeline mode ────────────────────────────────────────────────────────
+  if (state.pipelineMode) {
+    const next = mergeMarkIntoPipeline(state.pipeline, ids)
+    dispatch({
+      type: "SET_PIPELINE",
+      pipeline: next,
+      source: "",
+      isAggregate: false,
+    })
+    dispatch({
+      type: "SHOW_MESSAGE",
+      message: `Mark [${letter}]: ${ids.length} doc${ids.length === 1 ? "" : "s"}`,
+      kind: "info",
+    })
+    return
+  }
+
+  // ── BSON mode ────────────────────────────────────────────────────────────
+  if (state.queryMode === "bson") {
+    const next = mergeMarkIntoBson(state.queryInput, ids)
+    if (next === null) {
+      dispatch({
+        type: "SHOW_MESSAGE",
+        message: "BSON filter is invalid — fix it before applying a mark",
+        kind: "warning",
+      })
+      return
+    }
+    dispatch({ type: "SET_QUERY_INPUT", input: next })
+    dispatch({ type: "SUBMIT_QUERY" })
+    dispatch({
+      type: "SHOW_MESSAGE",
+      message: `Mark [${letter}]: ${ids.length} doc${ids.length === 1 ? "" : "s"}`,
+      kind: "info",
+    })
+    return
+  }
+
+  // ── Simple mode ──────────────────────────────────────────────────────────
+  // Pure textual toggle — the parser resolves `@<letter>` at query time, so
+  // newly marked docs surface automatically on the next reload.
+  const next = toggleMarkToken(state.queryInput, letter)
+  dispatch({ type: "SET_QUERY_INPUT", input: next })
+  dispatch({ type: "SUBMIT_QUERY" })
+  // No toast — the visible @<letter> in the bar is the feedback.
+}
+
+/**
+ * Clear any active mark filter from the current query mode (the `''` shortcut).
+ *   • Simple   → strip every `@<letter>` token
+ *   • BSON     → strip the `_id` key
+ *   • Pipeline → strip `_id` from the first $match (and the stage if empty)
+ */
+export function clearMarkJump(state: AppState, dispatch: Dispatch<AppAction>): void {
+  if (state.view !== "documents") {
+    return
+  }
+
+  if (state.pipelineMode) {
+    const next = removeIdFromPipeline(state.pipeline)
+    if (next === state.pipeline) {
+      return
+    }
+    dispatch({ type: "SET_PIPELINE", pipeline: next, source: "", isAggregate: false })
+    return
+  }
+
+  if (state.queryMode === "bson") {
+    const next = removeIdFromBson(state.queryInput)
+    if (next === null) {
+      // Broken BSON — leave it alone.
+      return
+    }
+    if (next === state.queryInput) {
+      return
+    }
+    dispatch({ type: "SET_QUERY_INPUT", input: next })
+    dispatch({ type: "SUBMIT_QUERY" })
+    return
+  }
+
+  // Simple mode
+  const next = removeAnyMarkToken(state.queryInput)
+  if (next === state.queryInput) {
+    return
+  }
+  dispatch({ type: "SET_QUERY_INPUT", input: next })
+  dispatch({ type: "SUBMIT_QUERY" })
 }

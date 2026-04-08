@@ -171,22 +171,6 @@ export interface Tab {
   pipelineSource: string
   pipelineIsAggregate: boolean
   pipelineWatching: boolean
-  // Mark filter — when set, the tab shows only docs with this mark letter and
-  // the previous query is held in markFilterSavedQuery so it can be restored.
-  activeMarkFilter: string | null
-  markFilterSavedQuery: SavedMarkQuery | null
-}
-
-/** Snapshot of a tab's query state, taken when a mark filter activates. */
-export interface SavedMarkQuery {
-  query: string
-  queryMode: QueryMode
-  bsonSort: string
-  bsonProjection: string
-  pipelineMode: boolean
-  pipeline: Document[]
-  pipelineSource: string
-  pipelineIsAggregate: boolean
 }
 
 // ============================================================================

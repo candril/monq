@@ -33,8 +33,6 @@ function makeTab(id: string, collection: string, overrides: Partial<Tab> = {}): 
     pipelineSource: "",
     pipelineIsAggregate: false,
     pipelineWatching: false,
-    activeMarkFilter: null,
-    markFilterSavedQuery: null,
     ...overrides,
   }
 }

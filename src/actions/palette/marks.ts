@@ -46,11 +46,6 @@ export function handleMarksCommand(cmdId: string, ctx: PaletteContext): boolean 
         message: `Cleared ${total} mark${total === 1 ? "" : "s"}`,
         kind: "success",
       })
-      // If a mark filter was active, the underlying ids are gone now —
-      // restore the saved query so the user isn't stuck on an empty result.
-      if (activeTab.activeMarkFilter) {
-        dispatch({ type: "CLEAR_MARK_FILTER" })
-      }
     })
     return true
   }
@@ -80,10 +75,6 @@ export function handleMarksCommand(cmdId: string, ctx: PaletteContext): boolean 
         message: `Cleared mark [${letter}] from ${ids.length} doc${ids.length === 1 ? "" : "s"}`,
         kind: "success",
       })
-      // If the active filter was on this letter, restore the saved query.
-      if (activeTab.activeMarkFilter === letter) {
-        dispatch({ type: "CLEAR_MARK_FILTER" })
-      }
     })()
     return true
   }

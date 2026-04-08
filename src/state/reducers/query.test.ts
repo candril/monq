@@ -73,8 +73,6 @@ describe("SUBMIT_QUERY", () => {
           pipelineSource: "",
           pipelineIsAggregate: false,
           pipelineWatching: false,
-          activeMarkFilter: null,
-          markFilterSavedQuery: null,
         },
       ],
     })
@@ -120,8 +118,6 @@ describe("CLEAR_QUERY", () => {
           pipelineSource: "",
           pipelineIsAggregate: false,
           pipelineWatching: false,
-          activeMarkFilter: null,
-          markFilterSavedQuery: null,
         },
       ],
     })

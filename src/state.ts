@@ -174,8 +174,6 @@ export type AppAction =
   | { type: "ENTER_JUMP_PENDING" }
   | { type: "EXIT_JUMP_PENDING" }
   | { type: "SET_MARKS"; marks: MarkEntry[] }
-  | { type: "ACTIVATE_MARK_FILTER"; letter: string }
-  | { type: "CLEAR_MARK_FILTER" }
 
 // ============================================================================
 // Initial State
