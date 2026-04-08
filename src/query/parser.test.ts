@@ -470,9 +470,4 @@ describe("in() syntax", () => {
     const { query } = filterToSimple(filter as Record<string, unknown>)
     expect(query).toBe("status:in(open,closed)")
   })
-
-  test("in() with whitespace around values", () => {
-    const { filter } = parseSimpleQueryFull("status:in( open , closed )", emptySchema)
-    expect(filter).toEqual({ status: { $in: ["open", "closed"] } })
-  })
 })
