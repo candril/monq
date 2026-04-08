@@ -4,6 +4,7 @@ import type { AppState } from "../../types"
 import type { AppAction } from "../../state"
 import { EJSON } from "bson"
 import { parseSimpleQueryFull } from "../../query/parser"
+import { buildMarkIdMap } from "../../utils/query"
 import { stageOf } from "../../query/pipeline"
 
 export function pipelineReducer(state: AppState, action: AppAction): AppState | null {
@@ -49,6 +50,7 @@ export function pipelineReducer(state: AppState, action: AppAction): AppState | 
       const { filter: enterFilter, projection: enterProj } = parseSimpleQueryFull(
         state.queryInput,
         state.schemaMap,
+        buildMarkIdMap(state),
       )
       try {
         stages.push({ $match: enterFilter })

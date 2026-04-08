@@ -91,8 +91,14 @@ source — see Technical Notes.
 > **Note on `''`**: P1 reassigns `''` to "clear active mark filter" because that's the only one-handed way to undo a filter (a lone `'` always opens jump pending). The "list used marks" overlay therefore needs a different entry point — most likely a command palette entry, since the keyboard space around `'` is now spoken for.
 
 - **List-marks overlay**: a small palette overlay that lists all used mark letters for the current collection with the count of docs each one tags. Selecting one applies that filter. Surfaced via a command palette entry (no dedicated key) — see below.
-- **`marks:<letter>`** filter token in the simple query bar — equivalent to `'<letter>` but composable with other tokens (e.g. `marks:a Author:Peter`).
-  - Parser detects `marks:<letter>` and rewrites it to `_id: { $in: [...] }` at query-build time, ANDed with the rest of the parsed filter.
+- **`@<letter>` mark register token** in the simple query bar — composable with other tokens (e.g. `@a Author:Peter`).
+  - Uses an `@` sigil rather than `marks:<letter>` so it can never collide with a user field literally called `marks`. Mirrors vim's `@a` (run macro from register `a`); symmetric with `'a` (jump to mark `a`).
+  - Parser detects `@<letter>` (single lowercase a-z only) and rewrites it to `_id: { $in: [...] }` at query-build time, ANDed with the rest of the parsed filter. Unknown letters resolve to an empty `$in` (matches nothing) — explicit "no marks for this letter" instead of silently dropping the constraint.
+  - Combines with all other simple-query token types: `@a +Name -State`, `@a status:active createdAt>2026-01-01`, etc.
+  - When both `@a` and `_id:...` appear in the same query, last-write wins (matches the parser's existing behaviour for repeated field tokens).
+  - Marks are resolved at parse time via an optional `markIds: Map<letter, ids[]>` argument to `parseSimpleQueryFull`. Call sites that have `AppState` build the map via `buildMarkIdMap(state)` (see `src/utils/query.ts`).
+  - `@a` resolution is also propagated through pipeline-template generation (Ctrl+F / Ctrl+E), so opening a `@a Author:Peter` query in the editor produces a `$match` with the resolved ids — not a silently dropped token.
+  - Uppercase letters (`@A-@Z`) and multi-char tokens (`@ab`) are not recognised — reserved for future use.
 - **Command palette entries**:
   - "Show marks for current collection" (opens the list-marks overlay)
   - "Clear all marks for current collection"
@@ -399,6 +405,7 @@ toast/status area: `mark: _` or `jump to mark: _`. Cancelled on the next keypres
 | `'<letter>` | Filter to docs marked `<letter>` in the current collection |
 | `''` | Clear active mark filter, restore previous query |
 | `'<same letter>` | Toggle the active filter off (same as `''` when the letter matches the current filter) |
+| `@<letter>` (simple query token) | Mark register — composes with other filter tokens |
 | `Escape` (during pending mode) | Cancel mark/jump pending |
 
 ## UX notes

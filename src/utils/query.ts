@@ -6,8 +6,35 @@
 
 import type { Document, Filter } from "mongodb"
 import type { AppState } from "../types"
-import { parseSimpleQueryFull, parseBsonQuery } from "../query/parser"
+import { parseSimpleQueryFull, parseBsonQuery, type MarkIdMap } from "../query/parser"
 import { classifyPipeline, extractFindParts } from "../query/pipeline"
+import { decodeMarkId, lettersInScope, idsForLetter } from "./marks"
+
+/**
+ * Build the `@<letter>` resolver map for the current active tab. Each used
+ * letter in the active (host, db, col) scope maps to its decoded `_id`s,
+ * ready to drop into a Mongo `_id: { $in: [...] }` filter.
+ *
+ * Returns an empty map when there's no active tab (so `@a` resolves to
+ * "matches nothing", which is the safest default).
+ */
+export function buildMarkIdMap(state: AppState): MarkIdMap {
+  const map: MarkIdMap = new Map()
+  // Defensive against partial state shapes (e.g. test mocks): if any required
+  // field is missing, return an empty map so `@<letter>` resolves to "no marks".
+  if (!Array.isArray(state.tabs) || !Array.isArray(state.marks)) {
+    return map
+  }
+  const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+  if (!activeTab) {
+    return map
+  }
+  const scope = { host: state.host, db: state.dbName, col: activeTab.collectionName }
+  for (const letter of lettersInScope(state.marks, scope).keys()) {
+    map.set(letter, idsForLetter(state.marks, scope, letter).map(decodeMarkId))
+  }
+  return map
+}
 
 export type ResolvedQuery =
   | {
@@ -41,7 +68,11 @@ export function resolveCurrentQuery(state: AppState): ResolvedQuery {
       if (state.queryMode === "bson") {
         filter = parseBsonQuery(state.queryInput)
       } else {
-        const parsed = parseSimpleQueryFull(state.queryInput, state.schemaMap)
+        const parsed = parseSimpleQueryFull(
+          state.queryInput,
+          state.schemaMap,
+          buildMarkIdMap(state),
+        )
         filter = parsed.filter
         projection = parsed.projection
       }

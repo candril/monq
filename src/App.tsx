@@ -37,7 +37,7 @@ import { useKeyboardNav } from "./hooks/useKeyboardNav"
 import { useDocumentLoader } from "./hooks/useDocumentLoader"
 import { buildCommands } from "./commands/builder"
 import { loadHistory, appendHistory } from "./utils/history"
-import { loadMarks, marksForScope } from "./utils/marks"
+import { loadMarks, marksForScope, lettersInScope } from "./utils/marks"
 import { buildCollectionCommands } from "./commands/collections"
 import { buildDatabaseCommands } from "./commands/databases"
 import { buildThemeCommands } from "./commands/themes"
@@ -314,6 +314,19 @@ export function App({
     })
   }, [state.marks, state.host, state.dbName, activeCollectionName])
 
+  // letter → count for the active scope, fed to the suggestions panel so the
+  // user can hit `@` and see all live registers with their doc counts.
+  const markCounts = useMemo(() => {
+    if (!activeCollectionName) {
+      return new Map<string, number>()
+    }
+    return lettersInScope(state.marks, {
+      host: state.host,
+      db: state.dbName,
+      col: activeCollectionName,
+    })
+  }, [state.marks, state.host, state.dbName, activeCollectionName])
+
   // Surface mark/jump pending modes as a transient toast hint.
   useEffect(() => {
     if (state.markPending) {
@@ -475,6 +488,7 @@ export function App({
         columns={state.columns}
         schemaMap={state.schemaMap}
         documents={state.documents}
+        markCounts={markCounts}
         onChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
         onSubmit={() => dispatch({ type: "SUBMIT_QUERY" })}
       />

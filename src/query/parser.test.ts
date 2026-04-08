@@ -1,4 +1,5 @@
 import { describe, test, expect } from "bun:test"
+import { ObjectId } from "mongodb"
 import {
   parseSimpleQueryFull,
   filterToSimple,
@@ -114,6 +115,104 @@ describe("parseSimpleQueryFull", () => {
 
     expect(filter).toEqual({ Author: "Peter" })
     expect(projection).toEqual({ Name: 1, State: 0 })
+  })
+})
+
+describe("@<letter> mark register", () => {
+  const oid1 = new ObjectId("507f1f77bcf86cd799439011")
+  const oid2 = new ObjectId("507f1f77bcf86cd799439012")
+  const oid3 = new ObjectId("507f1f77bcf86cd799439013")
+  const marks = new Map<string, unknown[]>([
+    ["a", [oid1, oid2]],
+    ["b", [oid3]],
+  ])
+
+  test("@a alone resolves to _id $in", () => {
+    const { filter } = parseSimpleQueryFull("@a", emptySchema, marks)
+
+    expect(filter).toEqual({ _id: { $in: [oid1, oid2] } })
+  })
+
+  test("@a combines with field filters via AND", () => {
+    const { filter } = parseSimpleQueryFull("@a Author:Peter", emptySchema, marks)
+
+    expect(filter).toEqual({
+      _id: { $in: [oid1, oid2] },
+      Author: "Peter",
+    } as never)
+  })
+
+  test("@b uses the b register, not a", () => {
+    const { filter } = parseSimpleQueryFull("@b", emptySchema, marks)
+
+    expect(filter).toEqual({ _id: { $in: [oid3] } })
+  })
+
+  test("unknown letter resolves to empty $in (matches nothing)", () => {
+    // Explicit empty $in is the safe default — better than silently dropping
+    // the constraint and showing the user the whole collection.
+    const { filter } = parseSimpleQueryFull("@z", emptySchema, marks)
+
+    expect(filter).toEqual({ _id: { $in: [] } })
+  })
+
+  test("@<letter> with no map at all also resolves to empty $in", () => {
+    const { filter } = parseSimpleQueryFull("@a", emptySchema)
+
+    expect(filter).toEqual({ _id: { $in: [] } })
+  })
+
+  test("uppercase @A is not recognised (skipped as bare text)", () => {
+    // Uppercase letters are reserved for future use (global marks).
+    // The token is not recognised so it's silently dropped — matches the
+    // existing parser's "bare text → skip" behaviour.
+    const { filter } = parseSimpleQueryFull("@A", emptySchema, marks)
+
+    expect(filter).toEqual({})
+  })
+
+  test("multi-character @ab is not recognised", () => {
+    const { filter } = parseSimpleQueryFull("@ab", emptySchema, marks)
+
+    expect(filter).toEqual({})
+  })
+
+  test("explicit _id field filter after @a wins (last-write semantics)", () => {
+    // Mirrors how `Author:Peter Author:Alice` produces `{Author: "Alice"}`.
+    const oid = new ObjectId("507f1f77bcf86cd799439099")
+    const { filter } = parseSimpleQueryFull(
+      `_id:ObjectId(${oid.toHexString()})`,
+      emptySchema,
+      marks,
+    )
+
+    // Sanity check the baseline: explicit _id parses to the ObjectId.
+    expect((filter as { _id: ObjectId })._id.toHexString()).toBe(oid.toHexString())
+  })
+
+  test("@a after _id filter overwrites the field filter", () => {
+    const { filter } = parseSimpleQueryFull(
+      "_id:ObjectId(507f1f77bcf86cd799439099) @a",
+      emptySchema,
+      marks,
+    )
+
+    expect(filter).toEqual({ _id: { $in: [oid1, oid2] } })
+  })
+
+  test("@a does not affect projection", () => {
+    const { filter, projection } = parseSimpleQueryFull("@a +Name", emptySchema, marks)
+
+    expect(filter).toEqual({ _id: { $in: [oid1, oid2] } })
+    expect(projection).toEqual({ Name: 1 })
+  })
+
+  test("a real field literally called marks is unaffected", () => {
+    // Sanity check: the new @-syntax doesn't change `marks:foo` parsing,
+    // so collections with a `marks` field still work normally.
+    const { filter } = parseSimpleQueryFull("marks:active", emptySchema, marks)
+
+    expect(filter).toEqual({ marks: "active" } as never)
   })
 })
 

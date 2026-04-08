@@ -18,7 +18,7 @@ import type { Document } from "mongodb"
 import type { DetectedColumn } from "../types"
 import type { FieldType, SchemaMap } from "../query/schema"
 import { getSubfieldSuggestions } from "../query/schema"
-import { theme } from "../theme"
+import { theme, getMarkColor } from "../theme"
 import { getLastToken } from "../query/parser"
 import { fuzzyFilter } from "../utils/fuzzy"
 import { sampleValues } from "../utils/document"
@@ -29,6 +29,8 @@ interface Suggestion {
   hint?: string
   /** When true, accepting this suggestion should submit the query */
   submit?: boolean
+  /** Optional foreground color for the label (used for mark-register entries) */
+  labelColor?: string
 }
 
 interface FilterSuggestionsProps {
@@ -38,6 +40,12 @@ interface FilterSuggestionsProps {
   columns: DetectedColumn[]
   schemaMap: SchemaMap
   documents: Document[]
+  /**
+   * Used mark letters for the current scope, keyed by letter → doc count.
+   * Drives the `@<letter>` register suggestions. Empty when the user has no
+   * marks in the active collection.
+   */
+  markCounts?: Map<string, number>
   onChange: (query: string) => void
   onSubmit: () => void
 }
@@ -241,6 +249,41 @@ function buildOperatorSuggestions(
   return suggestions
 }
 
+// ---- Mark register suggestions (`@<letter>`) ----
+
+function buildMarkRegisterSuggestions(
+  prefix: string,
+  partial: string,
+  markCounts: Map<string, number>,
+): Suggestion[] {
+  if (markCounts.size === 0) {
+    return [
+      {
+        label: "@",
+        value: prefix,
+        hint: "no marks in this collection",
+      },
+    ]
+  }
+  // Sort letters alphabetically so the order is stable across renders.
+  const sorted = [...markCounts.entries()].sort(([a], [b]) => a.localeCompare(b))
+  const all: Suggestion[] = sorted.map(([letter, count]) => ({
+    label: `@${letter}`,
+    value: prefix + `@${letter}`,
+    hint: `${count} doc${count === 1 ? "" : "s"}`,
+    labelColor: getMarkColor(letter),
+    // Don't auto-submit — `@a` is composable, the user may want to type more
+    // tokens after it (e.g. `@a Author:Peter`). They submit explicitly.
+  }))
+  // If the user typed `@x` (something past the @), filter to letters
+  // starting with that prefix.
+  if (partial) {
+    const lower = partial.toLowerCase()
+    return all.filter((s) => s.label.slice(1).toLowerCase().startsWith(lower))
+  }
+  return all
+}
+
 // ---- Field suggestions (simple mode) ----
 
 function buildFieldSuggestions(
@@ -248,8 +291,15 @@ function buildFieldSuggestions(
   columns: DetectedColumn[],
   schemaMap: SchemaMap,
   documents: Document[],
+  markCounts: Map<string, number>,
 ): Suggestion[] {
   const { prefix, lastToken } = getLastToken(query)
+
+  // Mark register: `@` or `@<partial>` — show register suggestions before
+  // anything else, since `@` is unambiguous (no field starts with `@`).
+  if (lastToken.startsWith("@")) {
+    return buildMarkRegisterSuggestions(prefix, lastToken.slice(1), markCounts)
+  }
 
   // Determine token mode
   const isProjectionInclude = lastToken.startsWith("+")
@@ -334,6 +384,7 @@ export function FilterSuggestions({
   columns,
   schemaMap,
   documents,
+  markCounts,
   onChange,
   onSubmit,
 }: FilterSuggestionsProps) {
@@ -343,8 +394,8 @@ export function FilterSuggestions({
     () =>
       queryMode === "bson"
         ? buildBsonSuggestions(columns, schemaMap)
-        : buildFieldSuggestions(query, columns, schemaMap, documents),
-    [query, queryMode, columns, schemaMap, documents],
+        : buildFieldSuggestions(query, columns, schemaMap, documents, markCounts ?? new Map()),
+    [query, queryMode, columns, schemaMap, documents, markCounts],
   )
 
   useEffect(() => {
@@ -391,7 +442,9 @@ export function FilterSuggestions({
               justifyContent="space-between"
             >
               <text>
-                <span fg={selected ? theme.primary : theme.textDim}>{suggestion.label}</span>
+                <span fg={suggestion.labelColor ?? (selected ? theme.primary : theme.textDim)}>
+                  {suggestion.label}
+                </span>
               </text>
               {suggestion.hint && (
                 <text>

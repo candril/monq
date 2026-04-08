@@ -3,6 +3,7 @@
 import type { PaletteContext } from "./types"
 import { openPipelineEditor, writePipelineFile, pipelineFilePaths } from "../pipeline"
 import { startWatching, reloadFromFile, openTmuxSplit } from "../pipelineWatch"
+import { buildMarkIdMap } from "../../utils/query"
 
 export function handleQueryCommand(cmdId: string, ctx: PaletteContext): boolean {
   const { state, dispatch, renderer } = ctx
@@ -55,6 +56,7 @@ export function handleQueryCommand(cmdId: string, ctx: PaletteContext): boolean 
         schemaMap: state.schemaMap,
         sortField: state.sortField,
         sortDirection: state.sortDirection,
+        markIds: buildMarkIdMap(state),
       })
         .then((result) => {
           if (!result) {
@@ -96,6 +98,7 @@ export function handleQueryCommand(cmdId: string, ctx: PaletteContext): boolean 
         schemaMap: state.schemaMap,
         sortField: state.pipeline.length > 0 ? null : state.sortField,
         sortDirection: state.sortDirection,
+        markIds: buildMarkIdMap(state),
       })
         .then((queryFile) => {
           const result = openTmuxSplit(queryFile)

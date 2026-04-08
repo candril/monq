@@ -19,6 +19,7 @@ import {
 } from "../actions/pipelineWatch"
 import { classifyPipeline, extractFindParts } from "../query/pipeline"
 import { filterToSimple, projectionToSimple } from "../query/parser"
+import { buildMarkIdMap } from "../utils/query"
 import type { Document } from "mongodb"
 
 interface UsePipelineKeysOptions {
@@ -95,6 +96,7 @@ export function usePipelineKeys({ state, dispatch, renderer, keymap }: UsePipeli
         schemaMap: state.schemaMap,
         sortField: state.pipeline.length > 0 ? null : state.sortField,
         sortDirection: state.sortDirection,
+        markIds: buildMarkIdMap(state),
       })
         .then((result) => {
           if (!result) {
@@ -137,6 +139,7 @@ export function usePipelineKeys({ state, dispatch, renderer, keymap }: UsePipeli
         schemaMap: state.schemaMap,
         sortField: state.pipeline.length > 0 ? null : state.sortField,
         sortDirection: state.sortDirection,
+        markIds: buildMarkIdMap(state),
       })
         .then((queryFile) => {
           const result = openTmuxSplit(queryFile)

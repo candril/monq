@@ -10,6 +10,7 @@
  *   field:/regex/flags   -> { field: { $regex, $options } }
  *   +field               -> projection include  (bare, no colon)
  *   -field               -> projection exclude  (bare, no colon)
+ *   @<letter>            -> _id: { $in: [...marked ids] } (mark register, vim @-style)
  *
  * Examples:
  *   "Author:Peter"              -> filter: { "Author": "Peter" }
@@ -19,6 +20,11 @@
  *   "Status:[open,closed]"      -> filter: { "Status": { "$in": ["open","closed"] } }
  *   "+Name -State"              -> projection: { Name: 1, State: 0 }
  *   "Author:Peter +Name -State" -> filter + projection combined
+ *   "@a Author:Peter"           -> filter: { _id: { $in: [...] }, Author: "Peter" }
+ *
+ * The `@<letter>` token uses a sigil prefix instead of `marks:<letter>` so it
+ * never collides with a user field literally called `marks`. Mirrors vim's
+ * `@a` (run macro from register a) — symmetric with `'a` (jump to mark a).
  */
 
 import type { Filter, Document } from "mongodb"
@@ -211,16 +217,32 @@ export interface ParsedSimpleQuery {
 }
 
 /**
+ * Optional resolver for `@<letter>` mark-register tokens. Maps each lowercase
+ * letter to the list of decoded `_id` values currently tagged with that mark
+ * in the active scope. Pass undefined to disable the token (it'll be silently
+ * skipped — equivalent to "no marks").
+ */
+export type MarkIdMap = Map<string, unknown[]>
+
+/**
  * Parse a simple query string into filter + projection.
  *
  * +field / bare -field  → projection
  * everything else       → filter
  */
-export function parseSimpleQuery(input: string, schemaMap?: SchemaMap): Filter<Document> {
-  return parseSimpleQueryFull(input, schemaMap).filter
+export function parseSimpleQuery(
+  input: string,
+  schemaMap?: SchemaMap,
+  markIds?: MarkIdMap,
+): Filter<Document> {
+  return parseSimpleQueryFull(input, schemaMap, markIds).filter
 }
 
-export function parseSimpleQueryFull(input: string, schemaMap?: SchemaMap): ParsedSimpleQuery {
+export function parseSimpleQueryFull(
+  input: string,
+  schemaMap?: SchemaMap,
+  markIds?: MarkIdMap,
+): ParsedSimpleQuery {
   const trimmed = input.trim()
   if (!trimmed) {
     return { filter: {}, projection: undefined }
@@ -231,6 +253,18 @@ export function parseSimpleQueryFull(input: string, schemaMap?: SchemaMap): Pars
   const proj: Record<string, 0 | 1> = {}
 
   for (let token of tokens) {
+    // @<letter> → mark register: _id: { $in: [...marked ids] }
+    // Single lowercase letter only. Unknown letters resolve to an empty $in
+    // (matches nothing) so the user gets explicit feedback when a register
+    // is empty rather than silently dropping the constraint.
+    const markMatch = token.match(/^@([a-z])$/)
+    if (markMatch) {
+      const letter = markMatch[1]
+      const ids = markIds?.get(letter) ?? []
+      filter._id = { $in: ids }
+      continue
+    }
+
     // +field → projection include
     if (token.startsWith("+")) {
       const field = token.slice(1)

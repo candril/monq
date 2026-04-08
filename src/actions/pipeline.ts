@@ -14,7 +14,7 @@ import type { Document } from "mongodb"
 import JSON5 from "json5"
 import { EJSON } from "bson"
 import type { SchemaMap } from "../query/schema"
-import { parseSimpleQueryFull } from "../query/parser"
+import { parseSimpleQueryFull, type MarkIdMap } from "../query/parser"
 import { classifyPipeline } from "../query/pipeline"
 import { getEditor } from "../utils/editor"
 
@@ -71,6 +71,7 @@ export function _buildPipelineTemplate(
   schemaMap: SchemaMap,
   sortField: string | null,
   sortDirection: 1 | -1,
+  markIds?: MarkIdMap,
 ): string {
   return buildTemplate(
     collectionName,
@@ -81,6 +82,7 @@ export function _buildPipelineTemplate(
     schemaMap,
     sortField,
     sortDirection,
+    markIds,
   )
 }
 
@@ -93,6 +95,7 @@ function buildTemplate(
   schemaMap: SchemaMap,
   sortField: string | null,
   sortDirection: 1 | -1,
+  markIds?: MarkIdMap,
 ): string {
   const header = buildHeader(collectionName, dbName, schemaMap)
 
@@ -109,12 +112,14 @@ function buildTemplate(
     return header + EJSON.stringify(doc, undefined, 2) + "\n"
   }
 
-  // Parse filter + projection from simple query string
+  // Parse filter + projection from simple query string. Marks are expanded
+  // here so that `@a Author:Peter` opens in the editor with the resolved ids
+  // already in `$match`, instead of silently dropping the `@a` token.
   let matchObj: Record<string, unknown> = {}
   let projObj: Record<string, 0 | 1> | undefined
   if (simpleQuery.trim()) {
     try {
-      const parsed = parseSimpleQueryFull(simpleQuery, schemaMap)
+      const parsed = parseSimpleQueryFull(simpleQuery, schemaMap, markIds)
       matchObj = parsed.filter as Record<string, unknown>
       projObj = parsed.projection
     } catch {
@@ -374,6 +379,7 @@ export async function writePipelineFile(params: {
   schemaMap: SchemaMap
   sortField: string | null
   sortDirection: 1 | -1
+  markIds?: MarkIdMap
 }): Promise<string> {
   const {
     collectionName,
@@ -385,6 +391,7 @@ export async function writePipelineFile(params: {
     schemaMap,
     sortField,
     sortDirection,
+    markIds,
   } = params
   const { dir, queryFile, schemaFile } = pipelineFilePaths(dbName, collectionName, tabId)
   await mkdir(dir, { recursive: true })
@@ -398,6 +405,7 @@ export async function writePipelineFile(params: {
     schemaMap,
     sortField,
     sortDirection,
+    markIds,
   )
   await Bun.write(queryFile, content)
   return queryFile
@@ -413,6 +421,7 @@ export async function openPipelineEditor(params: {
   schemaMap: SchemaMap
   sortField: string | null
   sortDirection: 1 | -1
+  markIds?: MarkIdMap
 }): Promise<PipelineResult | null> {
   const {
     collectionName,
@@ -424,6 +433,7 @@ export async function openPipelineEditor(params: {
     schemaMap,
     sortField,
     sortDirection,
+    markIds,
   } = params
 
   // Stable temp dir scoped to db + collection + tab
@@ -443,6 +453,7 @@ export async function openPipelineEditor(params: {
     schemaMap,
     sortField,
     sortDirection,
+    markIds,
   )
   await Bun.write(queryFile, template)
 
