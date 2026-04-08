@@ -124,3 +124,27 @@ Author:Peter -_id -tags         → filter by Author, exclude _id and tags
 :::
 
 Projection tokens carry through automatically when you switch to BSON mode or the pipeline editor.
+
+## Mark register tokens
+
+`@<letter>` resolves to `_id: { $in: [...] }` from the marks registered for the active collection. The sigil prefix means the token can never collide with a field literally called `marks`.
+
+```
+@a                              → docs marked with letter a
+@a Author:Peter                 → marked-with-a AND Author=Peter
+@a +name -_id                   → marked-with-a, projecting only name
+@a @b                           → last-write wins (applies @b)
+```
+
+| Detail | Behaviour |
+|--------|-----------|
+| Single lowercase letter only | `@A`, `@ab`, `@1` are not recognised |
+| Empty register | Resolves to `_id: { $in: [] }` (matches nothing — explicit, not silent) |
+| Conflict with `_id:...` | Last-write wins, like other field tokens |
+| Pipeline editor | `@a` is expanded to literal ids when opening the pipeline (Ctrl+F / Ctrl+E) |
+
+The token is **live** in simple mode — newly-marked documents surface on the next reload, because `@<letter>` is resolved at every query parse. BSON and pipeline modes snapshot the resolved ids at the moment `'<letter>` is pressed; press it again to refresh.
+
+Type `@` in the simple query bar to see every used register in the active collection, with its doc count and color.
+
+See the [Usage guide](/monq/guide/usage/#marks) for the full marking workflow.

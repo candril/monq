@@ -76,6 +76,8 @@ See [Query Syntax](/monq/reference/query-syntax/) for the full simple mode refer
 
 Press `Ctrl+R` while the query bar is open to browse past queries in a fuzzy picker. History is persisted to disk (`~/.local/share/monq/history`) and survives across sessions.
 
+History is **scoped per collection** — each `(database, collection)` pair has its own history, since the schema and useful filters are usually different. Switching tabs gives you a different history list.
+
 ## Navigating results
 
 Use vim-style keys to move through results:
@@ -99,6 +101,46 @@ Open multiple collections at once with `t` (clone tab) or by switching after `Ct
 - `i` — insert a new document
 - `Shift+I` — manage indexes (edit all in `$EDITOR`)
 - `Shift+D` — delete selected documents (with confirmation)
+
+## Marks
+
+Vim-style letter marks let you bookmark a handful of documents while exploring a collection — without polluting the data, writing a query, or remembering `_id`s. Marks are scoped per `(host, db, collection)` and persist to `~/.local/share/monq/marks`.
+
+### Setting marks
+
+Press `m` followed by any lowercase letter `a–z` to toggle that mark on the selected document. The mark appears as a colored letter in the leftmost gutter.
+
+- `ma` — tag the current doc with letter `a`
+- `mb` — tag with `b` (replaces `a` if the doc was already marked)
+- `ma` again — toggle the mark off
+- In selection mode (`v`), `m<letter>` marks **all** selected rows at once
+
+Each letter has a stable color (`a` red, `b` peach, `c` yellow, …) so the same letter looks the same everywhere it appears.
+
+### Filtering by mark
+
+Press `'` (apostrophe) followed by a letter to filter the current collection to only the documents tagged with that letter. The filter is written into your active query mode in a form you can see and edit afterwards:
+
+- **Simple mode**: toggles a `@<letter>` token in the query bar. Composes naturally with other tokens — `@a Author:Peter` filters to "marked-with-a AND Author=Peter".
+- **BSON mode**: sets `_id: { $in: [...] }` in the BSON filter (literal ObjectIds).
+- **Pipeline mode**: merges `_id: { $in: [...] }` into the first `$match` stage (or prepends one).
+
+The simple-mode token is **live** — newly-marked docs surface on the next reload. BSON and pipeline modes snapshot the resolved ids at the moment `'<letter>` is pressed; press it again to refresh.
+
+Press `''` (two apostrophes) to clear the mark filter from the current query.
+
+### Listing marks
+
+Type `@` in the simple query bar — the suggestion panel lists every used register in the active collection, with the doc count and the mark's color. Selecting one inserts the token (you can keep typing to compose with other filters before submitting).
+
+### Managing marks
+
+The command palette (`Ctrl+P`) exposes:
+
+- **Clear All Marks (current collection)** — removes every mark in the active collection
+- **Clear Mark [a] (3 docs)** — one entry per used letter, with the count
+
+These entries only appear when you have marks in the active collection.
 
 ## Managing indexes
 

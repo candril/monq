@@ -69,7 +69,9 @@ Define named profiles in `~/.config/monq/config.toml`. Use `uri_cmd` to fetch UR
 - **Bulk update / delete via query** — run `updateMany` or `deleteMany` with a filter you write in `$EDITOR`; shows matched count before applying
 - **Index management** — edit all indexes in `$EDITOR` as a live JSON array; add, remove, or edit entries to create, drop, or replace indexes
 - **Explain query** — press `x` to see the execution plan as stage cards with per-stage stats; `X` opens the full raw explain JSON in `$EDITOR`
+- **Document marks** — vim-style letter marks (`m<letter>`) on individual documents, scoped per collection. `'<letter>` filters to all marked docs; `@<letter>` composes with other filter tokens
 - **Collection tabs** — open multiple collections side by side, switch with `1–9` or `[`/`]`
+- **Per-collection query history** — `Ctrl+R` opens a fuzzy picker over past queries, scoped to the active collection
 - **Schema-aware suggestions** — field name autocomplete with dot-notation drill-down
 - **Smart columns** — auto-detects fields, horizontal scroll, sort, column sizing, hide via `-`
 - **Saved connections** — named profiles with `uri_cmd` for secret-fetching (Vault, 1Password, etc.)
@@ -168,6 +170,19 @@ monq                                        # shows saved connections or URI pro
 | `y` / `Y` | Copy cell value / full document JSON |
 | `r` | Reload |
 
+### Marks
+
+Vim-style letter marks let you bookmark a handful of documents while exploring a collection — without polluting the data, writing a query, or remembering `_id`s. Marks are scoped per `(host, db, collection)` and persist to `~/.local/share/monq/marks`.
+
+| Key | Action |
+|-----|--------|
+| `m<letter>` | Toggle mark `<letter>` on the selected doc (or all selected rows in selection mode) |
+| `'<letter>` | Apply mark filter to the active query mode (toggles `@<letter>` in simple, sets `_id: {$in}` in BSON / pipeline) |
+| `''` | Clear any mark filter from the current query |
+| `@<letter>` | Mark register token in the simple query bar — composes with other filter tokens |
+
+Marked documents show a colored letter in the leftmost gutter. Each letter has a stable color (`a` red, `b` peach, `c` yellow, …). The simple-query suggestion panel lists every used register when you type `@`.
+
 ### Simple Query Syntax
 
 Filter and projection live in the same query string — no separator needed.
@@ -205,6 +220,16 @@ Author:Peter -_id -tags         → filter by Author, exclude _id and tags
 ```
 
 `+field` = include, bare `-field` = exclude. `-field:value` is still a `$ne` filter.
+
+**Mark register tokens** (inline, composable):
+
+```
+@a                              → docs marked with letter a
+@a Author:Peter                 → marked-with-a AND Author=Peter
+@a +name -_id                   → marked-with-a, projecting only name
+```
+
+`@<letter>` resolves to `_id: { $in: [...] }` from the marks registered for the active collection. Unknown letters resolve to an empty `$in` (matches nothing).
 
 ## Configuration
 

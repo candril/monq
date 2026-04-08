@@ -84,3 +84,17 @@ These operations are also available from the command palette, making them access
 | `Shift+D` | Delete selected (with confirmation) |
 | `y` / `Y` | Copy cell value / full document JSON |
 | `r` | Reload |
+
+## Marks
+
+Vim-style letter marks bookmark individual documents per collection. See the [Usage guide](/monq/guide/usage/#marks) for the full workflow.
+
+| Key | Action |
+|-----|--------|
+| `m<letter>` | Toggle mark `<letter>` on the selected doc (or all selected rows in selection mode) |
+| `'<letter>` | Apply mark filter to the active query mode |
+| `''` | Clear any mark filter from the current query |
+| `@<letter>` | Mark register token in the simple query bar — composes with other filter tokens |
+| `Escape` (during pending mode) | Cancel mark/jump pending |
+
+After pressing `m` or `'`, monq waits for the next letter. Any non-letter key cancels pending mode (modal — same as vim).

@@ -85,7 +85,10 @@ Define named profiles in `~/.config/monq/config.toml`. Use `uri_cmd` to fetch UR
     Execution plan stage cards with timing, document counts, and index usage. `COLLSCAN` vs `IXSCAN` at a glance.
   </Card>
   <Card title="Query history" icon="open-book">
-    `Ctrl+R` opens a fuzzy picker over past queries. History persists across sessions.
+    `Ctrl+R` opens a fuzzy picker over past queries, scoped per collection. History persists across sessions.
+  </Card>
+  <Card title="Document marks" icon="pen">
+    Vim-style letter marks (`m<letter>`) bookmark individual documents. `'<letter>` filters by mark; `@<letter>` composes with other query tokens.
   </Card>
   <Card title="Collection tabs" icon="laptop">
     Open multiple collections side by side, switch with `1`–`9` or `[`/`]`. Clone, close, undo close.
