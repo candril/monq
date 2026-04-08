@@ -31,6 +31,7 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 009 | [Export](./009-export.md) | Draft | Export results as JSON/CSV |
 | 028 | [Connection Error Handling](./028-connection-error-handling.md) | Draft | Graceful handling of connection failures and timeouts |
 | 051 | [Value Suggestions](./051-value-suggestions.md) | Draft | Value samples + quick-filter helpers (`ago()`, `in()`, `oid()`) in suggestion panel |
+| 052 | [Document Marks](./052-document-marks.md) | Draft | Vim-style letter marks (`m<letter>` / `'<letter>`) on documents, scoped per collection |
 
 ## Done Specs
 
