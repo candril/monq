@@ -18,6 +18,7 @@ import { handleViewCommand } from "../actions/palette/view"
 import { handleQueryCommand } from "../actions/palette/query"
 import { handleDocumentCommand } from "../actions/palette/document"
 import { handleNavigationCommand } from "../actions/palette/navigation"
+import { handleMarksCommand } from "../actions/palette/marks"
 
 interface UsePaletteActionsOptions {
   state: AppState
@@ -93,6 +94,9 @@ export function usePaletteActions({
         return
       }
       if (handleDocumentCommand(cmd.id, ctx)) {
+        return
+      }
+      if (handleMarksCommand(cmd.id, ctx)) {
         return
       }
       if (handleNavigationCommand(cmd.id, ctx)) {

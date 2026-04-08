@@ -146,6 +146,9 @@ export function documentsReducer(state: AppState, action: AppAction): AppState |
       return { ...state, selectedColumnIndex: newColIndex }
     }
 
+    case "SET_MARKS":
+      return { ...state, marks: action.marks }
+
     case "CYCLE_COLUMN_MODE": {
       const visibleCols = state.columns.filter((c) => c.visible)
       const targetCol = visibleCols[state.selectedColumnIndex]

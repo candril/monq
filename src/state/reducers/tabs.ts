@@ -1,7 +1,7 @@
 /** Reducer: tab management (open, close, clone, switch, undo) */
 
 import type { Document } from "mongodb"
-import type { AppState, Tab } from "../../types"
+import type { AppState, SavedMarkQuery, Tab } from "../../types"
 import type { AppAction } from "../../state"
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -12,6 +12,7 @@ export function generateTabId(): string {
 }
 
 export function snapshotTab(state: AppState, tabId: string, collectionName: string): Tab {
+  const previousTab = state.tabs.find((t) => t.id === tabId)
   return {
     id: tabId,
     collectionName,
@@ -37,6 +38,8 @@ export function snapshotTab(state: AppState, tabId: string, collectionName: stri
     pipelineSource: state.pipelineSource,
     pipelineIsAggregate: state.pipelineIsAggregate,
     pipelineWatching: state.pipelineWatching,
+    activeMarkFilter: previousTab?.activeMarkFilter ?? null,
+    markFilterSavedQuery: previousTab?.markFilterSavedQuery ?? null,
   }
 }
 
@@ -131,6 +134,8 @@ export function tabsReducer(state: AppState, action: AppAction): AppState | null
         pipelineSource: "",
         pipelineIsAggregate: false,
         pipelineWatching: false,
+        activeMarkFilter: null,
+        markFilterSavedQuery: null,
       }
       return {
         ...state,
@@ -174,6 +179,8 @@ export function tabsReducer(state: AppState, action: AppAction): AppState | null
 
       const newTab: Tab = {
         ...snapshotTab(state, generateTabId(), activeTab.collectionName),
+        activeMarkFilter: activeTab.activeMarkFilter,
+        markFilterSavedQuery: activeTab.markFilterSavedQuery,
       }
       return {
         ...state,
@@ -288,6 +295,78 @@ export function tabsReducer(state: AppState, action: AppAction): AppState | null
         ...restoreFromTab(state, targetTab),
         tabs,
         activeTabId: action.tabId,
+      }
+    }
+
+    case "ACTIVATE_MARK_FILTER": {
+      const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+      if (!activeTab) {
+        return state
+      }
+      // Snapshot the current query state so it can be restored when the
+      // mark filter is cleared. Reuse an existing snapshot if one is already
+      // saved (toggling between letters shouldn't lose the original query).
+      const saved: SavedMarkQuery = activeTab.markFilterSavedQuery ?? {
+        query: state.queryInput,
+        queryMode: state.queryMode,
+        bsonSort: state.bsonSort,
+        bsonProjection: state.bsonProjection,
+        pipelineMode: state.pipelineMode,
+        pipeline: state.pipeline,
+        pipelineSource: state.pipelineSource,
+        pipelineIsAggregate: state.pipelineIsAggregate,
+      }
+      return {
+        ...state,
+        tabs: state.tabs.map((t) =>
+          t.id === state.activeTabId
+            ? { ...t, activeMarkFilter: action.letter, markFilterSavedQuery: saved }
+            : t,
+        ),
+        // Clear the visible query while the mark filter is active so the
+        // filter bar shows the mark indicator instead of the previous query.
+        queryInput: "",
+        queryMode: "simple",
+        bsonSort: "",
+        bsonProjection: "",
+        pipelineMode: false,
+        pipeline: [],
+        pipelineSource: "",
+        pipelineIsAggregate: false,
+        documentsLoading: true,
+        reloadCounter: state.reloadCounter + 1,
+        loadedCount: 0,
+        loadingMore: false,
+        selectedIndex: 0,
+      }
+    }
+
+    case "CLEAR_MARK_FILTER": {
+      const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+      if (!activeTab || !activeTab.activeMarkFilter) {
+        return state
+      }
+      const saved = activeTab.markFilterSavedQuery
+      return {
+        ...state,
+        tabs: state.tabs.map((t) =>
+          t.id === state.activeTabId
+            ? { ...t, activeMarkFilter: null, markFilterSavedQuery: null }
+            : t,
+        ),
+        queryInput: saved?.query ?? "",
+        queryMode: saved?.queryMode ?? "simple",
+        bsonSort: saved?.bsonSort ?? "",
+        bsonProjection: saved?.bsonProjection ?? "",
+        pipelineMode: saved?.pipelineMode ?? false,
+        pipeline: saved?.pipeline ?? [],
+        pipelineSource: saved?.pipelineSource ?? "",
+        pipelineIsAggregate: saved?.pipelineIsAggregate ?? false,
+        documentsLoading: true,
+        reloadCounter: state.reloadCounter + 1,
+        loadedCount: 0,
+        loadingMore: false,
+        selectedIndex: 0,
       }
     }
 

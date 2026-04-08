@@ -5,6 +5,7 @@
 import type { Document } from "mongodb"
 import type { SchemaMap } from "./query/schema"
 import type { HistoryEntry } from "./utils/history"
+import type { MarkEntry } from "./utils/marks"
 
 // ============================================================================
 // Selection
@@ -170,6 +171,22 @@ export interface Tab {
   pipelineSource: string
   pipelineIsAggregate: boolean
   pipelineWatching: boolean
+  // Mark filter — when set, the tab shows only docs with this mark letter and
+  // the previous query is held in markFilterSavedQuery so it can be restored.
+  activeMarkFilter: string | null
+  markFilterSavedQuery: SavedMarkQuery | null
+}
+
+/** Snapshot of a tab's query state, taken when a mark filter activates. */
+export interface SavedMarkQuery {
+  query: string
+  queryMode: QueryMode
+  bsonSort: string
+  bsonProjection: string
+  pipelineMode: boolean
+  pipeline: Document[]
+  pipelineSource: string
+  pipelineIsAggregate: boolean
 }
 
 // ============================================================================
@@ -332,6 +349,13 @@ export interface AppState {
   historyEntries: HistoryEntry[]
   /** Whether the history picker overlay is open */
   historyPickerOpen: boolean
+
+  // Marks (loaded from disk at startup)
+  marks: MarkEntry[]
+  /** True after `m`, waiting for a letter (mutually exclusive with jumpPending) */
+  markPending: boolean
+  /** True after `'`, waiting for a letter (mutually exclusive with markPending) */
+  jumpPending: boolean
 
   // Index create confirmation dialog (null = not showing)
   indexCreateConfirmation: IndexCreateConfirmation | null

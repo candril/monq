@@ -21,6 +21,7 @@ import type {
   View,
 } from "./types"
 import type { HistoryEntry } from "./utils/history"
+import type { MarkEntry } from "./utils/marks"
 
 // Sub-reducers
 import { connectionReducer } from "./state/reducers/connection"
@@ -167,6 +168,14 @@ export type AppAction =
   | { type: "STOP_EXPORT" }
   | { type: "SHOW_EXPORT_CANCEL_CONFIRM"; confirmation: ExportCancelConfirmation }
   | { type: "CLEAR_EXPORT_CANCEL_CONFIRM" }
+  // Marks
+  | { type: "ENTER_MARK_PENDING" }
+  | { type: "EXIT_MARK_PENDING" }
+  | { type: "ENTER_JUMP_PENDING" }
+  | { type: "EXIT_JUMP_PENDING" }
+  | { type: "SET_MARKS"; marks: MarkEntry[] }
+  | { type: "ACTIVATE_MARK_FILTER"; letter: string }
+  | { type: "CLEAR_MARK_FILTER" }
 
 // ============================================================================
 // Initial State
@@ -238,6 +247,9 @@ export function createInitialState(): AppState {
     renameInput: null,
     historyEntries: [],
     historyPickerOpen: false,
+    marks: [],
+    markPending: false,
+    jumpPending: false,
     indexCreateConfirmation: null,
     exportCancelConfirmation: null,
     exporting: false,

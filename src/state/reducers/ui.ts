@@ -124,6 +124,19 @@ export function uiReducer(state: AppState, action: AppAction): AppState | null {
     case "CLEAR_EXPORT_CANCEL_CONFIRM":
       return { ...state, exportCancelConfirmation: null }
 
+    // Marks — pending modes are mutually exclusive
+    case "ENTER_MARK_PENDING":
+      return { ...state, markPending: true, jumpPending: false }
+
+    case "EXIT_MARK_PENDING":
+      return state.markPending ? { ...state, markPending: false } : state
+
+    case "ENTER_JUMP_PENDING":
+      return { ...state, jumpPending: true, markPending: false }
+
+    case "EXIT_JUMP_PENDING":
+      return state.jumpPending ? { ...state, jumpPending: false } : state
+
     default:
       return null
   }

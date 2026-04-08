@@ -61,6 +61,8 @@ const DEFAULT_BINDINGS: Record<ActionName, string[]> = {
   "index.open": ["shift+i"],
   "explain.run": ["x"],
   "explain.raw": ["shift+x"],
+  "mark.set": ["m"],
+  "mark.jump": ["'"],
   "app.quit": ["q"],
 }
 

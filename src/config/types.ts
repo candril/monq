@@ -97,6 +97,8 @@ export type ActionName =
   | "index.open"
   | "explain.run"
   | "explain.raw"
+  | "mark.set"
+  | "mark.jump"
   | "app.quit"
 
 /** Raw user-supplied keys config — each action maps to a string or string[]. */

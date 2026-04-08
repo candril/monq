@@ -8,6 +8,7 @@ import type { Command } from "./types"
 import type { AppState } from "../types"
 import type { Keymap } from "../config/types"
 import { hintFor } from "../utils/keymap"
+import { lettersInScope } from "../utils/marks"
 
 export function buildCommands(state: AppState, keymap: Keymap): Command[] {
   const commands: Command[] = []
@@ -275,6 +276,37 @@ export function buildCommands(state: AppState, keymap: Keymap): Command[] {
         category: "tabs",
         shortcut: hintFor(keymap, "tab.next"),
       })
+    }
+  }
+
+  // Marks — only show entries when there's something to clear, so the
+  // palette stays empty for users who don't use marks at all.
+  if (hasTab) {
+    const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+    if (activeTab) {
+      const scope = {
+        host: state.host,
+        db: state.dbName,
+        col: activeTab.collectionName,
+      }
+      const usedLetters = lettersInScope(state.marks, scope)
+      if (usedLetters.size > 0) {
+        commands.push({
+          id: "marks:clear-all",
+          label: "Clear All Marks (current collection)",
+          category: "document",
+        })
+        // One entry per used letter, sorted alphabetically. Each is keyed
+        // marks:clear-letter:<letter> so the handler can pick the letter out.
+        const sortedLetters = [...usedLetters.entries()].sort(([a], [b]) => a.localeCompare(b))
+        for (const [letter, count] of sortedLetters) {
+          commands.push({
+            id: `marks:clear-letter:${letter}`,
+            label: `Clear Mark [${letter}] (${count} doc${count === 1 ? "" : "s"})`,
+            category: "document",
+          })
+        }
+      }
     }
   }
 

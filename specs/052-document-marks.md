@@ -49,9 +49,10 @@ A mark `a` in `users` is independent from a mark `a` in `orders`.
 - **`'<letter>`** shows only documents marked with that letter in the current collection.
   - First press of `'` enters "jump to mark" mode (waits for a letter).
   - Pressing `a-z` activates the filter (queries the collection for those `_id`s).
-  - Pressing `'` again **clears** the active mark filter and restores the previous query.
+  - Pressing `'` while the same letter's filter is already active toggles it off.
+  - **`''`** (a second `'` while jump-pending) clears the active mark filter and restores the previous query. A lone `'` always waits for a letter, so this is the only one-handed way to clear.
   - Pressing `Escape` cancels jump pending mode.
-  - The filter must coexist with — but visually replace — the current simple/pipeline query while active. Restoring (via `'`, `Escape`, `query.clear`, etc.) brings the previous query back.
+  - The filter must coexist with — but visually replace — the current simple/pipeline query while active. Restoring (via `''`, `query.clear`, etc.) brings the previous query back.
 
 #### Persistence and scope
 
@@ -62,10 +63,10 @@ A mark `a` in `users` is independent from a mark `a` in `orders`.
 
 #### Visual indicator
 
-- Marked documents show a single-character marker in a **1-char gutter** prepended to the row (left of the existing content).
-- Unmarked rows show a single space in the gutter (so columns stay aligned).
+- Marked documents show a single-character marker in a **2-char gutter** (1 char letter + 1 char gap) prepended to the row, left of the existing content.
+- Unmarked rows leave the gutter blank (so columns stay aligned).
 - The gutter character is the **letter itself** (`a`, `b`, …), color-coded from a fixed Catppuccin Mocha palette — **same approach as presto** (`../presto/src/theme.ts` `MARK_PALETTE` / `getMarkColor`). Each letter is deterministically mapped to a colour by index (`a → red`, `b → peach`, `c → yellow`, …), cycling through the palette for letters beyond its length. The mapping is stable so the same letter always renders the same colour everywhere it appears.
-- The gutter only renders if at least one document in the current view is marked — otherwise it collapses to zero width to avoid stealing horizontal space from columns.
+- The gutter is **always reserved** in the documents view. The original draft of this spec proposed collapsing it to zero width when no marks existed, but that caused a jarring layout shift the moment the user set their first mark (every column moved 2 chars right). Reserving the 2 chars permanently is a cheap price for a stable layout.
 
 #### Filter behaviour (the surprising bit)
 
@@ -87,14 +88,16 @@ source — see Technical Notes.
 
 ### P2 — Should Have
 
-- **`''` (quote twice)** lists all used mark letters for the current collection in a small palette overlay, with the count of docs each one tags. Selecting one applies that filter.
+> **Note on `''`**: P1 reassigns `''` to "clear active mark filter" because that's the only one-handed way to undo a filter (a lone `'` always opens jump pending). The "list used marks" overlay therefore needs a different entry point — most likely a command palette entry, since the keyboard space around `'` is now spoken for.
+
+- **List-marks overlay**: a small palette overlay that lists all used mark letters for the current collection with the count of docs each one tags. Selecting one applies that filter. Surfaced via a command palette entry (no dedicated key) — see below.
 - **`marks:<letter>`** filter token in the simple query bar — equivalent to `'<letter>` but composable with other tokens (e.g. `marks:a Author:Peter`).
   - Parser detects `marks:<letter>` and rewrites it to `_id: { $in: [...] }` at query-build time, ANDed with the rest of the parsed filter.
 - **Command palette entries**:
-  - "Show marks for current collection" (`''`)
+  - "Show marks for current collection" (opens the list-marks overlay)
   - "Clear all marks for current collection"
   - "Clear mark [letter]"
-- **Toast on stale mark**: if a marked `_id` no longer exists when the filter runs, the filter still completes (it just returns fewer rows). After the result lands, prune the dangling id from storage and show `Pruned 2 stale marks`.
+- **Toast on stale mark**: if a marked `_id` no longer exists when the filter runs, the filter still completes (it just returns fewer rows). After the result lands, prune the dangling id from storage and show `Pruned 2 stale marks`. The helper `pruneMarks(scope, ids)` already exists in `src/utils/marks.ts`; the loader needs to compare returned `_id`s against the requested set and call it.
 
 ### P3 — Nice to Have
 
@@ -394,8 +397,8 @@ toast/status area: `mark: _` or `jump to mark: _`. Cancelled on the next keypres
 |---|---|
 | `m<letter>` | Toggle mark `<letter>` on selected doc (or selected rows) |
 | `'<letter>` | Filter to docs marked `<letter>` in the current collection |
-| `'` (while mark filter active) | Clear mark filter, restore previous query |
-| `''` (P2) | List used marks for current collection |
+| `''` | Clear active mark filter, restore previous query |
+| `'<same letter>` | Toggle the active filter off (same as `''` when the letter matches the current filter) |
 | `Escape` (during pending mode) | Cancel mark/jump pending |
 
 ## UX notes
@@ -418,5 +421,5 @@ shop.orders   ' a                                   docs 2 / 1234
 a  6512abcd…  Alice    paid     2026-04-01   $129.00
 a  6512abd0…  Dave     refunded 2026-04-03   $0.00
 ─────────────────────────────────────────────────────────────────
-filter: marks:a (press ' to clear)
+filter: marks:a (press '' to clear)
 ```

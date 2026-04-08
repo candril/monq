@@ -37,6 +37,7 @@ import { useKeyboardNav } from "./hooks/useKeyboardNav"
 import { useDocumentLoader } from "./hooks/useDocumentLoader"
 import { buildCommands } from "./commands/builder"
 import { loadHistory, appendHistory } from "./utils/history"
+import { loadMarks, marksForScope } from "./utils/marks"
 import { buildCollectionCommands } from "./commands/collections"
 import { buildDatabaseCommands } from "./commands/databases"
 import { buildThemeCommands } from "./commands/themes"
@@ -107,6 +108,13 @@ export function App({
   // Load query history from disk once on mount
   useEffect(() => {
     loadHistory().then((entries) => dispatch({ type: "LOAD_HISTORY", entries }))
+  }, [])
+
+  // Load document marks from disk once on mount.
+  // (Mutating writes are made by actions/marks.ts and dispatch SET_MARKS
+  // with the new snapshot, so we don't need a watcher here.)
+  useEffect(() => {
+    loadMarks().then((marks) => dispatch({ type: "SET_MARKS", marks }))
   }, [])
 
   // Append to history whenever a non-empty simple query is submitted.
@@ -291,6 +299,30 @@ export function App({
   const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
   const selectedDoc = state.documents[state.selectedIndex] ?? null
 
+  // Build the per-row mark lookup for the active tab's scope. Empty when the
+  // user hasn't marked anything in this collection — the gutter then collapses
+  // to zero width in DocumentList.
+  const activeCollectionName = activeTab?.collectionName ?? null
+  const marksForRow = useMemo(() => {
+    if (!activeCollectionName) {
+      return new Map<string, string>()
+    }
+    return marksForScope(state.marks, {
+      host: state.host,
+      db: state.dbName,
+      col: activeCollectionName,
+    })
+  }, [state.marks, state.host, state.dbName, activeCollectionName])
+
+  // Surface mark/jump pending modes as a transient toast hint.
+  useEffect(() => {
+    if (state.markPending) {
+      dispatch({ type: "SHOW_MESSAGE", message: "mark: _", kind: "info" })
+    } else if (state.jumpPending) {
+      dispatch({ type: "SHOW_MESSAGE", message: "jump to mark: _", kind: "info" })
+    }
+  }, [state.markPending, state.jumpPending])
+
   // Show full-screen loading (no chrome) during initial connection — avoids
   // layout jump when transitioning from ConnectionScreen's Loading state.
   // Hold-off: only show after 500ms to avoid a flash on fast connections.
@@ -392,6 +424,7 @@ export function App({
               viewportWidth={
                 state.previewPosition === "right" ? Math.floor(terminalWidth / 2) : terminalWidth
               }
+              marksForRow={marksForRow}
             />
           </box>
         ) : null}
@@ -419,9 +452,7 @@ export function App({
       {/* History picker — Ctrl-R while simple bar is open. Scoped to current db. */}
       {state.historyPickerOpen && state.queryVisible && (
         <HistoryPicker
-          entries={state.historyEntries
-            .filter((e) => e.db === state.dbName)
-            .map((e) => e.q)}
+          entries={state.historyEntries.filter((e) => e.db === state.dbName).map((e) => e.q)}
           onPick={(entry) => {
             dispatch({ type: "SET_QUERY_INPUT", input: entry })
             dispatch({ type: "CLOSE_HISTORY_PICKER" })

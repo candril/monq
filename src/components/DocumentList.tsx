@@ -10,7 +10,7 @@ import type { ScrollBoxRenderable } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/react"
 import type { Document } from "mongodb"
 import type { DetectedColumn, SelectionMode } from "../types"
-import { theme } from "../theme"
+import { theme, getMarkColor } from "../theme"
 import {
   formatValue,
   valueColor,
@@ -19,6 +19,7 @@ import {
   truncate,
   getNestedValue,
 } from "../utils/format"
+import { markDocId } from "../utils/marks"
 import { Loading } from "./Loading"
 import { randomDocumentMessage } from "../utils/loadingMessages"
 
@@ -43,6 +44,11 @@ interface DocumentListProps {
   themeVersion?: number
   /** Effective viewport width in columns. Defaults to full terminal width. */
   viewportWidth?: number
+  /**
+   * Mark letter per canonical doc id (from `markDocId`). When non-empty, a
+   * 1-char gutter is rendered to the left of each row.
+   */
+  marksForRow?: Map<string, string>
 }
 
 /** Compute natural column widths, then expand capped columns to fill available screen width */
@@ -242,7 +248,12 @@ export function DocumentList({
   loading,
   scrollRef: externalScrollRef,
   viewportWidth: viewportWidthProp,
+  marksForRow,
 }: DocumentListProps) {
+  // Always reserve the gutter so the layout never shifts when the first mark
+  // appears in a collection. Costs 2 chars of horizontal space, but avoids the
+  // jarring jump that the conditional gutter caused.
+  const showMarkGutter = true
   const scrollRef = externalScrollRef ?? useRef<ScrollBoxRenderable>(null)
   const { width: terminalWidth } = useTerminalDimensions()
   const [loadingMessage, setLoadingMessage] = useState(randomDocumentMessage)
@@ -313,6 +324,7 @@ export function DocumentList({
         viewportWidth={viewportWidth}
         sortField={sortField}
         sortDirection={sortDirection}
+        showMarkGutter={showMarkGutter}
       />
       <scrollbox
         ref={scrollRef}
@@ -326,20 +338,25 @@ export function DocumentList({
           },
         }}
       >
-        {documents.map((doc, i) => (
-          <DocumentRow
-            key={String(doc._id ?? i)}
-            doc={doc}
-            columns={visibleColumns}
-            colWidthArray={colWidthArray}
-            selected={i === selectedIndex}
-            selectedColumnIndex={selectedColumnIndex}
-            scrollLeft={scrollLeft}
-            viewportWidth={viewportWidth}
-            rowSelected={selectedRows.has(i)}
-            selectionMode={selectionMode}
-          />
-        ))}
+        {documents.map((doc, i) => {
+          const markLetter = showMarkGutter ? (marksForRow?.get(markDocId(doc._id)) ?? null) : null
+          return (
+            <DocumentRow
+              key={String(doc._id ?? i)}
+              doc={doc}
+              columns={visibleColumns}
+              colWidthArray={colWidthArray}
+              selected={i === selectedIndex}
+              selectedColumnIndex={selectedColumnIndex}
+              scrollLeft={scrollLeft}
+              viewportWidth={viewportWidth}
+              rowSelected={selectedRows.has(i)}
+              selectionMode={selectionMode}
+              showMarkGutter={showMarkGutter}
+              markLetter={markLetter}
+            />
+          )
+        })}
       </scrollbox>
     </box>
   )
@@ -353,6 +370,7 @@ function HeaderRow({
   viewportWidth,
   sortField,
   sortDirection,
+  showMarkGutter,
 }: {
   columns: DetectedColumn[]
   colWidthArray: number[]
@@ -361,6 +379,7 @@ function HeaderRow({
   viewportWidth: number
   sortField: string | null
   sortDirection: 1 | -1
+  showMarkGutter: boolean
 }) {
   const values = columns.map((col, i) => {
     const isSelectedCol = i === selectedColumnIndex
@@ -389,7 +408,8 @@ function HeaderRow({
   const visible = sliceSegments(segments, scrollLeft, viewportWidth)
 
   return (
-    <box height={1} width="100%" paddingLeft={1} paddingRight={1}>
+    <box height={1} width="100%" paddingLeft={1} paddingRight={1} flexDirection="row">
+      {showMarkGutter && <box width={2} />}
       <text>
         {visible.map((seg, i) => (
           <span key={i} fg={seg.color}>
@@ -411,6 +431,8 @@ function DocumentRow({
   viewportWidth,
   rowSelected,
   selectionMode,
+  showMarkGutter,
+  markLetter,
 }: {
   doc: Document
   columns: DetectedColumn[]
@@ -421,6 +443,8 @@ function DocumentRow({
   viewportWidth: number
   rowSelected: boolean
   selectionMode: SelectionMode
+  showMarkGutter: boolean
+  markLetter: string | null
 }) {
   const values = columns.map((col, i) => {
     const w = colWidthArray[i]
@@ -443,7 +467,25 @@ function DocumentRow({
         : undefined
 
   return (
-    <box height={1} width="100%" backgroundColor={bg} paddingLeft={1} paddingRight={1}>
+    <box
+      height={1}
+      width="100%"
+      backgroundColor={bg}
+      paddingLeft={1}
+      paddingRight={1}
+      flexDirection="row"
+    >
+      {showMarkGutter && (
+        <box width={2}>
+          <text>
+            {markLetter ? (
+              <span fg={getMarkColor(markLetter)}>{markLetter}</span>
+            ) : (
+              <span fg={theme.textDim}>{" "}</span>
+            )}
+          </text>
+        </box>
+      )}
       <text>
         {visible.map((seg, i) => (
           <span key={i} fg={seg.color}>

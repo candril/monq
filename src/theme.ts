@@ -69,3 +69,28 @@ export let theme: Theme = tokyoNight
 export function setTheme(t: Theme): void {
   theme = t
 }
+
+/**
+ * Fixed colour palette for mark letters. Each letter always maps to the same
+ * colour (a → red, b → peach, …), cycling for letters past the palette.
+ * Catppuccin Mocha — matches presto's `MARK_PALETTE`.
+ */
+const MARK_PALETTE = [
+  "#f38ba8", // red
+  "#fab387", // peach
+  "#f9e2af", // yellow
+  "#a6e3a1", // green
+  "#94e2d5", // teal
+  "#89dceb", // sky
+  "#89b4fa", // blue
+  "#cba6f7", // mauve
+]
+
+/** Stable per-letter colour for mark gutters. */
+export function getMarkColor(letter: string): string {
+  const index = letter.charCodeAt(0) - "a".charCodeAt(0)
+  if (index < 0) {
+    return MARK_PALETTE[0]
+  }
+  return MARK_PALETTE[index % MARK_PALETTE.length]
+}

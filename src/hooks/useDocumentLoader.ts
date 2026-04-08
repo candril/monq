@@ -12,6 +12,7 @@ import { detectColumns } from "../utils/document"
 import { buildSchemaMap } from "../query/schema"
 import { classifyPipeline, extractFindParts } from "../query/pipeline"
 import { resolveCurrentQuery } from "../utils/query"
+import { decodeMarkId, idsForLetter, markDocId, pruneMarks } from "../utils/marks"
 
 /**
  * Strip `_id: 0` from a projection before sending to MongoDB.
@@ -53,6 +54,76 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
 
     let cancelled = false
     const existingColumns = state.columns
+
+    // Mark filter — overrides any other query. Runs a fresh find against the
+    // collection with `_id: { $in: [...] }` so previously marked docs surface
+    // even if they're not currently in the result set.
+    if (activeTab.activeMarkFilter) {
+      const scope = {
+        host: state.host,
+        db: state.dbName,
+        col: activeTab.collectionName,
+      }
+      const markIds = idsForLetter(state.marks, scope, activeTab.activeMarkFilter)
+      const decodedIds = markIds.map(decodeMarkId)
+      const filter = { _id: { $in: decodedIds as never } } as import("mongodb").Filter<
+        import("mongodb").Document
+      >
+      fetchDocuments(activeTab.collectionName, filter, { limit: pageSize })
+        .then(({ documents, count, totalCount }) => {
+          if (cancelled) {
+            return
+          }
+          const detectedFields = detectColumns(documents)
+          const detectedSet = new Set(detectedFields)
+          const existingByField = new Map(existingColumns.map((c) => [c.field, c]))
+          const newColumns = detectedFields.map((field) => {
+            const existing = existingByField.get(field)
+            return (
+              existing ?? { field, frequency: 1, visible: true, displayMode: "normal" as const }
+            )
+          })
+          const preserved = existingColumns.filter((c) => !detectedSet.has(c.field))
+          const columns = [...newColumns, ...preserved]
+          dispatch({ type: "SET_DOCUMENTS", documents, count, totalCount })
+          dispatch({ type: "SET_COLUMNS", columns })
+          dispatch({ type: "SET_SCHEMA", schemaMap: buildSchemaMap(documents) })
+
+          // Prune stale marks: any requested id that didn't come back is gone
+          // from the collection. Only do this when the result set is complete
+          // (count <= pageSize) so we don't drop ids that just paged out.
+          if (count <= documents.length) {
+            const returnedIds = new Set<string>()
+            for (const doc of documents) {
+              if (doc._id != null) {
+                returnedIds.add(markDocId(doc._id))
+              }
+            }
+            const stale = markIds.filter((id) => !returnedIds.has(id))
+            if (stale.length > 0) {
+              void pruneMarks(scope, stale).then((next) => {
+                if (cancelled) {
+                  return
+                }
+                dispatch({ type: "SET_MARKS", marks: next })
+                dispatch({
+                  type: "SHOW_MESSAGE",
+                  message: `Pruned ${stale.length} stale mark${stale.length === 1 ? "" : "s"}`,
+                  kind: "info",
+                })
+              })
+            }
+          }
+        })
+        .catch((err: Error) => {
+          if (!cancelled) {
+            dispatch({ type: "SET_ERROR", error: err.message })
+          }
+        })
+      return () => {
+        cancelled = true
+      }
+    }
 
     // Pipeline mode — aggregate or find-compatible pipeline
     if (state.pipelineMode && state.pipeline.length > 0) {
@@ -252,11 +323,27 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
 
     let cancelled = false
 
-    // Resolve filter/sort/projection from current state (same as Effect 1)
-    const resolved = resolveCurrentQuery(state)
-    const filter = resolved.mode === "find" ? resolved.filter : {}
-    const sort = resolved.mode === "find" ? resolved.sort : undefined
-    const projection = resolved.mode === "find" ? resolved.projection : undefined
+    // Mark filter override (mirrors Effect 1)
+    let filter: import("mongodb").Document
+    let sort: import("mongodb").Document | undefined
+    let projection: Record<string, 0 | 1> | undefined
+    if (activeTab.activeMarkFilter) {
+      const scope = {
+        host: state.host,
+        db: state.dbName,
+        col: activeTab.collectionName,
+      }
+      const markIds = idsForLetter(state.marks, scope, activeTab.activeMarkFilter)
+      filter = { _id: { $in: markIds.map(decodeMarkId) } }
+      sort = undefined
+      projection = undefined
+    } else {
+      // Resolve filter/sort/projection from current state (same as Effect 1)
+      const resolved = resolveCurrentQuery(state)
+      filter = resolved.mode === "find" ? resolved.filter : {}
+      sort = resolved.mode === "find" ? resolved.sort : undefined
+      projection = resolved.mode === "find" ? resolved.projection : undefined
+    }
 
     // Always fetch _id so edit/delete commands work (same logic as Effect 1)
     const { projection: safeProjection } = sanitizeProjection(projection)

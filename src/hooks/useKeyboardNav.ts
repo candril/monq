@@ -22,6 +22,7 @@ import { getExportAbort } from "../actions/palette/document"
 import { filterBySelectedValue } from "../actions/filterValue"
 import { yankDocument, yankCell } from "../actions/yank"
 import { hideColumn } from "../actions/hideColumn"
+import { toggleMarkOnSelection } from "../actions/marks"
 import { useDialogKeys } from "./useDialogKeys"
 import { usePipelineKeys } from "./usePipelineKeys"
 import { useDocumentEditKeys } from "./useDocumentEditKeys"
@@ -331,6 +332,59 @@ export function useKeyboardNav({
     // ── Document view only ─────────────────────────────────────────────
 
     if (state.view !== "documents") {
+      return
+    }
+
+    // Mark/jump pending modes — consume the next letter (or escape).
+    // Pending mode wins over the regular handler table so that `m` followed
+    // by `q` doesn't quit the app. Any non-letter key cancels.
+    if (state.markPending) {
+      if (key.name && /^[a-z]$/.test(key.name)) {
+        const letter = key.name
+        dispatch({ type: "EXIT_MARK_PENDING" })
+        // Fire-and-forget: the action handles disk I/O + dispatches SET_MARKS.
+        void toggleMarkOnSelection(state, dispatch, letter)
+      } else {
+        dispatch({ type: "EXIT_MARK_PENDING" })
+      }
+      return
+    }
+
+    if (state.jumpPending) {
+      // `''` (a second `'` while pending) clears the active mark filter.
+      if (matches(key, keymap["mark.jump"])) {
+        dispatch({ type: "EXIT_JUMP_PENDING" })
+        const tab = state.tabs.find((t) => t.id === state.activeTabId)
+        if (tab?.activeMarkFilter) {
+          dispatch({ type: "CLEAR_MARK_FILTER" })
+        }
+        return
+      }
+      if (key.name && /^[a-z]$/.test(key.name)) {
+        const letter = key.name
+        const tab = state.tabs.find((t) => t.id === state.activeTabId)
+        dispatch({ type: "EXIT_JUMP_PENDING" })
+        if (tab?.activeMarkFilter === letter) {
+          dispatch({ type: "CLEAR_MARK_FILTER" })
+        } else {
+          dispatch({ type: "ACTIVATE_MARK_FILTER", letter })
+        }
+      } else {
+        dispatch({ type: "EXIT_JUMP_PENDING" })
+      }
+      return
+    }
+
+    // Enter mark pending mode on `m`
+    if (matches(key, keymap["mark.set"]) && state.activeTabId) {
+      dispatch({ type: "ENTER_MARK_PENDING" })
+      return
+    }
+
+    // Enter jump pending mode on `'`. The pending handler above turns a
+    // second `'` into a clear (`''`), so a lone `'` always waits for a letter.
+    if (matches(key, keymap["mark.jump"]) && state.activeTabId) {
+      dispatch({ type: "ENTER_JUMP_PENDING" })
       return
     }
 
