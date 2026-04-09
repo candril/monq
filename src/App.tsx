@@ -395,8 +395,6 @@ export function App({
         selectionCount={state.selectedIds.size}
       />
 
-      <TabBar tabs={state.tabs} activeTabId={state.activeTabId} />
-
       <box flexGrow={1} flexDirection="row" overflow="hidden">
         {state.sidebarOpen && activeTab && (
           <CollectionSidebar
@@ -408,81 +406,86 @@ export function App({
             focused={state.sidebarFocused}
           />
         )}
-        <box
-          flexGrow={1}
-          overflow="hidden"
-          flexDirection={state.previewPosition === "bottom" ? "column" : "row"}
-        >
-          {state.error ? (
-            <ErrorView message={state.error} />
-          ) : showWelcome ? (
-            <WelcomeScreen
-              step={welcomeStep}
-              databases={state.databases}
-              collections={state.collections.map((c) => c.name)}
-              dbName={state.dbName}
-              host={state.host}
-              databasesLoading={state.databasesLoading}
-              collectionsLoading={state.collectionsLoading}
-              onSelectDatabase={handleSelectDatabase}
-              onSelectCollection={handleSelectCollection}
-              onBack={handleWelcomeBack}
-              onBackToUri={onBackToUri}
-              onCreateDatabase={handleCreateDatabase}
-              onCreateCollection={handleCreateCollection}
-              onDropCollection={handleDropCollection}
-              onDropDatabase={handleDropDatabase}
-              onRenameCollection={handleRenameCollection}
-            />
-          ) : activeTab ? (
-            <box
-              flexGrow={1}
-              width={state.previewPosition === "right" ? "50%" : "100%"}
-              height={state.previewPosition === "bottom" ? "50%" : "100%"}
-              overflow="hidden"
-            >
-              <DocumentList
-                documents={state.documents}
-                columns={state.columns}
-                selectedIndex={state.selectedIndex}
-                selectedColumnIndex={state.selectedColumnIndex}
-                sortField={resolveSortField(state.pipelineMode, state.pipeline, state.sortField)}
-                sortDirection={resolveSortDirection(
-                  state.pipelineMode,
-                  state.pipeline,
-                  state.sortDirection,
-                )}
-                selectionMode={state.selectionMode}
-                selectedRows={state.selectedRows}
-                loading={state.documentsLoading}
-                scrollRef={docListScrollRef}
-                themeVersion={themeVersion}
-                viewportWidth={
-                  state.previewPosition === "right" ? Math.floor(terminalWidth / 2) : terminalWidth
-                }
-                marksForRow={marksForRow}
+        <box flexGrow={1} flexDirection="column" overflow="hidden">
+          <TabBar tabs={state.tabs} activeTabId={state.activeTabId} />
+          <box
+            flexGrow={1}
+            overflow="hidden"
+            flexDirection={state.previewPosition === "bottom" ? "column" : "row"}
+          >
+            {state.error ? (
+              <ErrorView message={state.error} />
+            ) : showWelcome ? (
+              <WelcomeScreen
+                step={welcomeStep}
+                databases={state.databases}
+                collections={state.collections.map((c) => c.name)}
+                dbName={state.dbName}
+                host={state.host}
+                databasesLoading={state.databasesLoading}
+                collectionsLoading={state.collectionsLoading}
+                onSelectDatabase={handleSelectDatabase}
+                onSelectCollection={handleSelectCollection}
+                onBack={handleWelcomeBack}
+                onBackToUri={onBackToUri}
+                onCreateDatabase={handleCreateDatabase}
+                onCreateCollection={handleCreateCollection}
+                onDropCollection={handleDropCollection}
+                onDropDatabase={handleDropDatabase}
+                onRenameCollection={handleRenameCollection}
               />
-            </box>
-          ) : null}
+            ) : activeTab ? (
+              <box
+                flexGrow={1}
+                width={state.previewPosition === "right" ? "50%" : "100%"}
+                height={state.previewPosition === "bottom" ? "50%" : "100%"}
+                overflow="hidden"
+              >
+                <DocumentList
+                  documents={state.documents}
+                  columns={state.columns}
+                  selectedIndex={state.selectedIndex}
+                  selectedColumnIndex={state.selectedColumnIndex}
+                  sortField={resolveSortField(state.pipelineMode, state.pipeline, state.sortField)}
+                  sortDirection={resolveSortDirection(
+                    state.pipelineMode,
+                    state.pipeline,
+                    state.sortDirection,
+                  )}
+                  selectionMode={state.selectionMode}
+                  selectedRows={state.selectedRows}
+                  loading={state.documentsLoading}
+                  scrollRef={docListScrollRef}
+                  themeVersion={themeVersion}
+                  viewportWidth={
+                    state.previewPosition === "right"
+                      ? Math.floor(terminalWidth / 2)
+                      : terminalWidth
+                  }
+                  marksForRow={marksForRow}
+                />
+              </box>
+            ) : null}
 
-          {activeTab && state.previewMode === "explain" && (
-            <ExplainPreview
-              result={state.explainResult}
-              loading={state.explainLoading}
-              limited={state.explainLimited}
-              position={state.previewPosition}
-              scrollOffset={state.previewScrollOffset}
-              collectionName={activeTab.collectionName}
-            />
-          )}
+            {activeTab && state.previewMode === "explain" && (
+              <ExplainPreview
+                result={state.explainResult}
+                loading={state.explainLoading}
+                limited={state.explainLimited}
+                position={state.previewPosition}
+                scrollOffset={state.previewScrollOffset}
+                collectionName={activeTab.collectionName}
+              />
+            )}
 
-          {activeTab && state.previewMode === "document" && (
-            <DocumentPreview
-              document={selectedDoc}
-              position={state.previewPosition}
-              scrollOffset={state.previewScrollOffset}
-            />
-          )}
+            {activeTab && state.previewMode === "document" && (
+              <DocumentPreview
+                document={selectedDoc}
+                position={state.previewPosition}
+                scrollOffset={state.previewScrollOffset}
+              />
+            )}
+          </box>
         </box>
       </box>
 

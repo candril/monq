@@ -6,11 +6,16 @@
  * owned by `AppState`. Keyboard handling lives in `useKeyboardNav` and the
  * action helpers in `src/actions/sidebar.ts`.
  *
- * Visual markers:
- *   ▶  the collection in the active tab
- *   ●  any collection that has at least one open tab
- *   v  view (non-collection type tag)
- *   t  timeseries (non-collection type tag)
+ * Collection state is communicated purely through colour (no glyphs), so
+ * the list reads as a clean single-column name list:
+ *
+ *   theme.textDim      — regular collection, no open tab
+ *   theme.text         — collection that has at least one open tab
+ *   theme.primary      — collection that's in the currently-active tab
+ *   theme.selection bg — the focused cursor row (on top of the above)
+ *
+ * Long names are truncated with an ellipsis so a single-line-per-row layout
+ * is preserved (wrapping used to produce "strange empty lines").
  */
 
 import { useRef, useEffect } from "react"
@@ -20,6 +25,10 @@ import { theme } from "../theme"
 
 const SIDEBAR_WIDTH = 24
 const SCROLL_MARGIN = 2
+// Content width inside the sidebar, once the right border (1) and horizontal
+// padding (2) are subtracted. Leave a 1-col safety margin so names never
+// bump against the border.
+const CONTENT_WIDTH = SIDEBAR_WIDTH - 1 - 2 - 1
 
 interface CollectionSidebarProps {
   dbName: string
@@ -28,6 +37,14 @@ interface CollectionSidebarProps {
   openCollectionNames: Set<string>
   selectedIndex: number
   focused: boolean
+}
+
+/** Truncate a collection name to `CONTENT_WIDTH`, appending an ellipsis. */
+function truncate(name: string): string {
+  if (name.length <= CONTENT_WIDTH) {
+    return name
+  }
+  return name.slice(0, CONTENT_WIDTH - 1) + "…"
 }
 
 export function CollectionSidebar({
@@ -76,7 +93,7 @@ export function CollectionSidebar({
       </box>
       <box height={1}>
         <text>
-          <span fg={theme.textMuted}>{"─".repeat(SIDEBAR_WIDTH - 2)}</span>
+          <span fg={theme.textMuted}>{"─".repeat(CONTENT_WIDTH + 1)}</span>
         </text>
       </box>
       {collections.length === 0 ? (
@@ -90,7 +107,7 @@ export function CollectionSidebar({
           {collections.map((col, i) => (
             <SidebarRow
               key={col.name}
-              col={col}
+              name={col.name}
               isActive={col.name === activeCollectionName}
               hasOpen={openCollectionNames.has(col.name)}
               isCursor={focused && i === selectedIndex}
@@ -103,24 +120,20 @@ export function CollectionSidebar({
 }
 
 interface SidebarRowProps {
-  col: CollectionInfo
+  name: string
   isActive: boolean
   hasOpen: boolean
   isCursor: boolean
 }
 
-function SidebarRow({ col, isActive, hasOpen, isCursor }: SidebarRowProps) {
-  const marker = isActive ? "▶ " : "  "
-  const nameColor = isActive ? theme.primary : isCursor ? theme.text : theme.textDim
-  const markerColor = isCursor ? theme.text : theme.textDim
-  const typeTag = col.type === "view" ? " v" : col.type === "timeseries" ? " t" : ""
+function SidebarRow({ name, isActive, hasOpen, isCursor }: SidebarRowProps) {
+  // Colour encodes collection state; cursor row gets the selection background
+  // on top. No glyphs — the colour alone communicates everything.
+  const fg = isActive ? theme.primary : hasOpen ? theme.text : theme.textDim
   return (
-    <box height={1} flexDirection="row" backgroundColor={isCursor ? theme.selection : undefined}>
+    <box width="100%" height={1} backgroundColor={isCursor ? theme.selection : undefined}>
       <text>
-        <span fg={markerColor}>{marker}</span>
-        <span fg={nameColor}>{col.name}</span>
-        {hasOpen && <span fg={theme.textDim}>{" ●"}</span>}
-        {typeTag && <span fg={theme.textMuted}>{typeTag}</span>}
+        <span fg={fg}>{truncate(name)}</span>
       </text>
     </box>
   )
