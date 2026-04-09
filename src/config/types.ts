@@ -99,6 +99,7 @@ export type ActionName =
   | "explain.raw"
   | "mark.set"
   | "mark.jump"
+  | "sidebar.toggle"
   | "app.quit"
 
 /** Raw user-supplied keys config — each action maps to a string or string[]. */

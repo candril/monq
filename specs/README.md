@@ -30,7 +30,7 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 000 | [Vision](./000-vision.md) | Ready | Product vision and core philosophy |
 | 009 | [Export](./009-export.md) | Draft | Export results as JSON/CSV |
 | 028 | [Connection Error Handling](./028-connection-error-handling.md) | Draft | Graceful handling of connection failures and timeouts |
-| 053 | [Collection Sidebar](./053-collection-sidebar.md) | Draft | Vertical collapsible collection navigation pane (Ctrl+B) |
+| 053 | [Collection Sidebar](./053-collection-sidebar.md) | In Progress | Vertical collapsible collection navigation pane (Ctrl+B) |
 
 ## Done Specs
 

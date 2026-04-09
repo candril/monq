@@ -137,6 +137,44 @@ export function uiReducer(state: AppState, action: AppAction): AppState | null {
     case "EXIT_JUMP_PENDING":
       return state.jumpPending ? { ...state, jumpPending: false } : state
 
+    // Collection sidebar (spec 053) — state machine:
+    //   closed          → open + focus
+    //   open, focused   → close (also unfocus)
+    //   open, unfocused → refocus
+    case "TOGGLE_SIDEBAR":
+      if (!state.sidebarOpen) {
+        return { ...state, sidebarOpen: true, sidebarFocused: true }
+      }
+      if (state.sidebarFocused) {
+        return { ...state, sidebarOpen: false, sidebarFocused: false }
+      }
+      return { ...state, sidebarFocused: true }
+
+    case "FOCUS_SIDEBAR":
+      return state.sidebarOpen ? { ...state, sidebarFocused: true } : state
+
+    case "BLUR_SIDEBAR":
+      return state.sidebarFocused ? { ...state, sidebarFocused: false } : state
+
+    case "SIDEBAR_NAV": {
+      if (state.collections.length === 0) {
+        return state
+      }
+      const next = Math.max(
+        0,
+        Math.min(state.collections.length - 1, state.sidebarSelectedIndex + action.delta),
+      )
+      return next === state.sidebarSelectedIndex ? state : { ...state, sidebarSelectedIndex: next }
+    }
+
+    case "SIDEBAR_SET_INDEX": {
+      if (state.collections.length === 0) {
+        return state
+      }
+      const next = Math.max(0, Math.min(state.collections.length - 1, action.index))
+      return next === state.sidebarSelectedIndex ? state : { ...state, sidebarSelectedIndex: next }
+    }
+
     default:
       return null
   }

@@ -63,6 +63,7 @@ const DEFAULT_BINDINGS: Record<ActionName, string[]> = {
   "explain.raw": ["shift+x"],
   "mark.set": ["m"],
   "mark.jump": ["'"],
+  "sidebar.toggle": ["ctrl+b"],
   "app.quit": ["q"],
 }
 

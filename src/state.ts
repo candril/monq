@@ -174,6 +174,12 @@ export type AppAction =
   | { type: "ENTER_JUMP_PENDING" }
   | { type: "EXIT_JUMP_PENDING" }
   | { type: "SET_MARKS"; marks: MarkEntry[] }
+  // Collection sidebar (spec 053)
+  | { type: "TOGGLE_SIDEBAR" }
+  | { type: "FOCUS_SIDEBAR" }
+  | { type: "BLUR_SIDEBAR" }
+  | { type: "SIDEBAR_NAV"; delta: -1 | 1 }
+  | { type: "SIDEBAR_SET_INDEX"; index: number }
 
 // ============================================================================
 // Initial State
@@ -251,6 +257,9 @@ export function createInitialState(): AppState {
     indexCreateConfirmation: null,
     exportCancelConfirmation: null,
     exporting: false,
+    sidebarOpen: false,
+    sidebarFocused: false,
+    sidebarSelectedIndex: 0,
   }
 }
 

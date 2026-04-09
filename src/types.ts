@@ -348,4 +348,12 @@ export interface AppState {
   exportCancelConfirmation: ExportCancelConfirmation | null
   /** True while an export is in progress */
   exporting: boolean
+
+  // Collection sidebar (spec 053)
+  /** Whether the left-hand collection navigation pane is visible */
+  sidebarOpen: boolean
+  /** Whether keyboard focus is inside the sidebar */
+  sidebarFocused: boolean
+  /** Cursor row within the sidebar's collection list */
+  sidebarSelectedIndex: number
 }

@@ -31,6 +31,7 @@ import { ExplainPreview } from "./components/ExplainPreview"
 import { ExportCancelDialog } from "./components/ExportCancelDialog"
 import { WelcomeScreen } from "./components/WelcomeScreen"
 import { TabBar } from "./components/TabBar"
+import { CollectionSidebar } from "./components/CollectionSidebar"
 import { appReducer, createInitialState } from "./state"
 import { useMongoConnection } from "./hooks/useMongoConnection"
 import { useKeyboardNav } from "./hooks/useKeyboardNav"
@@ -303,6 +304,13 @@ export function App({
   const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
   const selectedDoc = state.documents[state.selectedIndex] ?? null
 
+  // Set of collection names that currently have an open tab — used by the
+  // collection sidebar to mark those collections with a `●` glyph.
+  const openCollectionNames = useMemo(
+    () => new Set(state.tabs.map((t) => t.collectionName)),
+    [state.tabs],
+  )
+
   // Build the per-row mark lookup for the active tab's scope. Empty when the
   // user hasn't marked anything in this collection — the gutter then collapses
   // to zero width in DocumentList.
@@ -389,81 +397,93 @@ export function App({
 
       <TabBar tabs={state.tabs} activeTabId={state.activeTabId} />
 
-      <box
-        flexGrow={1}
-        overflow="hidden"
-        flexDirection={state.previewPosition === "bottom" ? "column" : "row"}
-      >
-        {state.error ? (
-          <ErrorView message={state.error} />
-        ) : showWelcome ? (
-          <WelcomeScreen
-            step={welcomeStep}
-            databases={state.databases}
-            collections={state.collections.map((c) => c.name)}
+      <box flexGrow={1} flexDirection="row" overflow="hidden">
+        {state.sidebarOpen && activeTab && (
+          <CollectionSidebar
             dbName={state.dbName}
-            host={state.host}
-            databasesLoading={state.databasesLoading}
-            collectionsLoading={state.collectionsLoading}
-            onSelectDatabase={handleSelectDatabase}
-            onSelectCollection={handleSelectCollection}
-            onBack={handleWelcomeBack}
-            onBackToUri={onBackToUri}
-            onCreateDatabase={handleCreateDatabase}
-            onCreateCollection={handleCreateCollection}
-            onDropCollection={handleDropCollection}
-            onDropDatabase={handleDropDatabase}
-            onRenameCollection={handleRenameCollection}
+            collections={state.collections}
+            activeCollectionName={activeTab.collectionName}
+            openCollectionNames={openCollectionNames}
+            selectedIndex={state.sidebarSelectedIndex}
+            focused={state.sidebarFocused}
           />
-        ) : activeTab ? (
-          <box
-            flexGrow={1}
-            width={state.previewPosition === "right" ? "50%" : "100%"}
-            height={state.previewPosition === "bottom" ? "50%" : "100%"}
-            overflow="hidden"
-          >
-            <DocumentList
-              documents={state.documents}
-              columns={state.columns}
-              selectedIndex={state.selectedIndex}
-              selectedColumnIndex={state.selectedColumnIndex}
-              sortField={resolveSortField(state.pipelineMode, state.pipeline, state.sortField)}
-              sortDirection={resolveSortDirection(
-                state.pipelineMode,
-                state.pipeline,
-                state.sortDirection,
-              )}
-              selectionMode={state.selectionMode}
-              selectedRows={state.selectedRows}
-              loading={state.documentsLoading}
-              scrollRef={docListScrollRef}
-              themeVersion={themeVersion}
-              viewportWidth={
-                state.previewPosition === "right" ? Math.floor(terminalWidth / 2) : terminalWidth
-              }
-              marksForRow={marksForRow}
+        )}
+        <box
+          flexGrow={1}
+          overflow="hidden"
+          flexDirection={state.previewPosition === "bottom" ? "column" : "row"}
+        >
+          {state.error ? (
+            <ErrorView message={state.error} />
+          ) : showWelcome ? (
+            <WelcomeScreen
+              step={welcomeStep}
+              databases={state.databases}
+              collections={state.collections.map((c) => c.name)}
+              dbName={state.dbName}
+              host={state.host}
+              databasesLoading={state.databasesLoading}
+              collectionsLoading={state.collectionsLoading}
+              onSelectDatabase={handleSelectDatabase}
+              onSelectCollection={handleSelectCollection}
+              onBack={handleWelcomeBack}
+              onBackToUri={onBackToUri}
+              onCreateDatabase={handleCreateDatabase}
+              onCreateCollection={handleCreateCollection}
+              onDropCollection={handleDropCollection}
+              onDropDatabase={handleDropDatabase}
+              onRenameCollection={handleRenameCollection}
             />
-          </box>
-        ) : null}
+          ) : activeTab ? (
+            <box
+              flexGrow={1}
+              width={state.previewPosition === "right" ? "50%" : "100%"}
+              height={state.previewPosition === "bottom" ? "50%" : "100%"}
+              overflow="hidden"
+            >
+              <DocumentList
+                documents={state.documents}
+                columns={state.columns}
+                selectedIndex={state.selectedIndex}
+                selectedColumnIndex={state.selectedColumnIndex}
+                sortField={resolveSortField(state.pipelineMode, state.pipeline, state.sortField)}
+                sortDirection={resolveSortDirection(
+                  state.pipelineMode,
+                  state.pipeline,
+                  state.sortDirection,
+                )}
+                selectionMode={state.selectionMode}
+                selectedRows={state.selectedRows}
+                loading={state.documentsLoading}
+                scrollRef={docListScrollRef}
+                themeVersion={themeVersion}
+                viewportWidth={
+                  state.previewPosition === "right" ? Math.floor(terminalWidth / 2) : terminalWidth
+                }
+                marksForRow={marksForRow}
+              />
+            </box>
+          ) : null}
 
-        {activeTab && state.previewMode === "explain" && (
-          <ExplainPreview
-            result={state.explainResult}
-            loading={state.explainLoading}
-            limited={state.explainLimited}
-            position={state.previewPosition}
-            scrollOffset={state.previewScrollOffset}
-            collectionName={activeTab.collectionName}
-          />
-        )}
+          {activeTab && state.previewMode === "explain" && (
+            <ExplainPreview
+              result={state.explainResult}
+              loading={state.explainLoading}
+              limited={state.explainLimited}
+              position={state.previewPosition}
+              scrollOffset={state.previewScrollOffset}
+              collectionName={activeTab.collectionName}
+            />
+          )}
 
-        {activeTab && state.previewMode === "document" && (
-          <DocumentPreview
-            document={selectedDoc}
-            position={state.previewPosition}
-            scrollOffset={state.previewScrollOffset}
-          />
-        )}
+          {activeTab && state.previewMode === "document" && (
+            <DocumentPreview
+              document={selectedDoc}
+              position={state.previewPosition}
+              scrollOffset={state.previewScrollOffset}
+            />
+          )}
+        </box>
       </box>
 
       {/* History picker — Ctrl-R while simple bar is open. Scoped to (db, col). */}

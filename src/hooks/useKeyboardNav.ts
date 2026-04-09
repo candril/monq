@@ -23,6 +23,7 @@ import { filterBySelectedValue } from "../actions/filterValue"
 import { yankDocument, yankCell } from "../actions/yank"
 import { hideColumn } from "../actions/hideColumn"
 import { toggleMarkOnSelection, jumpToMark, clearMarkJump } from "../actions/marks"
+import { handleSidebarEnter, closeTabsForSidebarCursor } from "../actions/sidebar"
 import { useDialogKeys } from "./useDialogKeys"
 import { usePipelineKeys } from "./usePipelineKeys"
 import { useDocumentEditKeys } from "./useDocumentEditKeys"
@@ -318,6 +319,48 @@ export function useKeyboardNav({
 
     // Dialog keys (pipeline confirm, bulk edit confirm, delete confirm)
     if (handleDialogKey(key)) {
+      return
+    }
+
+    // ── Collection sidebar (spec 053) ──────────────────────────────────
+    // When the sidebar has keyboard focus it acts as a modal list: nav,
+    // Enter, Esc, `d`, and Ctrl+B are the only keys it responds to; every
+    // other key is swallowed so it doesn't leak into the doc-list handler
+    // table. The user exits focus with Esc to get back to doc-list keys.
+    if (state.sidebarFocused && state.activeTabId) {
+      if (matches(key, keymap["sidebar.toggle"])) {
+        dispatch({ type: "TOGGLE_SIDEBAR" })
+        return
+      }
+      if (matches(key, keymap["nav.down"])) {
+        dispatch({ type: "SIDEBAR_NAV", delta: 1 })
+        return
+      }
+      if (matches(key, keymap["nav.up"])) {
+        dispatch({ type: "SIDEBAR_NAV", delta: -1 })
+        return
+      }
+      if (key.name === "return") {
+        handleSidebarEnter(state, dispatch)
+        return
+      }
+      if (key.name === "escape") {
+        dispatch({ type: "BLUR_SIDEBAR" })
+        return
+      }
+      if (matches(key, keymap["tab.close"])) {
+        closeTabsForSidebarCursor(state, dispatch)
+        return
+      }
+      // Swallow everything else so it doesn't fall through to the doc list.
+      return
+    }
+
+    // sidebar.toggle when not focused — opens (and focuses) the sidebar,
+    // or refocuses it if it's already open. Only meaningful when a tab is
+    // actually open (the sidebar is suppressed on the welcome screen).
+    if (matches(key, keymap["sidebar.toggle"]) && state.activeTabId) {
+      dispatch({ type: "TOGGLE_SIDEBAR" })
       return
     }
 

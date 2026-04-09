@@ -4,6 +4,17 @@ import type { Document } from "mongodb"
 import type { AppState, Tab } from "../../types"
 import type { AppAction } from "../../state"
 
+/**
+ * Move the sidebar cursor to the collection in the active tab.
+ * Used by OPEN_TAB / SWITCH_TAB so the sidebar tracks tab-switching. Returns
+ * the current index unchanged if the collection isn't in state.collections
+ * (e.g. during the startup window before SET_COLLECTIONS lands).
+ */
+function sidebarIndexForCollection(state: AppState, collectionName: string): number {
+  const idx = state.collections.findIndex((c) => c.name === collectionName)
+  return idx === -1 ? state.sidebarSelectedIndex : idx
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 let tabIdCounter = 0
@@ -159,6 +170,7 @@ export function tabsReducer(state: AppState, action: AppAction): AppState | null
         pipelineSource: "",
         pipelineIsAggregate: false,
         pipelineWatching: false,
+        sidebarSelectedIndex: sidebarIndexForCollection(state, action.collectionName),
       }
     }
 
@@ -288,6 +300,7 @@ export function tabsReducer(state: AppState, action: AppAction): AppState | null
         ...restoreFromTab(state, targetTab),
         tabs,
         activeTabId: action.tabId,
+        sidebarSelectedIndex: sidebarIndexForCollection(state, targetTab.collectionName),
       }
     }
 

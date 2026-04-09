@@ -39,6 +39,7 @@ export function connectionReducer(state: AppState, action: AppAction): AppState 
         collections: [],
         collectionsLoading: false,
         collectionSelectedIndex: 0,
+        sidebarSelectedIndex: 0,
         documents: [],
         documentCount: 0,
         totalDocumentCount: 0,
@@ -70,6 +71,7 @@ export function connectionReducer(state: AppState, action: AppAction): AppState 
         collections: [],
         collectionsLoading: true,
         collectionSelectedIndex: 0,
+        sidebarSelectedIndex: 0,
         documents: [],
         documentCount: 0,
         totalDocumentCount: 0,
@@ -90,8 +92,18 @@ export function connectionReducer(state: AppState, action: AppAction): AppState 
         selectedRows: new Set(),
       }
 
-    case "SET_COLLECTIONS":
-      return { ...state, collections: action.collections, collectionsLoading: false }
+    case "SET_COLLECTIONS": {
+      // Clamp sidebar cursor to new list bounds so an out-of-range index after
+      // reloads / drops doesn't render off the end of the list.
+      const maxIdx = Math.max(0, action.collections.length - 1)
+      const clampedSidebarIndex = Math.min(state.sidebarSelectedIndex, maxIdx)
+      return {
+        ...state,
+        collections: action.collections,
+        collectionsLoading: false,
+        sidebarSelectedIndex: clampedSidebarIndex,
+      }
+    }
 
     case "SET_COLLECTIONS_LOADING":
       return { ...state, collectionsLoading: action.loading }
