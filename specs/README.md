@@ -31,6 +31,7 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 009 | [Export](./009-export.md) | Draft | Export results as JSON/CSV |
 | 028 | [Connection Error Handling](./028-connection-error-handling.md) | Draft | Graceful handling of connection failures and timeouts |
 | 053 | [Collection Sidebar](./053-collection-sidebar.md) | In Progress | Vertical collapsible collection navigation pane (Ctrl+B) |
+| 054 | [Ephemeral Peek Tabs](./054-ephemeral-peek-tabs.md) | Draft | `{`/`}` to peek through collections in a single ephemeral tab |
 
 ## Done Specs
 
