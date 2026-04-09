@@ -328,20 +328,21 @@ export function useKeyboardNav({
 
     // ── Collection sidebar (spec 053 + 054) ────────────────────────────
     // When the sidebar has keyboard focus it acts as a modal list. Nav keys
-    // dispatch PEEK_COLLECTION so every cursor move also previews the
-    // highlighted collection in an ephemeral tab (spec 054). Enter promotes
-    // or switches; Esc discards any peek and blurs.
+    // dispatch PEEK_COLLECTION with anchor="cursor" so the walk follows the
+    // sidebar cursor (not the active tab) and clamps at the ends like a
+    // normal list. Enter promotes or switches; Esc discards any peek and
+    // blurs.
     if (state.sidebarFocused && state.activeTabId) {
       if (matches(key, keymap["sidebar.toggle"])) {
         dispatch({ type: "TOGGLE_SIDEBAR" })
         return
       }
       if (matches(key, keymap["nav.down"])) {
-        dispatch({ type: "PEEK_COLLECTION", delta: 1 })
+        dispatch({ type: "PEEK_COLLECTION", delta: 1, anchor: "cursor" })
         return
       }
       if (matches(key, keymap["nav.up"])) {
-        dispatch({ type: "PEEK_COLLECTION", delta: -1 })
+        dispatch({ type: "PEEK_COLLECTION", delta: -1, anchor: "cursor" })
         return
       }
       if (key.name === "return") {

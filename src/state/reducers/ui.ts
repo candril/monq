@@ -156,25 +156,6 @@ export function uiReducer(state: AppState, action: AppAction): AppState | null {
     case "BLUR_SIDEBAR":
       return state.sidebarFocused ? { ...state, sidebarFocused: false } : state
 
-    case "SIDEBAR_NAV": {
-      if (state.collections.length === 0) {
-        return state
-      }
-      const next = Math.max(
-        0,
-        Math.min(state.collections.length - 1, state.sidebarSelectedIndex + action.delta),
-      )
-      return next === state.sidebarSelectedIndex ? state : { ...state, sidebarSelectedIndex: next }
-    }
-
-    case "SIDEBAR_SET_INDEX": {
-      if (state.collections.length === 0) {
-        return state
-      }
-      const next = Math.max(0, Math.min(state.collections.length - 1, action.index))
-      return next === state.sidebarSelectedIndex ? state : { ...state, sidebarSelectedIndex: next }
-    }
-
     default:
       return null
   }

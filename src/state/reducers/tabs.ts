@@ -199,21 +199,46 @@ export function tabsReducer(state: AppState, action: AppAction): AppState | null
         return state
       }
 
-      // Anchor: the existing ephemeral tab if any, else the active tab.
-      // The peek walks forward/back from there.
       const ephemeral = state.tabs.find((t) => t.ephemeral)
-      const anchorTab = ephemeral ?? state.tabs.find((t) => t.id === state.activeTabId)
-      const anchorName = anchorTab?.collectionName
-      const currentIdx = anchorName ? state.collections.findIndex((c) => c.name === anchorName) : -1
-
       const len = state.collections.length
-      const nextIdx =
-        currentIdx === -1
-          ? action.delta > 0
-            ? 0
-            : len - 1
-          : (currentIdx + action.delta + len) % len
+      const anchor = action.anchor ?? "active"
+
+      // Compute the target index. Two modes:
+      //   - "cursor": walk from the sidebar cursor, clamping at the ends.
+      //     Used by sidebar j/k — the user is navigating a visible list and
+      //     expects list semantics (no wrap, no jumping back to wherever the
+      //     active tab happens to sit).
+      //   - "active": walk from the active/ephemeral tab, wrapping at the
+      //     ends. Used by global `}` / `{` — the user is cycling through
+      //     collections regardless of which one is focused in the sidebar.
+      let nextIdx: number
+      if (anchor === "cursor") {
+        nextIdx = Math.max(0, Math.min(len - 1, state.sidebarSelectedIndex + action.delta))
+      } else {
+        const anchorTab = ephemeral ?? state.tabs.find((t) => t.id === state.activeTabId)
+        const anchorName = anchorTab?.collectionName
+        const currentIdx = anchorName
+          ? state.collections.findIndex((c) => c.name === anchorName)
+          : -1
+        nextIdx =
+          currentIdx === -1
+            ? action.delta > 0
+              ? 0
+              : len - 1
+            : (currentIdx + action.delta + len) % len
+      }
       const nextCol = state.collections[nextIdx]
+
+      // No-op: target is already the active/ephemeral collection. Without
+      // this, sidebar j at the last row would flash the reducer's
+      // snapshot/restore dance for no visible change. The cursor-clamping
+      // branch is the main trigger.
+      const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+      if (activeTab?.collectionName === nextCol.name) {
+        return state.sidebarSelectedIndex === nextIdx
+          ? state
+          : { ...state, sidebarSelectedIndex: nextIdx }
+      }
 
       // If a real tab already exists for the target collection, switch to it
       // and discard any ephemeral tab as a side effect.

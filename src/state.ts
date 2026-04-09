@@ -178,10 +178,18 @@ export type AppAction =
   | { type: "TOGGLE_SIDEBAR" }
   | { type: "FOCUS_SIDEBAR" }
   | { type: "BLUR_SIDEBAR" }
-  | { type: "SIDEBAR_NAV"; delta: -1 | 1 }
-  | { type: "SIDEBAR_SET_INDEX"; index: number }
   // Ephemeral peek tabs (spec 054)
-  | { type: "PEEK_COLLECTION"; delta: -1 | 1 }
+  //
+  // `anchor` controls which collection we step away from:
+  //   - "active" (default, global `}`/`{`): walks from the active/ephemeral
+  //     tab, wrapping at the ends like a carousel.
+  //   - "cursor" (sidebar j/k): walks from the sidebar cursor position,
+  //     clamping at the ends like a normal list.
+  //
+  // The two anchors matter whenever the cursor and the active tab have
+  // diverged — e.g. after closing the ephemeral tab, the cursor stays on the
+  // closed collection but the active tab snaps back to the pre-peek tab.
+  | { type: "PEEK_COLLECTION"; delta: -1 | 1; anchor?: "active" | "cursor" }
   | { type: "PROMOTE_EPHEMERAL_TAB" }
   | { type: "DISCARD_EPHEMERAL_TAB" }
 
