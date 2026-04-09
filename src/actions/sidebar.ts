@@ -11,19 +11,29 @@ import type { AppState } from "../types"
 import type { AppAction } from "../state"
 
 /**
- * Enter on the sidebar cursor. If the highlighted collection already has an
- * open tab, switch to that tab; otherwise open it in a new tab. Either way,
- * the sidebar loses focus so the doc list can take over keyboard — but the
- * sidebar itself stays visible.
+ * Enter on the sidebar cursor. Three cases:
+ *
+ *   1. An ephemeral tab is active for the cursor's collection → promote it
+ *      (spec 054). Commits the peek without rebuilding state.
+ *   2. A real tab already exists for the cursor's collection → switch to it.
+ *   3. No tab exists → open a fresh tab.
+ *
+ * In all cases focus returns to the doc list but the sidebar stays visible.
  */
 export function handleSidebarEnter(state: AppState, dispatch: Dispatch<AppAction>): void {
   const col = state.collections[state.sidebarSelectedIndex]
   if (!col) {
     return
   }
-  const existing = state.tabs.find((t) => t.collectionName === col.name)
-  if (existing) {
-    dispatch({ type: "SWITCH_TAB", tabId: existing.id })
+  const ephemeral = state.tabs.find((t) => t.ephemeral)
+  if (ephemeral && ephemeral.collectionName === col.name) {
+    dispatch({ type: "PROMOTE_EPHEMERAL_TAB" })
+    dispatch({ type: "BLUR_SIDEBAR" })
+    return
+  }
+  const existingReal = state.tabs.find((t) => t.collectionName === col.name && !t.ephemeral)
+  if (existingReal) {
+    dispatch({ type: "SWITCH_TAB", tabId: existingReal.id })
   } else {
     dispatch({ type: "OPEN_TAB", collectionName: col.name })
   }

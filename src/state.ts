@@ -180,6 +180,10 @@ export type AppAction =
   | { type: "BLUR_SIDEBAR" }
   | { type: "SIDEBAR_NAV"; delta: -1 | 1 }
   | { type: "SIDEBAR_SET_INDEX"; index: number }
+  // Ephemeral peek tabs (spec 054)
+  | { type: "PEEK_COLLECTION"; delta: -1 | 1 }
+  | { type: "PROMOTE_EPHEMERAL_TAB" }
+  | { type: "DISCARD_EPHEMERAL_TAB" }
 
 // ============================================================================
 // Initial State
@@ -260,6 +264,7 @@ export function createInitialState(): AppState {
     sidebarOpen: false,
     sidebarFocused: false,
     sidebarSelectedIndex: 0,
+    preEphemeralTabId: null,
   }
 }
 
@@ -277,12 +282,56 @@ const reducers = [
   uiReducer,
 ]
 
+/**
+ * Actions that count as "committing" to the ephemeral peek tab. When any of
+ * these fire while an ephemeral tab is active, we auto-promote before the
+ * sub-reducers see the action so the commit lands on a real tab.
+ *
+ * Note: SUBMIT_QUERY is handled specially in `appReducer` (only promotes when
+ * the query is non-empty) since a bare submit from the history picker with an
+ * empty query shouldn't count.
+ */
+const AUTO_PROMOTE_ACTIONS = new Set<AppAction["type"]>([
+  "OPEN_QUERY",
+  "OPEN_QUERY_BSON",
+  "CYCLE_SORT",
+  "ENTER_PIPELINE_MODE",
+  "ENTER_SELECTION_MODE",
+  "CLONE_TAB",
+  "ENTER_MARK_PENDING",
+])
+
+/**
+ * If the state has an ephemeral tab, flip it to non-ephemeral and clear the
+ * preEphemeralTabId restore pointer. Otherwise return state unchanged.
+ */
+function maybePromoteEphemeral(state: AppState): AppState {
+  if (!state.tabs.some((t) => t.ephemeral)) {
+    return state
+  }
+  return {
+    ...state,
+    tabs: state.tabs.map((t) => (t.ephemeral ? { ...t, ephemeral: false } : t)),
+    preEphemeralTabId: null,
+  }
+}
+
 export function appReducer(state: AppState, action: AppAction): AppState {
+  // Auto-promote the ephemeral tab on any committing action before routing
+  // to the sub-reducers. This keeps the rest of the reducer tree unaware of
+  // the ephemeral concept — only `tabsReducer` and this pre-pass care.
+  let nextState = state
+  if (AUTO_PROMOTE_ACTIONS.has(action.type)) {
+    nextState = maybePromoteEphemeral(nextState)
+  } else if (action.type === "SUBMIT_QUERY" && state.queryInput.trim()) {
+    nextState = maybePromoteEphemeral(nextState)
+  }
+
   for (const reducer of reducers) {
-    const result = reducer(state, action)
+    const result = reducer(nextState, action)
     if (result !== null) {
       return result
     }
   }
-  return state
+  return nextState
 }

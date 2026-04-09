@@ -141,6 +141,13 @@ export interface CollectionInfo {
 export interface Tab {
   id: string
   collectionName: string
+  /**
+   * If true, this tab is a transient "peek" created by `{` / `}` or sidebar
+   * browsing. Only one ephemeral tab may exist at a time. Promoted to a real
+   * tab (this flag flipped to false) on the first committing action; otherwise
+   * discarded when the user switches to a real tab or cancels the peek.
+   */
+  ephemeral?: boolean
   /** Current query string */
   query: string
   queryMode: QueryMode
@@ -356,4 +363,12 @@ export interface AppState {
   sidebarFocused: boolean
   /** Cursor row within the sidebar's collection list */
   sidebarSelectedIndex: number
+
+  // Ephemeral peek tab (spec 054)
+  /**
+   * The tab id that was active when the current peek session started, or null
+   * if no ephemeral tab exists. Used to restore focus after the peek is
+   * discarded. Cleared on promote or discard.
+   */
+  preEphemeralTabId: string | null
 }

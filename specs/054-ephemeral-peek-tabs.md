@@ -1,6 +1,6 @@
 # Ephemeral Peek Tabs — `{` / `}` Collection Browser
 
-**Status**: Draft
+**Status**: In Progress
 
 ## Description
 

@@ -64,6 +64,8 @@ const DEFAULT_BINDINGS: Record<ActionName, string[]> = {
   "mark.set": ["m"],
   "mark.jump": ["'"],
   "sidebar.toggle": ["ctrl+b"],
+  "collection.peek_next": ["}"],
+  "collection.peek_prev": ["{"],
   "app.quit": ["q"],
 }
 

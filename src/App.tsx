@@ -304,10 +304,12 @@ export function App({
   const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
   const selectedDoc = state.documents[state.selectedIndex] ?? null
 
-  // Set of collection names that currently have an open tab — used by the
-  // collection sidebar to mark those collections with a `●` glyph.
+  // Set of collection names that currently have a *real* (non-ephemeral)
+  // open tab — used by the collection sidebar to brighten those rows. The
+  // ephemeral peek tab is intentionally excluded so a transient peek
+  // doesn't visually "commit" its collection in the sidebar (spec 054).
   const openCollectionNames = useMemo(
-    () => new Set(state.tabs.map((t) => t.collectionName)),
+    () => new Set(state.tabs.filter((t) => !t.ephemeral).map((t) => t.collectionName)),
     [state.tabs],
   )
 

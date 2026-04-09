@@ -161,6 +161,10 @@ export function useKeyboardNav({
     ["doc.yank_cell", () => yankCell(state, dispatch)],
     ["doc.filter_value", () => filterBySelectedValue(state, dispatch)],
     ["doc.hide_column", () => hideColumn(state, dispatch)],
+
+    // Ephemeral peek (spec 054) — `}` / `{` browse collections in place
+    ["collection.peek_next", () => dispatch({ type: "PEEK_COLLECTION", delta: 1 })],
+    ["collection.peek_prev", () => dispatch({ type: "PEEK_COLLECTION", delta: -1 })],
   ]
 
   /** Scroll half a page up or down, or scroll preview when preview is focused. */
@@ -322,22 +326,22 @@ export function useKeyboardNav({
       return
     }
 
-    // ── Collection sidebar (spec 053) ──────────────────────────────────
-    // When the sidebar has keyboard focus it acts as a modal list: nav,
-    // Enter, Esc, `d`, and Ctrl+B are the only keys it responds to; every
-    // other key is swallowed so it doesn't leak into the doc-list handler
-    // table. The user exits focus with Esc to get back to doc-list keys.
+    // ── Collection sidebar (spec 053 + 054) ────────────────────────────
+    // When the sidebar has keyboard focus it acts as a modal list. Nav keys
+    // dispatch PEEK_COLLECTION so every cursor move also previews the
+    // highlighted collection in an ephemeral tab (spec 054). Enter promotes
+    // or switches; Esc discards any peek and blurs.
     if (state.sidebarFocused && state.activeTabId) {
       if (matches(key, keymap["sidebar.toggle"])) {
         dispatch({ type: "TOGGLE_SIDEBAR" })
         return
       }
       if (matches(key, keymap["nav.down"])) {
-        dispatch({ type: "SIDEBAR_NAV", delta: 1 })
+        dispatch({ type: "PEEK_COLLECTION", delta: 1 })
         return
       }
       if (matches(key, keymap["nav.up"])) {
-        dispatch({ type: "SIDEBAR_NAV", delta: -1 })
+        dispatch({ type: "PEEK_COLLECTION", delta: -1 })
         return
       }
       if (key.name === "return") {
@@ -345,6 +349,9 @@ export function useKeyboardNav({
         return
       }
       if (key.name === "escape") {
+        // Discard any in-flight peek before releasing focus. Safe no-op
+        // when there's no ephemeral tab.
+        dispatch({ type: "DISCARD_EPHEMERAL_TAB" })
         dispatch({ type: "BLUR_SIDEBAR" })
         return
       }
@@ -367,6 +374,13 @@ export function useKeyboardNav({
     // Escape exits selection mode
     if (key.name === "escape" && state.selectionMode !== "none") {
       dispatch({ type: "EXIT_SELECTION_MODE" })
+      return
+    }
+
+    // Escape discards an in-flight peek (spec 054). Runs AFTER selection
+    // exit so `v` + Esc still cancels selection rather than the peek.
+    if (key.name === "escape" && state.tabs.some((t) => t.ephemeral)) {
+      dispatch({ type: "DISCARD_EPHEMERAL_TAB" })
       return
     }
 

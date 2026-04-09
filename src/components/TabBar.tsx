@@ -30,11 +30,15 @@ export function TabBar({ tabs, activeTabId }: TabBarProps) {
       {tabs.map((tab, i) => {
         const active = tab.id === activeTabId
         const filter = filterSuffix(tab.query)
+        // Ephemeral tabs render dim regardless of active state so the eye
+        // immediately spots which tabs are real work (spec 054).
+        const numberColor = tab.ephemeral ? theme.textDim : active ? theme.primary : theme.textDim
+        const nameColor = tab.ephemeral ? theme.textDim : active ? theme.text : theme.textDim
         return (
           <box key={tab.id} marginRight={2}>
             <text>
-              <span fg={active ? theme.primary : theme.textDim}>{i + 1}:</span>
-              <span fg={active ? theme.text : theme.textDim}>{tab.collectionName}</span>
+              <span fg={numberColor}>{i + 1}:</span>
+              <span fg={nameColor}>{tab.collectionName}</span>
               {filter && <span fg={theme.textMuted}>{filter}</span>}
             </text>
           </box>

@@ -97,11 +97,34 @@ export function connectionReducer(state: AppState, action: AppAction): AppState 
       // reloads / drops doesn't render off the end of the list.
       const maxIdx = Math.max(0, action.collections.length - 1)
       const clampedSidebarIndex = Math.min(state.sidebarSelectedIndex, maxIdx)
+
+      // If the ephemeral tab's collection disappeared from the list (dropped
+      // from another client while peeking), drop the ephemeral too. Restore
+      // to the pre-peek tab if possible, else the last remaining tab.
+      const ephemeral = state.tabs.find((t) => t.ephemeral)
+      const ephemeralOrphaned =
+        ephemeral != null && !action.collections.some((c) => c.name === ephemeral.collectionName)
+      if (!ephemeralOrphaned) {
+        return {
+          ...state,
+          collections: action.collections,
+          collectionsLoading: false,
+          sidebarSelectedIndex: clampedSidebarIndex,
+        }
+      }
+      const remaining = state.tabs.filter((t) => !t.ephemeral)
+      const restoreId =
+        state.preEphemeralTabId && remaining.some((t) => t.id === state.preEphemeralTabId)
+          ? state.preEphemeralTabId
+          : (remaining[remaining.length - 1]?.id ?? null)
       return {
         ...state,
         collections: action.collections,
         collectionsLoading: false,
         sidebarSelectedIndex: clampedSidebarIndex,
+        tabs: remaining,
+        activeTabId: state.activeTabId === ephemeral.id ? restoreId : state.activeTabId,
+        preEphemeralTabId: null,
       }
     }
 

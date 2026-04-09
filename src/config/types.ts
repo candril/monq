@@ -100,6 +100,8 @@ export type ActionName =
   | "mark.set"
   | "mark.jump"
   | "sidebar.toggle"
+  | "collection.peek_next"
+  | "collection.peek_prev"
   | "app.quit"
 
 /** Raw user-supplied keys config — each action maps to a string or string[]. */
