@@ -353,6 +353,21 @@ export function useKeyboardNav({
         dispatch({ type: "PEEK_COLLECTION", delta: -1, anchor: "cursor" })
         return
       }
+      if (matches(key, keymap["nav.right"])) {
+        // `l` exits the sidebar back into the doc list, committing whatever
+        // collection is currently peeked. Symmetric with `h` on the leftmost
+        // cell (which focuses the sidebar). Promotes any ephemeral, opens a
+        // new tab if there's no active tab at all (empty post-discard
+        // state), then blurs the sidebar so the doc list takes over input.
+        //
+        // Different from Enter only in intent: Enter commits the cursor's
+        // collection (which can be a different one than the active tab if
+        // the user navigated without auto-peek); `l` is "I'm done browsing,
+        // get me out". In practice they overlap because sidebar j/k always
+        // auto-peeks, so cursor and ephemeral track each other.
+        handleSidebarEnter(state, dispatch)
+        return
+      }
       if (key.name === "return") {
         handleSidebarEnter(state, dispatch)
         return
@@ -468,6 +483,21 @@ export function useKeyboardNav({
         }
         return
       }
+    }
+
+    // `h` (nav.left) on the leftmost column focuses the sidebar — single
+    // keystroke shortcut from the doc list into the sidebar instead of
+    // Ctrl+B. Only when the cursor is already at column 0; otherwise nav.left
+    // does its normal thing via the handler table below. Sidebar must be
+    // open; we don't auto-open it on h.
+    if (
+      matches(key, keymap["nav.left"]) &&
+      state.selectedColumnIndex === 0 &&
+      state.sidebarOpen &&
+      state.dbName
+    ) {
+      dispatch({ type: "FOCUS_SIDEBAR" })
+      return
     }
 
     // Handler table: match keymap action → run handler
