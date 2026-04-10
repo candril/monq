@@ -331,10 +331,18 @@ export function useKeyboardNav({
     // dispatch PEEK_COLLECTION with anchor="cursor" so the walk follows the
     // sidebar cursor (not the active tab) and clamps at the ends like a
     // normal list. Enter promotes or switches; Esc discards any peek and
-    // blurs.
-    if (state.sidebarFocused && state.activeTabId) {
+    // blurs; q quits.
+    //
+    // Gated on `state.dbName` (not `state.activeTabId`) so the sidebar
+    // still works in the empty post-discard state from spec 055 — DB picked
+    // but no tab open — where the sidebar is the only navigation surface.
+    if (state.sidebarFocused && state.dbName) {
       if (matches(key, keymap["sidebar.toggle"])) {
         dispatch({ type: "TOGGLE_SIDEBAR" })
+        return
+      }
+      if (matches(key, keymap["app.quit"])) {
+        quitApp()
         return
       }
       if (matches(key, keymap["nav.down"])) {
@@ -365,9 +373,10 @@ export function useKeyboardNav({
     }
 
     // sidebar.toggle when not focused — opens (and focuses) the sidebar,
-    // or refocuses it if it's already open. Only meaningful when a tab is
-    // actually open (the sidebar is suppressed on the welcome screen).
-    if (matches(key, keymap["sidebar.toggle"]) && state.activeTabId) {
+    // or refocuses it if it's already open. Gated on `state.dbName` so it
+    // works in the empty post-discard state too (where the user has no
+    // active tab but is past the welcome screen).
+    if (matches(key, keymap["sidebar.toggle"]) && state.dbName) {
       dispatch({ type: "TOGGLE_SIDEBAR" })
       return
     }
@@ -411,8 +420,12 @@ export function useKeyboardNav({
       }
     }
 
-    // app.quit — skip when welcome screen is active (user may be typing in search)
-    if (matches(key, keymap["app.quit"]) && state.activeTabId) {
+    // app.quit — skip when welcome screen is active (user may be typing in
+    // its search input). Gated on `state.dbName` post spec 055: once a DB
+    // is picked we're past the welcome screen and `q` is safe to handle,
+    // even if no tab is currently open (e.g. after discarding the
+    // auto-peek with Esc).
+    if (matches(key, keymap["app.quit"]) && state.dbName) {
       quitApp()
       return
     }
