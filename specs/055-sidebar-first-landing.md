@@ -1,6 +1,6 @@
 # Sidebar-First Landing — Drop Welcome Step 2
 
-**Status**: Draft
+**Status**: In Progress
 
 ## Description
 

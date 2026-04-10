@@ -32,7 +32,7 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 028 | [Connection Error Handling](./028-connection-error-handling.md) | Draft | Graceful handling of connection failures and timeouts |
 | 053 | [Collection Sidebar](./053-collection-sidebar.md) | In Progress | Vertical collapsible collection navigation pane (Ctrl+B) |
 | 054 | [Ephemeral Peek Tabs](./054-ephemeral-peek-tabs.md) | In Progress | `{`/`}` to peek through collections in a single ephemeral tab |
-| 055 | [Sidebar-First Landing](./055-sidebar-first-landing.md) | Draft | Drop welcome step 2; auto-focus sidebar + auto-peek first collection |
+| 055 | [Sidebar-First Landing](./055-sidebar-first-landing.md) | In Progress | Drop welcome step 2; auto-focus sidebar + auto-peek first collection |
 
 ## Done Specs
 

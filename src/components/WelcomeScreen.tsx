@@ -1,82 +1,57 @@
 /**
- * WelcomeScreen — inline DB and collection picker shown at startup.
+ * WelcomeScreen — full-screen database picker shown at startup when no DB
+ * is selected (URI didn't contain a `/db` segment).
  *
- * Two steps:
- *   Step 1: pick a database  (when dbName === "")
- *   Step 2: pick a collection (when dbName is set but no tab is open)
+ * Once a database is picked, the sidebar takes over (spec 055): the
+ * sidebar opens + focuses + auto-peeks the first collection. There is no
+ * step 2 — collection browsing happens entirely through the sidebar and
+ * the `Ctrl+P` palette from then on.
  *
  * Interaction model (palette-style, full-screen):
- *   - Type to fuzzy-filter the list
+ *   - Type to fuzzy-filter the database list
  *   - ↑/↓, Ctrl-p/n, Ctrl-k/j → move selection
- *   - Enter → pick highlighted item
- *   - n → open inline "new database" / "new collection" input
- *   - Backspace → delete last filter char; if empty and step 2 → go back
- *   - Esc / q (empty query) → quit
+ *   - Enter → pick highlighted database
+ *   - Tab → open inline "new database" input
+ *   - Ctrl-D → drop selected database (with confirmation)
+ *   - Backspace on empty → back to URI screen (when supported)
+ *   - Esc → quit
  */
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { useKeyboard, useRenderer } from "@opentui/react"
 import { fuzzyFilter } from "../utils/fuzzy"
 import { theme } from "../theme"
 import { DropConfirmDialog } from "./DropConfirmDialog"
-import { RenameInputDialog } from "./RenameInputDialog"
 
 const MIN_LIST_HEIGHT = 10
 
 interface WelcomeScreenProps {
-  /** Step 1: list of database names */
+  /** List of database names */
   databases: string[]
-  /** Step 2: list of collection names */
-  collections: string[]
-  /** Which step we're on */
-  step: 1 | 2
-  /** Currently selected database name (shown as breadcrumb in step 2) */
-  dbName: string
   /** MongoDB host (shown under the Monq brand) */
   host: string
-  /** True while step-1 database list is loading */
+  /** True while the database list is loading */
   databasesLoading: boolean
-  /** True while step-2 collection list is loading */
-  collectionsLoading: boolean
   /** Called when a database is picked */
   onSelectDatabase: (name: string) => void
-  /** Called when a collection is picked */
-  onSelectCollection: (name: string) => void
-  /** Called when Backspace on empty input in step 2 → back to DB picker */
-  onBack: () => void
-  /** Called when Backspace on empty input in step 1 → back to URI screen (optional) */
+  /** Called when Backspace on empty input → back to URI screen (optional) */
   onBackToUri?: () => void
   /** Called to create a new database; returns an error string or null on success */
   onCreateDatabase: (dbName: string, firstCollection: string) => Promise<string | null>
-  /** Called to create a new collection; returns an error string or null on success */
-  onCreateCollection: (collectionName: string) => Promise<string | null>
-  /** Called to drop a collection; returns an error string or null on success */
-  onDropCollection: (collectionName: string) => Promise<string | null>
   /** Called to drop a database; returns an error string or null on success */
   onDropDatabase: (dbName: string) => Promise<string | null>
-  /** Called to rename a collection; returns an error string or null on success */
-  onRenameCollection: (oldName: string, newName: string) => Promise<string | null>
 }
 
 type CreateStep = "idle" | "name" | "first-collection" | "creating"
 
 export function WelcomeScreen({
   databases,
-  collections,
-  step,
-  dbName,
   host,
   databasesLoading,
-  collectionsLoading,
   onSelectDatabase,
-  onSelectCollection,
-  onBack,
   onBackToUri,
   onCreateDatabase,
-  onCreateCollection,
-  onDropCollection,
   onDropDatabase,
-  onRenameCollection,
 }: WelcomeScreenProps) {
   const renderer = useRenderer()
   const [query, setQuery] = useState("")
@@ -92,35 +67,20 @@ export function WelcomeScreen({
   const [showDropConfirm, setShowDropConfirm] = useState(false)
   const [dropTargetName, setDropTargetName] = useState("")
 
-  // Rename flow state
-  const [showRename, setShowRename] = useState(false)
-  const [renameTargetName, setRenameTargetName] = useState("")
-
-  const items = step === 1 ? databases : collections
-  const onSelect = step === 1 ? onSelectDatabase : onSelectCollection
-
-  // Reset query + cursor + create flow when the step changes
-  useEffect(() => {
-    setQuery("")
-    setCursor(0)
-    setCreateStep("idle")
-    setNewName("")
-    setFirstCollection("")
-    setCreateError(null)
-  }, [step])
-
   const filtered = useMemo(
-    () => (query ? fuzzyFilter(query, items, (s) => [s]) : items),
-    [query, items],
+    () => (query ? fuzzyFilter(query, databases, (s) => [s]) : databases),
+    [query, databases],
   )
 
   const safeCursor = Math.min(cursor, Math.max(0, filtered.length - 1))
 
   const isCreating = createStep !== "idle"
+  const isLoading = databasesLoading
+  const isEmpty = !isLoading && databases.length === 0
 
   useKeyboard((key) => {
-    // Don't handle keys when dialogs are showing — let them handle input
-    if (showDropConfirm || showRename) {
+    // Don't handle keys when the drop dialog is showing — let it handle input
+    if (showDropConfirm) {
       return
     }
 
@@ -136,25 +96,11 @@ export function WelcomeScreen({
         if (!newName.trim()) {
           return
         }
-        if (step === 1) {
-          // Database: go to second prompt for first collection name
-          setCreateStep("first-collection")
-          setFirstCollection("")
-          setCreateError(null)
-        } else {
-          // Collection: create immediately
-          setCreateStep("creating")
-          setCreateError(null)
-          onCreateCollection(newName.trim()).then((err) => {
-            if (err) {
-              setCreateStep("name")
-              setCreateError(err)
-            } else {
-              setCreateStep("idle")
-              setNewName("")
-            }
-          })
-        }
+        // Database creation requires a first collection — go to step 2 of
+        // the create flow.
+        setCreateStep("first-collection")
+        setFirstCollection("")
+        setCreateError(null)
         return
       }
       // Let <input> handle text input; suppress other key handlers
@@ -208,61 +154,29 @@ export function WelcomeScreen({
       if (item) {
         setQuery("")
         setCursor(0)
-        onSelect(item)
+        onSelectDatabase(item)
       }
       return
     }
-    // New database / collection (Tab — Ctrl+I is the same byte in terminals)
+    // New database (Tab — Ctrl+I is the same byte in terminals)
     if (key.name === "tab") {
       setCreateStep("name")
       setNewName("")
       setCreateError(null)
       return
     }
-    // Drop database / collection (Ctrl-D)
+    // Drop database (Ctrl-D)
     if (key.ctrl && key.name === "d") {
-      if (step === 1) {
-        // Step 1: drop the selected database
-        const item = filtered[safeCursor]
-        if (item && !isEmpty) {
-          setDropTargetName(item)
-          setShowDropConfirm(true)
-        }
-      } else {
-        // Step 2: if no collections, offer to drop the current database
-        // otherwise drop the selected collection
-        if (isEmpty || filtered.length === 0) {
-          setDropTargetName(dbName)
-          setShowDropConfirm(true)
-        } else {
-          const item = filtered[safeCursor]
-          if (item) {
-            setDropTargetName(item)
-            setShowDropConfirm(true)
-          }
-        }
-      }
-      return
-    }
-    // Rename collection (Ctrl-R) — only on step 2 with collections
-    if (key.ctrl && key.name === "r" && step === 2) {
       const item = filtered[safeCursor]
       if (item && !isEmpty) {
-        setRenameTargetName(item)
-        setShowRename(true)
+        setDropTargetName(item)
+        setShowDropConfirm(true)
       }
       return
     }
-    // Backspace on empty → go back one level
-    if (key.name === "backspace" && !query) {
-      if (step === 2) {
-        onBack()
-        return
-      }
-      if (step === 1 && onBackToUri) {
-        onBackToUri()
-        return
-      }
+    // Backspace on empty → back to URI screen if supported
+    if (key.name === "backspace" && !query && onBackToUri) {
+      onBackToUri()
       return
     }
     // Quit
@@ -271,31 +185,17 @@ export function WelcomeScreen({
     }
   })
 
-  const isLoading = step === 1 ? databasesLoading : collectionsLoading
-  const isEmpty = !isLoading && items.length === 0
-
-  const stepTitle =
-    step === 1
-      ? isEmpty
-        ? "No databases found"
-        : "Select a database"
-      : isEmpty
-        ? `${dbName}  ›  No collections`
-        : `${dbName}  ›  Select a collection`
+  const stepTitle = isEmpty ? "No databases found" : "Select a database"
 
   const hintParts: string[] = []
   if (!isCreating) {
-    // Show "Ctrl-D drop" when there are items to drop, OR on step 2 when empty (to drop the db)
-    if (!isLoading && (!isEmpty || (step === 2 && isEmpty))) {
-      hintParts.push(step === 2 && isEmpty ? "Ctrl-D  drop database" : "Ctrl-D  drop")
-    }
-    if (!isLoading && !isEmpty && step === 2) {
-      hintParts.push("Ctrl-R  rename")
+    if (!isLoading && !isEmpty) {
+      hintParts.push("Ctrl-D  drop")
     }
     if (!isLoading) {
       hintParts.push("Tab  new")
     }
-    if (step === 2 || onBackToUri) {
+    if (onBackToUri) {
       hintParts.push("⌫  back")
     }
     hintParts.push("Esc  quit")
@@ -329,9 +229,7 @@ export function WelcomeScreen({
           {createStep !== "first-collection" && (
             <>
               <text>
-                <span fg={theme.textMuted}>
-                  {step === 1 ? "New database name" : "New collection name"}
-                </span>
+                <span fg={theme.textMuted}>New database name</span>
               </text>
               <box flexDirection="row" paddingLeft={1} marginTop={1}>
                 <text>
@@ -496,36 +394,14 @@ export function WelcomeScreen({
         </box>
       )}
 
-      {/* Rename dialog */}
-      {showRename && (
-        <RenameInputDialog
-          type="collection"
-          oldName={renameTargetName}
-          onConfirm={async (renamedTo) => {
-            setShowRename(false)
-            await onRenameCollection(renameTargetName, renamedTo)
-            setRenameTargetName("")
-          }}
-          onCancel={() => {
-            setShowRename(false)
-            setRenameTargetName("")
-          }}
-        />
-      )}
-
       {/* Drop confirmation dialog */}
       {showDropConfirm && (
         <DropConfirmDialog
-          type={step === 1 || dropTargetName === dbName ? "database" : "collection"}
+          type="database"
           name={dropTargetName}
           onConfirm={async () => {
             setShowDropConfirm(false)
-            // If dropping current database (either from step 1 or step 2 when empty)
-            if (step === 1 || dropTargetName === dbName) {
-              await onDropDatabase(dropTargetName)
-            } else {
-              await onDropCollection(dropTargetName)
-            }
+            await onDropDatabase(dropTargetName)
             setDropTargetName("")
           }}
           onCancel={() => {

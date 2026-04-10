@@ -282,23 +282,14 @@ export function App({
           ? "Themes"
           : "Commands"
 
-  // Welcome screen: shown when db is loaded but no tab is open yet
-  const showWelcome = !state.error && !state.collectionsLoading && !state.activeTabId
-
-  // Determine welcome step
-  const welcomeStep: 1 | 2 = !state.dbName ? 1 : 2
+  // Welcome screen is now DB-picker only (spec 055). Once a DB is selected,
+  // the sidebar takes over the "browse collections" job. Drop the
+  // `!activeTabId` gate that used to keep the welcome screen visible
+  // between DB pick and first tab open — that's now the auto-land state.
+  const showWelcome = !state.error && !state.collectionsLoading && !state.dbName
 
   const handleSelectDatabase = useCallback((name: string) => {
     dispatch({ type: "SELECT_DATABASE", dbName: name })
-  }, [])
-
-  const handleSelectCollection = useCallback((name: string) => {
-    dispatch({ type: "OPEN_TAB", collectionName: name })
-  }, [])
-
-  const handleWelcomeBack = useCallback(() => {
-    // Return to step 1: clear dbName but keep databases list in state
-    dispatch({ type: "RESET_DATABASE" })
   }, [])
 
   const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
@@ -350,6 +341,65 @@ export function App({
     }
   }, [state.markPending, state.jumpPending])
 
+  // Auto-land in the sidebar after the DB is picked (spec 055).
+  //
+  // Once per DB session: open + focus the sidebar and auto-peek the first
+  // collection so the user lands on data without going through a separate
+  // collection picker. The ref guards against re-firing after the user
+  // discards the auto-peeked ephemeral with Esc — they should stay in the
+  // empty state, not get auto-peeked again.
+  const hasAutoLandedRef = useRef(false)
+
+  // Reset the flag whenever the DB changes (SELECT_DATABASE / RESET_DATABASE
+  // / initial connect), so the next DB also gets an auto-land.
+  useEffect(() => {
+    hasAutoLandedRef.current = false
+  }, [state.dbName])
+
+  useEffect(() => {
+    if (hasAutoLandedRef.current) {
+      return
+    }
+    if (state.error) {
+      return
+    }
+    if (state.collectionsLoading) {
+      return
+    }
+    if (!state.dbName) {
+      // welcome step 1 still active
+      return
+    }
+    if (state.activeTabId) {
+      // URI fast-path or user already in a tab
+      return
+    }
+    if (state.collections.length === 0) {
+      // Empty DB — open the sidebar so the user knows where they are, but
+      // don't auto-peek (nothing to peek). Mark as landed so we don't
+      // re-fire on subsequent renders.
+      hasAutoLandedRef.current = true
+      if (!state.sidebarOpen) {
+        dispatch({ type: "TOGGLE_SIDEBAR" })
+      }
+      return
+    }
+    hasAutoLandedRef.current = true
+    if (!state.sidebarOpen) {
+      dispatch({ type: "TOGGLE_SIDEBAR" }) // closed → open + focus
+    }
+    // anchor defaults to "active"; with no active tab the reducer
+    // computes currentIdx = -1 and lands on collections[0].
+    dispatch({ type: "PEEK_COLLECTION", delta: 1 })
+  }, [
+    state.dbName,
+    state.collectionsLoading,
+    state.activeTabId,
+    state.collections.length,
+    state.error,
+    state.sidebarOpen,
+  ])
+
   // Show full-screen loading (no chrome) during initial connection — avoids
   // layout jump when transitioning from ConnectionScreen's Loading state.
   // Hold-off: only show after 500ms to avoid a flash on fast connections.
@@ -398,11 +448,11 @@ export function App({
       />
 
       <box flexGrow={1} flexDirection="row" overflow="hidden">
-        {state.sidebarOpen && activeTab && (
+        {state.sidebarOpen && state.dbName && !showWelcome && (
           <CollectionSidebar
             dbName={state.dbName}
             collections={state.collections}
-            activeCollectionName={activeTab.collectionName}
+            activeCollectionName={activeTab?.collectionName ?? ""}
             openCollectionNames={openCollectionNames}
             selectedIndex={state.sidebarSelectedIndex}
             focused={state.sidebarFocused}
@@ -419,22 +469,13 @@ export function App({
               <ErrorView message={state.error} />
             ) : showWelcome ? (
               <WelcomeScreen
-                step={welcomeStep}
                 databases={state.databases}
-                collections={state.collections.map((c) => c.name)}
-                dbName={state.dbName}
                 host={state.host}
                 databasesLoading={state.databasesLoading}
-                collectionsLoading={state.collectionsLoading}
                 onSelectDatabase={handleSelectDatabase}
-                onSelectCollection={handleSelectCollection}
-                onBack={handleWelcomeBack}
                 onBackToUri={onBackToUri}
                 onCreateDatabase={handleCreateDatabase}
-                onCreateCollection={handleCreateCollection}
-                onDropCollection={handleDropCollection}
                 onDropDatabase={handleDropDatabase}
-                onRenameCollection={handleRenameCollection}
               />
             ) : activeTab ? (
               <box
