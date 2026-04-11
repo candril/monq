@@ -385,6 +385,19 @@ export function App({
       return
     }
     hasAutoLandedRef.current = true
+    if (state.collections.length === 1) {
+      // Single-collection DB — there's nothing to browse. Open the only
+      // collection as a real tab and leave the sidebar open-but-unfocused
+      // so the doc list takes input immediately. Without this, the user
+      // would be stuck in a focused sidebar with nothing to navigate to,
+      // and j/k would silently clamp instead of moving the doc cursor.
+      if (!state.sidebarOpen) {
+        dispatch({ type: "TOGGLE_SIDEBAR" }) // open + focus
+        dispatch({ type: "BLUR_SIDEBAR" }) // …then blur so doc list owns input
+      }
+      dispatch({ type: "OPEN_TAB", collectionName: state.collections[0].name })
+      return
+    }
     if (!state.sidebarOpen) {
       dispatch({ type: "TOGGLE_SIDEBAR" }) // closed → open + focus
     }
