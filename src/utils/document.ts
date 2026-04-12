@@ -59,52 +59,40 @@ export function sampleValues(documents: Document[], fieldPath: string, max = 20)
   return result
 }
 
-/** Detect columns from a sample of documents, sorted: _id first, scalars before complex, then alphabetically */
+/** Detect columns from a sample of documents, ordered by first-document field order.
+ *  _id is always first. Fields only found in later documents are appended in discovery order.
+ *  Sparse fields (below a frequency threshold) are excluded in large result sets. */
 export function detectColumns(documents: Document[]): string[] {
   if (documents.length === 0) {
     return []
   }
 
+  // Track insertion order and frequency
+  const fieldOrder: string[] = []
+  const fieldSet = new Set<string>()
   const fieldCounts = new Map<string, number>()
-  const fieldIsComplex = new Map<string, boolean>()
 
   for (const doc of documents) {
-    for (const [key, value] of Object.entries(doc)) {
-      fieldCounts.set(key, (fieldCounts.get(key) ?? 0) + 1)
-      // Mark as complex if any value is object/array (not null, not Date, not ObjectId)
-      if (
-        value !== null &&
-        typeof value === "object" &&
-        !(value instanceof Date) &&
-        !((value as { _bsontype?: string })._bsontype === "ObjectId") &&
-        !((value as { _bsontype?: string })._bsontype === "ObjectID")
-      ) {
-        fieldIsComplex.set(key, true)
+    for (const key of Object.keys(doc)) {
+      if (!fieldSet.has(key)) {
+        fieldSet.add(key)
+        fieldOrder.push(key)
       }
+      fieldCounts.set(key, (fieldCounts.get(key) ?? 0) + 1)
     }
   }
 
   // Threshold scales with result size: always show if present in small sets,
   // require ~10% presence for medium sets, capped at 5 for large sets (50+ docs).
   const threshold = Math.max(1, Math.min(documents.length * 0.1, 5))
-  return [...fieldCounts.entries()]
-    .filter(([, count]) => count >= threshold)
-    .sort((a, b) => {
-      // _id always first
-      if (a[0] === "_id") {
-        return -1
-      }
-      if (b[0] === "_id") {
-        return 1
-      }
-      // Scalars before complex
-      const aComplex = fieldIsComplex.get(a[0]) ?? false
-      const bComplex = fieldIsComplex.get(b[0]) ?? false
-      if (aComplex !== bComplex) {
-        return aComplex ? 1 : -1
-      }
-      // Alphabetically
-      return a[0].localeCompare(b[0])
-    })
-    .map(([field]) => field)
+  const filtered = fieldOrder.filter((field) => (fieldCounts.get(field) ?? 0) >= threshold)
+
+  // Ensure _id is always first
+  const idIdx = filtered.indexOf("_id")
+  if (idIdx > 0) {
+    filtered.splice(idIdx, 1)
+    filtered.unshift("_id")
+  }
+
+  return filtered
 }

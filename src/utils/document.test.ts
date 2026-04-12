@@ -87,30 +87,29 @@ describe("detectColumns", () => {
     expect(cols).toContain("age")
   })
 
-  test("scalar fields before complex fields", () => {
+  test("fields follow first-document insertion order", () => {
     // arrange
     const docs = [{ _id: "1", name: "Peter", address: { city: "Berlin" }, age: 30 }]
 
     // act
     const cols = detectColumns(docs)
 
-    // assert
-    const nameIdx = cols.indexOf("name")
-    const ageIdx = cols.indexOf("age")
-    const addrIdx = cols.indexOf("address")
-    expect(nameIdx).toBeLessThan(addrIdx)
-    expect(ageIdx).toBeLessThan(addrIdx)
+    // assert — order matches object key order, with _id first
+    expect(cols).toEqual(["_id", "name", "address", "age"])
   })
 
-  test("fields sorted alphabetically within same complexity", () => {
+  test("fields from later documents are appended in discovery order", () => {
     // arrange
-    const docs = [{ _id: "1", zebra: "z", apple: "a", mango: "m" }]
+    const docs = [
+      { _id: "1", zebra: "z", apple: "a" },
+      { _id: "2", mango: "m", zebra: "z" },
+    ]
 
     // act
     const cols = detectColumns(docs).filter((c) => c !== "_id")
 
-    // assert
-    expect(cols).toEqual(["apple", "mango", "zebra"])
+    // assert — zebra/apple from doc 1, mango appended from doc 2
+    expect(cols).toEqual(["zebra", "apple", "mango"])
   })
 
   test("sparse fields excluded by threshold in large sets", () => {
