@@ -241,8 +241,8 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: full state read inside effect, only these trigger a reload
-  }, [activeTab?.id, documentsLoading, reloadCounter])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: full state read inside effect, only these trigger a reload. collectionName is in the deps because PEEK_COLLECTION reuses the ephemeral tab's id while swapping its collection — without this, an in-flight fetch for the prior collection would land in the new one's state.
+  }, [activeTab?.id, activeTab?.collectionName, documentsLoading, reloadCounter])
 
   // Effect 2: load next page when LOAD_MORE is triggered
   useEffect(() => {
@@ -282,8 +282,8 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only triggered by loadingMore flag
-  }, [activeTab?.id, state.loadingMore])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only triggered by loadingMore flag; collectionName guards against an ephemeral-tab collection swap mid-flight (see Effect 1)
+  }, [activeTab?.id, activeTab?.collectionName, state.loadingMore])
 
   // Effect 3: re-run explain when query changes and explain mode is active.
   // Fires on reloadCounter directly — not gated by documentsLoading — so the
@@ -321,6 +321,6 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on query change (reloadCounter) independently of document loading
-  }, [activeTab?.id, state.previewMode, reloadCounter])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on query change (reloadCounter) independently of document loading; collectionName guards against an ephemeral-tab collection swap mid-flight (see Effect 1)
+  }, [activeTab?.id, activeTab?.collectionName, state.previewMode, reloadCounter])
 }
