@@ -1,6 +1,6 @@
 # Collection Sidebar — Vertical Collapsible Navigation Pane
 
-**Status**: In Progress
+**Status**: Done
 
 ## Description
 

@@ -30,9 +30,6 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 000 | [Vision](./000-vision.md) | Ready | Product vision and core philosophy |
 | 009 | [Export](./009-export.md) | Draft | Export results as JSON/CSV |
 | 028 | [Connection Error Handling](./028-connection-error-handling.md) | Draft | Graceful handling of connection failures and timeouts |
-| 053 | [Collection Sidebar](./053-collection-sidebar.md) | In Progress | Vertical collapsible collection navigation pane (Ctrl+B) |
-| 054 | [Ephemeral Peek Tabs](./054-ephemeral-peek-tabs.md) | In Progress | `{`/`}` to peek through collections in a single ephemeral tab |
-| 055 | [Sidebar-First Landing](./055-sidebar-first-landing.md) | In Progress | Drop welcome step 2; auto-focus sidebar + auto-peek first collection |
 
 ## Done Specs
 
@@ -88,3 +85,6 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 050 | [Fix Column/Preview Overlap](./done/050-fix-column-browser-preview-overlap.md) | Fix column browser overlapping with preview panel |
 | 051 | [Value Suggestions](./done/051-value-suggestions.md) | Value samples + quick-filter helpers (`ago()`, `in()`, `oid()`) in suggestion panel |
 | 052 | [Document Marks](./done/052-document-marks.md) | Vim-style letter marks (`m<letter>` / `'<letter>`) on documents, scoped per collection |
+| 053 | [Collection Sidebar](./done/053-collection-sidebar.md) | Vertical collapsible collection navigation pane (Ctrl+B) |
+| 054 | [Ephemeral Peek Tabs](./done/054-ephemeral-peek-tabs.md) | `{`/`}` to peek through collections in a single ephemeral tab |
+| 055 | [Sidebar-First Landing](./done/055-sidebar-first-landing.md) | Drop welcome step 2; auto-focus sidebar + auto-peek first collection |

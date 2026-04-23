@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-23
+
+### Added
+- **Collection sidebar** (spec 053) — vertical collapsible nav pane listing collections in the current database.
+- **Ephemeral peek tabs** (spec 054) — `{` / `}` peek adjacent collections into a reusable ephemeral tab instead of opening a permanent one.
+- **Sidebar-first landing** (spec 055) — connecting to a DB lands focus in the sidebar so you can browse before picking a collection. Single-collection DBs still land straight in the doc view.
+- `h` / `l` cross-pane navigation between the sidebar and the document list.
+
+### Fixed
+- Sidebar `j`/`k` anchors to the cursor, not the active tab.
+- `q` quits from the sidebar / no-tab states; `activeTabId` gates relaxed.
+- Column order follows the first document's field order instead of alphabetical.
+- In-flight document fetch is cancelled when a peek reassigns the ephemeral tab.
+- Removed deprecated `downlevelIteration` tsconfig option.
+- Collection sidebar polish — taller sidebar, colour-only state indicators, truncated long names.
+
 ## [0.3.0] - 2026-04-08
 
 ### Added
