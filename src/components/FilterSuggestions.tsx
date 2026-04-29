@@ -12,7 +12,7 @@
  *   from loaded documents. Accepting a value suggestion submits the query.
  */
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, forwardRef, useImperativeHandle } from "react"
 import { useKeyboard } from "@opentui/react"
 import type { Document } from "mongodb"
 import type { DetectedColumn } from "../types"
@@ -48,6 +48,17 @@ interface FilterSuggestionsProps {
   markCounts?: Map<string, number>
   onChange: (query: string) => void
   onSubmit: () => void
+}
+
+/** Imperative handle so the filter input can ask for the active suggestion. */
+export interface FilterSuggestionsHandle {
+  /**
+   * Returns the currently-highlighted suggestion when the popup is visible,
+   * or null when there's nothing to accept. Used by the filter bar's Enter
+   * handler — the <input> element consumes Enter, so we can't intercept it
+   * inside FilterSuggestions' own keyboard hook.
+   */
+  getActiveSuggestion(): { value: string; submit: boolean } | null
 }
 
 // ---- Value-position detection ----
@@ -377,84 +388,101 @@ function buildFieldSuggestions(
 
 const MAX_VISIBLE = 15
 
-export function FilterSuggestions({
-  visible,
-  query,
-  queryMode,
-  columns,
-  schemaMap,
-  documents,
-  markCounts,
-  onChange,
-  onSubmit,
-}: FilterSuggestionsProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0)
+export const FilterSuggestions = forwardRef<FilterSuggestionsHandle, FilterSuggestionsProps>(
+  function FilterSuggestions(
+    { visible, query, queryMode, columns, schemaMap, documents, markCounts, onChange, onSubmit },
+    ref,
+  ) {
+    const [selectedIndex, setSelectedIndex] = useState(0)
 
-  const suggestions = useMemo(
-    () =>
-      queryMode === "bson"
-        ? buildBsonSuggestions(columns, schemaMap)
-        : buildFieldSuggestions(query, columns, schemaMap, documents, markCounts ?? new Map()),
-    [query, queryMode, columns, schemaMap, documents, markCounts],
-  )
+    const suggestions = useMemo(
+      () =>
+        queryMode === "bson"
+          ? buildBsonSuggestions(columns, schemaMap)
+          : buildFieldSuggestions(query, columns, schemaMap, documents, markCounts ?? new Map()),
+      [query, queryMode, columns, schemaMap, documents, markCounts],
+    )
 
-  useEffect(() => {
-    setSelectedIndex(0)
-  }, [suggestions.length])
+    useEffect(() => {
+      setSelectedIndex(0)
+    }, [suggestions.length])
 
-  useKeyboard((key) => {
-    if (!visible || suggestions.length === 0) {
-      return
-    }
-    if (key.name === "up" || (key.ctrl && key.name === "p")) {
-      setSelectedIndex((i) => Math.max(0, i - 1))
-    } else if (key.name === "down" || (key.ctrl && key.name === "n")) {
-      setSelectedIndex((i) => Math.min(suggestions.length - 1, i + 1))
-    } else if (key.ctrl && key.name === "y") {
-      const suggestion = suggestions[selectedIndex]
-      if (suggestion) {
-        onChange(suggestion.value)
-        if (suggestion.submit) {
-          onSubmit()
+    useImperativeHandle(
+      ref,
+      () => ({
+        getActiveSuggestion() {
+          if (!visible || suggestions.length === 0) {
+            return null
+          }
+          const s = suggestions[selectedIndex]
+          return s ? { value: s.value, submit: s.submit ?? false } : null
+        },
+      }),
+      [visible, suggestions, selectedIndex],
+    )
+
+    useKeyboard((key) => {
+      if (!visible || suggestions.length === 0) {
+        return
+      }
+      if (key.name === "up" || (key.ctrl && key.name === "p")) {
+        setSelectedIndex((i) => Math.max(0, i - 1))
+      } else if (key.name === "down" || (key.ctrl && key.name === "n")) {
+        setSelectedIndex((i) => Math.min(suggestions.length - 1, i + 1))
+      } else if (key.ctrl && key.name === "y") {
+        // Ctrl+Y: accept the active suggestion (and submit if applicable).
+        // Enter is handled by the <input>'s onSubmit at the FilterBar level
+        // because the input element consumes Enter before useKeyboard sees it.
+        const suggestion = suggestions[selectedIndex]
+        if (suggestion) {
+          onChange(suggestion.value)
+          if (suggestion.submit) {
+            onSubmit()
+          }
         }
       }
+    })
+
+    if (!visible || suggestions.length === 0) {
+      return null
     }
-  })
 
-  if (!visible || suggestions.length === 0) {
-    return null
-  }
+    const visibleSuggestions = suggestions.slice(0, MAX_VISIBLE)
 
-  const visibleSuggestions = suggestions.slice(0, MAX_VISIBLE)
-
-  return (
-    <box position="absolute" bottom={1} left={0} width="100%" flexDirection="column">
-      <box backgroundColor={theme.headerBg} flexDirection="column" paddingLeft={1} paddingRight={1}>
-        {visibleSuggestions.map((suggestion, i) => {
-          const selected = i === selectedIndex
-          return (
-            <box
-              key={suggestion.label}
-              height={1}
-              backgroundColor={selected ? theme.selection : undefined}
-              paddingLeft={1}
-              flexDirection="row"
-              justifyContent="space-between"
-            >
-              <text>
-                <span fg={suggestion.labelColor ?? (selected ? theme.primary : theme.textDim)}>
-                  {suggestion.label}
-                </span>
-              </text>
-              {suggestion.hint && (
+    return (
+      <box position="absolute" bottom={1} left={0} width="100%" flexDirection="column">
+        <box
+          backgroundColor={theme.headerBg}
+          flexDirection="column"
+          paddingLeft={1}
+          paddingRight={1}
+        >
+          {visibleSuggestions.map((suggestion, i) => {
+            const selected = i === selectedIndex
+            return (
+              <box
+                key={suggestion.label}
+                height={1}
+                backgroundColor={selected ? theme.selection : undefined}
+                paddingLeft={1}
+                flexDirection="row"
+                justifyContent="space-between"
+              >
                 <text>
-                  <span fg={theme.textMuted}>{suggestion.hint}</span>
+                  <span fg={suggestion.labelColor ?? (selected ? theme.primary : theme.textDim)}>
+                    {suggestion.label}
+                  </span>
                 </text>
-              )}
-            </box>
-          )
-        })}
+                {suggestion.hint && (
+                  <text>
+                    <span fg={theme.textMuted}>{suggestion.hint}</span>
+                  </text>
+                )}
+              </box>
+            )
+          })}
+        </box>
       </box>
-    </box>
-  )
-}
+    )
+  },
+)

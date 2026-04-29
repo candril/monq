@@ -23,7 +23,7 @@ import { Loading } from "./components/Loading"
 import { ErrorView } from "./components/ErrorView"
 import { DocumentList } from "./components/DocumentList"
 import { DocumentPreview } from "./components/DocumentPreview"
-import { FilterSuggestions } from "./components/FilterSuggestions"
+import { FilterSuggestions, type FilterSuggestionsHandle } from "./components/FilterSuggestions"
 import { HistoryPicker } from "./components/HistoryPicker"
 import { CommandPalette } from "./components/CommandPalette"
 import { IndexCreateConfirmDialog } from "./components/IndexCreateConfirmDialog"
@@ -103,6 +103,18 @@ export function App({
   const renderer = useRenderer()
   const { height: terminalHeight, width: terminalWidth } = useTerminalDimensions()
   const docListScrollRef = useRef<ScrollBoxRenderable>(null)
+  const filterSuggestionsRef = useRef<FilterSuggestionsHandle>(null)
+
+  // Submit handler that first accepts any active filter suggestion. The
+  // <input> element consumes Enter for its onSubmit before useKeyboard hooks
+  // see it, so this is where Enter-on-suggestion has to be intercepted.
+  const handleQuerySubmit = useCallback(() => {
+    const active = filterSuggestionsRef.current?.getActiveSuggestion()
+    if (active) {
+      dispatch({ type: "SET_QUERY_INPUT", input: active.value })
+    }
+    dispatch({ type: "SUBMIT_QUERY" })
+  }, [])
 
   const pageSize = terminalHeight + 10
 
@@ -567,6 +579,7 @@ export function App({
 
       {/* Suggestions only in simple mode, hidden when history picker is open */}
       <FilterSuggestions
+        ref={filterSuggestionsRef}
         visible={
           state.queryVisible &&
           !state.pipelineMode &&
@@ -580,7 +593,7 @@ export function App({
         documents={state.documents}
         markCounts={markCounts}
         onChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
-        onSubmit={() => dispatch({ type: "SUBMIT_QUERY" })}
+        onSubmit={handleQuerySubmit}
       />
 
       {/* Pipeline bar — shown in pipeline mode */}
@@ -607,7 +620,7 @@ export function App({
           onQueryChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
           onBsonSortChange={(v) => dispatch({ type: "SET_BSON_SORT", input: v })}
           onBsonProjectionChange={(v) => dispatch({ type: "SET_BSON_PROJECTION", input: v })}
-          onSubmit={() => dispatch({ type: "SUBMIT_QUERY" })}
+          onSubmit={handleQuerySubmit}
         />
       )}
 
