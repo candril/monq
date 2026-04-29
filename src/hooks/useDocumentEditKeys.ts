@@ -6,6 +6,7 @@
 
 import type { Dispatch } from "react"
 import type { CliRenderer } from "@opentui/core"
+import type { Document } from "mongodb"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import type { Keymap } from "../config/types"
@@ -15,9 +16,15 @@ import { showDeleteConfirm } from "../actions/deleteConfirm"
 import { openEditorForMany, openEditorForInsert, applyConfirmActions } from "../actions/editMany"
 import { runBulkQueryUpdate, runBulkQueryDelete } from "../actions/bulkQueryConfirm"
 import { openEditorForIndexes } from "../actions/index"
-import { explainFind, explainAggregate } from "../providers/mongodb"
+import { explainFind, explainAggregate, fetchDocuments } from "../providers/mongodb"
 import { resolveCurrentQuery, resolveActiveFilter } from "../utils/query"
 import { openExplainInEditor } from "../actions/explain"
+
+/** Stable string key for a Mongo _id (handles ObjectId and primitive ids). */
+function idKey(doc: Document): string {
+  const id = doc._id as { toHexString?: () => string } | undefined
+  return typeof id?.toHexString === "function" ? id.toHexString() : String(doc._id)
+}
 
 interface UseDocumentEditKeysOptions {
   state: AppState
@@ -57,15 +64,60 @@ export function useDocumentEditKeys({
         return true
       }
 
-      renderer.suspend()
-      openEditorForMany(
-        activeTab.collectionName,
-        state.dbName,
-        docsToEdit,
-        undefined,
-        state.schemaMap,
-      )
-        .then(async (outcome) => {
+      // In simple/find mode, the loaded docs may be projected (e.g. user
+      // hid columns with `-field`). Editing should always operate on the
+      // *full* document, so re-fetch by _id without a projection. In
+      // aggregate mode we leave docs as-is since pipelines may transform
+      // them and there's no reliable way to round-trip back to the source.
+      const collectionName = activeTab.collectionName
+      const dbName = state.dbName
+      const schemaMap = state.schemaMap
+      const query = resolveCurrentQuery(state)
+      const needsRefetch =
+        query.mode === "find" &&
+        query.projection != null &&
+        Object.keys(query.projection).length > 0
+
+      const resolveEditDocs = async (): Promise<Document[]> => {
+        if (!needsRefetch) {
+          return docsToEdit
+        }
+        const ids = docsToEdit.map((d) => d._id).filter((id) => id !== undefined && id !== null)
+        if (ids.length === 0) {
+          return docsToEdit
+        }
+        const { documents } = await fetchDocuments(
+          collectionName,
+          { _id: { $in: ids } },
+          { limit: ids.length },
+        )
+        // Preserve the table's row order so the editor view matches.
+        const byId = new Map(documents.map((d) => [idKey(d), d]))
+        return docsToEdit.map((d) => byId.get(idKey(d)) ?? d)
+      }
+
+      void (async () => {
+        let editDocs: Document[]
+        try {
+          editDocs = await resolveEditDocs()
+        } catch (err) {
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Edit failed: ${(err as Error).message}`,
+            kind: "error",
+          })
+          return
+        }
+
+        renderer.suspend()
+        try {
+          const outcome = await openEditorForMany(
+            collectionName,
+            dbName,
+            editDocs,
+            undefined,
+            schemaMap,
+          )
           renderer.resume()
           if (outcome.cancelled) {
             return
@@ -88,12 +140,16 @@ export function useDocumentEditKeys({
             dispatch({ type: "RELOAD_DOCUMENTS" })
             return
           }
-          showBulkConfirm(result, docsToEdit, editedDocs)
-        })
-        .catch((err: Error) => {
+          showBulkConfirm(result, editDocs, editedDocs)
+        } catch (err) {
           renderer.resume()
-          dispatch({ type: "SHOW_MESSAGE", message: `Edit failed: ${err.message}`, kind: "error" })
-        })
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Edit failed: ${(err as Error).message}`,
+            kind: "error",
+          })
+        }
+      })()
       return true
     }
 
