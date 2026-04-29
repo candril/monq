@@ -12,6 +12,7 @@ import type { Command } from "../commands/types"
 import type { Theme } from "../theme"
 import type { ThemeConfig } from "../config/types"
 import { switchDatabase } from "../providers/mongodb"
+import { switchToTab } from "../utils/tabs"
 import type { PaletteContext } from "../actions/palette/types"
 import { handleThemeCommand } from "../actions/palette/theme"
 import { handleViewCommand } from "../actions/palette/view"
@@ -75,11 +76,18 @@ export function usePaletteActions({
         return
       }
 
-      // Collection selection
+      // Collection selection — jump to an already-open tab if one exists,
+      // otherwise open a new tab.
       if (cmd.id.startsWith("open:")) {
+        const collectionName = cmd.id.slice(5)
         dispatch({ type: "CLOSE_COMMAND_PALETTE" })
         setPaletteMode("commands")
-        dispatch({ type: "OPEN_TAB", collectionName: cmd.id.slice(5) })
+        const existing = state.tabs.find((t) => !t.ephemeral && t.collectionName === collectionName)
+        if (existing) {
+          switchToTab(existing.id, dispatch)
+        } else {
+          dispatch({ type: "OPEN_TAB", collectionName })
+        }
         return
       }
 

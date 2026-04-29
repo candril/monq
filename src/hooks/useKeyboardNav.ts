@@ -33,6 +33,8 @@ interface UseKeyboardNavOptions {
   dispatch: Dispatch<AppAction>
   docListScrollRef: RefObject<ScrollBoxRenderable>
   keymap: Keymap
+  /** Open the palette in collections-picker mode (Ctrl+O fast switch). */
+  onOpenCollectionPalette: () => void
 }
 
 export function useKeyboardNav({
@@ -40,6 +42,7 @@ export function useKeyboardNav({
   dispatch,
   docListScrollRef,
   keymap,
+  onOpenCollectionPalette,
 }: UseKeyboardNavOptions) {
   const renderer = useRenderer()
   const {
@@ -283,6 +286,18 @@ export function useKeyboardNav({
       !state.historyPickerOpen
     ) {
       dispatch({ type: "OPEN_COMMAND_PALETTE" })
+      return
+    }
+
+    // palette.open_collections: fast collection switcher (Ctrl+O).
+    // Requires a database — collections aren't meaningful otherwise.
+    if (
+      matches(key, keymap["palette.open_collections"]) &&
+      state.dbName &&
+      !state.queryVisible &&
+      !state.historyPickerOpen
+    ) {
+      onOpenCollectionPalette()
       return
     }
 

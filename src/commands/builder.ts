@@ -26,7 +26,7 @@ export function buildCommands(state: AppState, keymap: Keymap): Command[] {
     id: "nav:switch-collection",
     label: "Open Collection",
     category: "navigation",
-    shortcut: "",
+    shortcut: hintFor(keymap, "palette.open_collections"),
   })
   commands.push({
     id: "nav:switch-database",

@@ -94,6 +94,7 @@ export type ActionName =
   | "tab.switch_9"
   | "filter_bar.toggle"
   | "palette.open"
+  | "palette.open_collections"
   | "index.open"
   | "explain.run"
   | "explain.raw"

@@ -177,6 +177,10 @@ export function App({
     dispatch,
     docListScrollRef,
     keymap,
+    onOpenCollectionPalette: useCallback(() => {
+      setPaletteMode("collections")
+      dispatch({ type: "OPEN_COMMAND_PALETTE" })
+    }, []),
   })
   useDocumentLoader({ state, dispatch, pageSize })
 
