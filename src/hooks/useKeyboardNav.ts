@@ -398,6 +398,44 @@ export function useKeyboardNav({
         closeTabsForSidebarCursor(state, dispatch)
         return
       }
+      // Pass-throughs: global shortcuts that don't conflict with sidebar
+      // navigation. The sidebar is blurred for tab-switch actions because the
+      // user clearly wants to land in that tab; palette opens overlay on top
+      // of the sidebar without disturbing focus.
+      for (let n = 1; n <= 9; n++) {
+        if (matches(key, keymap[`tab.switch_${n}` as keyof Keymap])) {
+          const tabIndex = n - 1
+          if (tabIndex < state.tabs.length) {
+            dispatch({ type: "BLUR_SIDEBAR" })
+            switchToTab(state.tabs[tabIndex].id, dispatch)
+          }
+          return
+        }
+      }
+      if (matches(key, keymap["tab.prev"])) {
+        const idx = state.tabs.findIndex((t) => t.id === state.activeTabId)
+        if (idx > 0) {
+          dispatch({ type: "BLUR_SIDEBAR" })
+          switchToTab(state.tabs[idx - 1].id, dispatch)
+        }
+        return
+      }
+      if (matches(key, keymap["tab.next"])) {
+        const idx = state.tabs.findIndex((t) => t.id === state.activeTabId)
+        if (idx < state.tabs.length - 1 && idx >= 0) {
+          dispatch({ type: "BLUR_SIDEBAR" })
+          switchToTab(state.tabs[idx + 1].id, dispatch)
+        }
+        return
+      }
+      if (matches(key, keymap["palette.open"]) && state.activeTabId) {
+        dispatch({ type: "OPEN_COMMAND_PALETTE" })
+        return
+      }
+      if (matches(key, keymap["palette.open_collections"])) {
+        onOpenCollectionPalette()
+        return
+      }
       // Swallow everything else so it doesn't fall through to the doc list.
       return
     }
