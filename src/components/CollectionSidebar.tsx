@@ -23,7 +23,7 @@ import type { ScrollBoxRenderable } from "@opentui/core"
 import type { CollectionInfo } from "../types"
 import { theme } from "../theme"
 
-const SIDEBAR_WIDTH = 24
+export const SIDEBAR_WIDTH = 24
 const SCROLL_MARGIN = 2
 // Content width inside the sidebar, once the right border (1) and horizontal
 // padding (2) are subtracted. Leave a 1-col safety margin so names never

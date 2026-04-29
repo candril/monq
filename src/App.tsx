@@ -31,7 +31,7 @@ import { ExplainPreview } from "./components/ExplainPreview"
 import { ExportCancelDialog } from "./components/ExportCancelDialog"
 import { WelcomeScreen } from "./components/WelcomeScreen"
 import { TabBar } from "./components/TabBar"
-import { CollectionSidebar } from "./components/CollectionSidebar"
+import { CollectionSidebar, SIDEBAR_WIDTH } from "./components/CollectionSidebar"
 import { appReducer, createInitialState } from "./state"
 import { useMongoConnection } from "./hooks/useMongoConnection"
 import { useKeyboardNav } from "./hooks/useKeyboardNav"
@@ -518,9 +518,10 @@ export function App({
                   scrollRef={docListScrollRef}
                   themeVersion={themeVersion}
                   viewportWidth={
-                    state.previewPosition === "right"
+                    (state.previewPosition === "right"
                       ? Math.floor(terminalWidth / 2)
-                      : terminalWidth
+                      : terminalWidth) -
+                    (state.sidebarOpen && state.dbName && !showWelcome ? SIDEBAR_WIDTH : 0)
                   }
                   marksForRow={marksForRow}
                 />

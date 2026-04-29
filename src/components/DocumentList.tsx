@@ -137,12 +137,20 @@ function computeColumnWidths(
   return widths
 }
 
-/** Compute horizontal scroll offset to keep selected column visible */
+/**
+ * Compute horizontal scroll offset to keep the selected column visible.
+ * `textAreaWidth` is the actual width available for column text (already
+ * minus row padding and mark gutter). `prevScrollLeft` is the scroll
+ * position from the previous render — we keep it stable while the
+ * selected column still fits in view, and only scroll the minimum needed
+ * to bring it back on-screen otherwise.
+ */
 function computeScrollLeft(
   columns: DetectedColumn[],
   colWidths: Map<string, number>,
   selectedColumnIndex: number,
-  viewportWidth: number,
+  textAreaWidth: number,
+  prevScrollLeft: number,
 ): number {
   const visible = columns.filter((c) => c.visible)
   if (visible.length === 0) {
@@ -160,29 +168,32 @@ function computeScrollLeft(
   totalWidth -= COL_GAP // no gap after last
 
   // No scrolling needed if everything fits
-  const available = viewportWidth - 2 // padding
-  if (totalWidth <= available) {
+  if (totalWidth <= textAreaWidth) {
     return 0
   }
 
-  // Ensure selected column is visible
+  // Start from the previous position, clamped to the valid range. This
+  // keeps the viewport stable while the selection moves through visible
+  // columns.
+  const maxScroll = totalWidth - textAreaWidth
+  let scrollLeft = Math.max(0, Math.min(prevScrollLeft, maxScroll))
+
   const sel = colPositions[selectedColumnIndex]
   if (!sel) {
-    return 0
+    return scrollLeft
   }
 
-  // If selected is to the right of the viewport, scroll right
-  // If selected is to the left, scroll left
-  // Keep some context around the selected column
-  let scrollLeft = 0
-  if (sel.right > available) {
-    scrollLeft = sel.left - 2 // small margin on left
-  }
-  if (sel.left < scrollLeft) {
-    scrollLeft = sel.left - 2
+  if (sel.right > scrollLeft + textAreaWidth) {
+    // Past the right edge — scroll right just enough to anchor the
+    // selected column to the right edge (with a 1-char margin).
+    scrollLeft = sel.right - textAreaWidth + 1
+  } else if (sel.left < scrollLeft) {
+    // Past the left edge — scroll left just enough to anchor the selected
+    // column to the left edge.
+    scrollLeft = sel.left
   }
 
-  return Math.max(0, scrollLeft)
+  return Math.max(0, Math.min(scrollLeft, maxScroll))
 }
 
 /** Build segments for a row: each column padded to width, separated by gaps */
@@ -285,17 +296,28 @@ export function DocumentList({
   const visibleColumns = columns.filter((c) => c.visible)
   // Use the explicit viewport width when provided (e.g. when a preview panel is open
   // and the document list only occupies part of the terminal width). Fall back to the
-  // full terminal width minus padding.
+  // full terminal width. We subtract 2 for the row's left/right padding, and another
+  // 2 for the mark gutter when shown — both sit inside the same flex row as the
+  // column text, so the text only gets the remaining space.
   const effectiveTerminalWidth = viewportWidthProp ?? terminalWidth
-  const viewportWidth = effectiveTerminalWidth - 2 // padding
+  const viewportWidth = effectiveTerminalWidth - 2 - (showMarkGutter ? 2 : 0)
   const colWidths = useMemo(
     () => computeColumnWidths(documents, columns, viewportWidth),
     [documents, columns, viewportWidth],
   )
-  const scrollLeft = useMemo(
-    () => computeScrollLeft(visibleColumns, colWidths, selectedColumnIndex, effectiveTerminalWidth),
-    [visibleColumns, colWidths, selectedColumnIndex, effectiveTerminalWidth],
+  // Persist the horizontal scroll across renders so we can keep the
+  // viewport stable while the cursor moves through already-visible columns.
+  // The compute is idempotent: feeding back the same scrollLeft yields the
+  // same result, so mutating the ref during render is safe.
+  const scrollLeftRef = useRef(0)
+  const scrollLeft = computeScrollLeft(
+    visibleColumns,
+    colWidths,
+    selectedColumnIndex,
+    viewportWidth,
+    scrollLeftRef.current,
   )
+  scrollLeftRef.current = scrollLeft
 
   const colWidthArray = useMemo(
     () => visibleColumns.map((c) => colWidths.get(c.field) ?? MIN_COL_WIDTH),
