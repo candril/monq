@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-05-09
+
+### Added
+- **`Ctrl+O` collection switcher palette** — quick-switch between collections in the current database without leaving the doc view.
+- Tab/palette shortcuts work while the sidebar is focused (no need to refocus the doc list first).
+- `Enter` accepts the active filter suggestion in the simple query bar (alias for `Ctrl+Y`).
+
+### Fixed
+- Earlier columns stay on screen when selecting the rightmost columns instead of scrolling out of view.
+- `e` (edit) fetches the full document with no projection when in simple/find mode, so edits don't accidentally truncate fields.
+
 ## [0.4.0] - 2026-04-23
 
 ### Added
