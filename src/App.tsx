@@ -23,7 +23,7 @@ import { Loading } from "./components/Loading"
 import { ErrorView } from "./components/ErrorView"
 import { DocumentList } from "./components/DocumentList"
 import { DocumentPreview } from "./components/DocumentPreview"
-import { FilterSuggestions, type FilterSuggestionsHandle } from "./components/FilterSuggestions"
+import { FilterSuggestions } from "./components/FilterSuggestions"
 import { HistoryPicker } from "./components/HistoryPicker"
 import { CommandPalette } from "./components/CommandPalette"
 import { IndexCreateConfirmDialog } from "./components/IndexCreateConfirmDialog"
@@ -103,16 +103,11 @@ export function App({
   const renderer = useRenderer()
   const { height: terminalHeight, width: terminalWidth } = useTerminalDimensions()
   const docListScrollRef = useRef<ScrollBoxRenderable>(null)
-  const filterSuggestionsRef = useRef<FilterSuggestionsHandle>(null)
 
-  // Submit handler that first accepts any active filter suggestion. The
-  // <input> element consumes Enter for its onSubmit before useKeyboard hooks
-  // see it, so this is where Enter-on-suggestion has to be intercepted.
+  // Enter always applies the current query as typed — it never accepts a
+  // suggestion. Picking a suggestion is Ctrl+Y's job (it fills the input
+  // without submitting), so the two actions stay distinct.
   const handleQuerySubmit = useCallback(() => {
-    const active = filterSuggestionsRef.current?.getActiveSuggestion()
-    if (active) {
-      dispatch({ type: "SET_QUERY_INPUT", input: active.value })
-    }
     dispatch({ type: "SUBMIT_QUERY" })
   }, [])
 
@@ -579,7 +574,6 @@ export function App({
 
       {/* Suggestions only in simple mode, hidden when history picker is open */}
       <FilterSuggestions
-        ref={filterSuggestionsRef}
         visible={
           state.queryVisible &&
           !state.pipelineMode &&
@@ -593,7 +587,6 @@ export function App({
         documents={state.documents}
         markCounts={markCounts}
         onChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
-        onSubmit={handleQuerySubmit}
       />
 
       {/* Pipeline bar — shown in pipeline mode */}

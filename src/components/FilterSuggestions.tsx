@@ -9,10 +9,13 @@
  *
  * **Value position** (after : > >= < <= !=):
  *   Suggests quick-filter helpers (date helpers, null) and sampled values
- *   from loaded documents. Accepting a value suggestion submits the query.
+ *   from loaded documents.
+ *
+ * Ctrl+Y fills the input with the highlighted suggestion without submitting;
+ * Enter (handled at the FilterBar level) applies the query as typed.
  */
 
-import { useState, useMemo, useEffect, forwardRef, useImperativeHandle } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useKeyboard } from "@opentui/react"
 import type { Document } from "mongodb"
 import type { DetectedColumn } from "../types"
@@ -27,8 +30,6 @@ interface Suggestion {
   label: string
   value: string
   hint?: string
-  /** When true, accepting this suggestion should submit the query */
-  submit?: boolean
   /** Optional foreground color for the label (used for mark-register entries) */
   labelColor?: string
 }
@@ -47,18 +48,6 @@ interface FilterSuggestionsProps {
    */
   markCounts?: Map<string, number>
   onChange: (query: string) => void
-  onSubmit: () => void
-}
-
-/** Imperative handle so the filter input can ask for the active suggestion. */
-export interface FilterSuggestionsHandle {
-  /**
-   * Returns the currently-highlighted suggestion when the popup is visible,
-   * or null when there's nothing to accept. Used by the filter bar's Enter
-   * handler — the <input> element consumes Enter, so we can't intercept it
-   * inside FilterSuggestions' own keyboard hook.
-   */
-  getActiveSuggestion(): { value: string; submit: boolean } | null
 }
 
 // ---- Value-position detection ----
@@ -128,30 +117,29 @@ function buildHelperSuggestions(
     // For comparison operators, suggest relative date helpers
     if (op === ":") {
       suggestions.push(
-        { label: ">ago(7d)", value: field + ">ago(7d)", hint: "last 7 days", submit: true },
-        { label: ">ago(30d)", value: field + ">ago(30d)", hint: "last 30 days", submit: true },
-        { label: ">ago(1m)", value: field + ">ago(1m)", hint: "last month", submit: true },
-        { label: ">ago(1y)", value: field + ">ago(1y)", hint: "last year", submit: true },
-        { label: ":today", value: base + "today", hint: "today", submit: true },
+        { label: ">ago(7d)", value: field + ">ago(7d)", hint: "last 7 days" },
+        { label: ">ago(30d)", value: field + ">ago(30d)", hint: "last 30 days" },
+        { label: ">ago(1m)", value: field + ">ago(1m)", hint: "last month" },
+        { label: ">ago(1y)", value: field + ">ago(1y)", hint: "last year" },
+        { label: ":today", value: base + "today", hint: "today" },
         {
           label: ":ago(7d)..today",
           value: base + "ago(7d)..today",
           hint: "7-day range",
-          submit: true,
         },
       )
     } else {
       suggestions.push(
-        { label: `${op}ago(7d)`, value: base + "ago(7d)", hint: "7 days ago", submit: true },
-        { label: `${op}ago(30d)`, value: base + "ago(30d)", hint: "30 days ago", submit: true },
-        { label: `${op}now`, value: base + "now", hint: "now", submit: true },
-        { label: `${op}today`, value: base + "today", hint: "today", submit: true },
+        { label: `${op}ago(7d)`, value: base + "ago(7d)", hint: "7 days ago" },
+        { label: `${op}ago(30d)`, value: base + "ago(30d)", hint: "30 days ago" },
+        { label: `${op}now`, value: base + "now", hint: "now" },
+        { label: `${op}today`, value: base + "today", hint: "today" },
       )
     }
   }
 
   // null is valid for all field types
-  suggestions.push({ label: "null", value: base + "null", hint: "empty/null check", submit: true })
+  suggestions.push({ label: "null", value: base + "null", hint: "empty/null check" })
 
   return suggestions
 }
@@ -182,7 +170,6 @@ function buildValueSuggestions(
       label: formatted.label,
       value: prefix + ctx.field + ctx.op + formatted.serialized,
       hint: fieldType ?? typeof val,
-      submit: true,
     })
   }
 
@@ -194,7 +181,6 @@ function buildValueSuggestions(
       label: `in(${inValues.join(",")})`,
       value: prefix + ctx.field + ctx.op + `in(${inValues.join(",")})`,
       hint: `match any of ${inValues.length}`,
-      submit: true,
     }
     // Filter by partial before returning
     if (ctx.partial) {
@@ -388,101 +374,83 @@ function buildFieldSuggestions(
 
 const MAX_VISIBLE = 15
 
-export const FilterSuggestions = forwardRef<FilterSuggestionsHandle, FilterSuggestionsProps>(
-  function FilterSuggestions(
-    { visible, query, queryMode, columns, schemaMap, documents, markCounts, onChange, onSubmit },
-    ref,
-  ) {
-    const [selectedIndex, setSelectedIndex] = useState(0)
+export function FilterSuggestions({
+  visible,
+  query,
+  queryMode,
+  columns,
+  schemaMap,
+  documents,
+  markCounts,
+  onChange,
+}: FilterSuggestionsProps) {
+  const [selectedIndex, setSelectedIndex] = useState(0)
 
-    const suggestions = useMemo(
-      () =>
-        queryMode === "bson"
-          ? buildBsonSuggestions(columns, schemaMap)
-          : buildFieldSuggestions(query, columns, schemaMap, documents, markCounts ?? new Map()),
-      [query, queryMode, columns, schemaMap, documents, markCounts],
-    )
+  const suggestions = useMemo(
+    () =>
+      queryMode === "bson"
+        ? buildBsonSuggestions(columns, schemaMap)
+        : buildFieldSuggestions(query, columns, schemaMap, documents, markCounts ?? new Map()),
+    [query, queryMode, columns, schemaMap, documents, markCounts],
+  )
 
-    useEffect(() => {
-      setSelectedIndex(0)
-    }, [suggestions.length])
+  useEffect(() => {
+    setSelectedIndex(0)
+  }, [suggestions.length])
 
-    useImperativeHandle(
-      ref,
-      () => ({
-        getActiveSuggestion() {
-          if (!visible || suggestions.length === 0) {
-            return null
-          }
-          const s = suggestions[selectedIndex]
-          return s ? { value: s.value, submit: s.submit ?? false } : null
-        },
-      }),
-      [visible, suggestions, selectedIndex],
-    )
-
-    useKeyboard((key) => {
-      if (!visible || suggestions.length === 0) {
-        return
-      }
-      if (key.name === "up" || (key.ctrl && key.name === "p")) {
-        setSelectedIndex((i) => Math.max(0, i - 1))
-      } else if (key.name === "down" || (key.ctrl && key.name === "n")) {
-        setSelectedIndex((i) => Math.min(suggestions.length - 1, i + 1))
-      } else if (key.ctrl && key.name === "y") {
-        // Ctrl+Y: accept the active suggestion (and submit if applicable).
-        // Enter is handled by the <input>'s onSubmit at the FilterBar level
-        // because the input element consumes Enter before useKeyboard sees it.
-        const suggestion = suggestions[selectedIndex]
-        if (suggestion) {
-          onChange(suggestion.value)
-          if (suggestion.submit) {
-            onSubmit()
-          }
-        }
-      }
-    })
-
+  useKeyboard((key) => {
     if (!visible || suggestions.length === 0) {
-      return null
+      return
     }
+    if (key.name === "up" || (key.ctrl && key.name === "p")) {
+      setSelectedIndex((i) => Math.max(0, i - 1))
+    } else if (key.name === "down" || (key.ctrl && key.name === "n")) {
+      setSelectedIndex((i) => Math.min(suggestions.length - 1, i + 1))
+    } else if (key.ctrl && key.name === "y") {
+      // Ctrl+Y: fill the input with the active suggestion but do NOT submit.
+      // Enter (handled by the <input>'s onSubmit at the FilterBar level) is
+      // what applies the query — keeping the two actions distinct.
+      const suggestion = suggestions[selectedIndex]
+      if (suggestion) {
+        onChange(suggestion.value)
+      }
+    }
+  })
 
-    const visibleSuggestions = suggestions.slice(0, MAX_VISIBLE)
+  if (!visible || suggestions.length === 0) {
+    return null
+  }
 
-    return (
-      <box position="absolute" bottom={1} left={0} width="100%" flexDirection="column">
-        <box
-          backgroundColor={theme.headerBg}
-          flexDirection="column"
-          paddingLeft={1}
-          paddingRight={1}
-        >
-          {visibleSuggestions.map((suggestion, i) => {
-            const selected = i === selectedIndex
-            return (
-              <box
-                key={suggestion.label}
-                height={1}
-                backgroundColor={selected ? theme.selection : undefined}
-                paddingLeft={1}
-                flexDirection="row"
-                justifyContent="space-between"
-              >
+  const visibleSuggestions = suggestions.slice(0, MAX_VISIBLE)
+
+  return (
+    <box position="absolute" bottom={1} left={0} width="100%" flexDirection="column">
+      <box backgroundColor={theme.headerBg} flexDirection="column" paddingLeft={1} paddingRight={1}>
+        {visibleSuggestions.map((suggestion, i) => {
+          const selected = i === selectedIndex
+          return (
+            <box
+              key={suggestion.label}
+              height={1}
+              backgroundColor={selected ? theme.selection : undefined}
+              paddingLeft={1}
+              flexDirection="row"
+              justifyContent="space-between"
+            >
+              <text>
+                <span fg={suggestion.labelColor ?? (selected ? theme.primary : theme.textDim)}>
+                  {suggestion.label}
+                </span>
+              </text>
+              {suggestion.hint && (
                 <text>
-                  <span fg={suggestion.labelColor ?? (selected ? theme.primary : theme.textDim)}>
-                    {suggestion.label}
-                  </span>
+                  <span fg={theme.textMuted}>{suggestion.hint}</span>
                 </text>
-                {suggestion.hint && (
-                  <text>
-                    <span fg={theme.textMuted}>{suggestion.hint}</span>
-                  </text>
-                )}
-              </box>
-            )
-          })}
-        </box>
+              )}
+            </box>
+          )
+        })}
       </box>
-    )
-  },
-)
+    </box>
+  )
+}
