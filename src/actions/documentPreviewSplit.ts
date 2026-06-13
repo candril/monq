@@ -3,7 +3,7 @@
 import { watch, type FSWatcher } from "fs"
 import { mkdir } from "fs/promises"
 import { spawn, spawnSync } from "child_process"
-import { join } from "path"
+import { basename, dirname, join } from "path"
 import { tmpdir } from "os"
 import { EJSON } from "bson"
 import JSON5 from "json5"
@@ -37,7 +37,7 @@ let session: PreviewSession | null = null
 let previewFile: PreviewFile | null = null
 let watcher: FSWatcher | null = null
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
-let suppressWatchEventsUntil = 0
+let ignoredSnapshot: string | null = null
 
 export async function openDocumentPreviewSplit(
   document: Document,
@@ -101,8 +101,9 @@ async function writePreviewFile(
 ): Promise<void> {
   await mkdir(previewDir(), { recursive: true })
   previewFile = { ...file, originalDoc: document }
-  suppressWatchEventsUntil = Date.now() + 500
-  await Bun.write(filePath, `${serializeDocumentRelaxed(document)}\n`)
+  const content = `${serializeDocumentRelaxed(document)}\n`
+  ignoredSnapshot = content
+  await Bun.write(filePath, content)
 }
 
 function openDetachedTmuxPane(filePath: string): string | null {
@@ -153,10 +154,16 @@ function startWatching(filePath: string): void {
     watcher.close()
   }
 
+  // Watch the directory rather than the file: editors like (n)vim save via a
+  // write-to-temp + rename, which replaces the inode. A file watch is bound to
+  // the original inode and goes silent after the first such save, so only the
+  // first reload would ever fire. A directory watch survives the replace.
+  const dir = dirname(filePath)
+  const target = basename(filePath)
   watcher = null
   try {
-    watcher = watch(filePath, () => {
-      if (Date.now() <= suppressWatchEventsUntil) {
+    watcher = watch(dir, (_event, name) => {
+      if (name !== null && name !== target) {
         return
       }
       if (debounceTimer) {
@@ -178,9 +185,20 @@ async function applySavedPreviewFile(filePath: string): Promise<void> {
     return
   }
 
+  const content = await Bun.file(filePath)
+    .text()
+    .catch(() => null)
+  if (content === null) {
+    return
+  }
+  if (ignoredSnapshot !== null && content === ignoredSnapshot) {
+    ignoredSnapshot = null
+    return
+  }
+
   let edited: Document
   try {
-    edited = parseDocument(await Bun.file(filePath).text())
+    edited = parseDocument(content)
   } catch (err) {
     previewFile.dispatch({
       type: "SHOW_MESSAGE",
