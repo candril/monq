@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-13
+
+### Added
+- **tmux document preview** — preview the selected document live in a tmux split pane that updates as you move the cursor.
+- **Edit documents in a tmux split** — `Shift+E` opens the selected document in your `$EDITOR` in a tmux split; monq reloads on save, including formatter-on-save, no-op saves, and editors that save via write-temp + rename (vim/neovim). A toast confirms each reload.
+- **Collection switch shortcuts** — shifted shortcuts to jump between collections without opening the switcher.
+- **Navigation quality-of-life shortcuts** — added navigation and column-navigation shortcuts, and clarified table focus / column cursor indicators.
+
+### Fixed
+- Editor serialization standardized on relaxed EJSON, matching the preview panel.
+- `Enter` applies the query and `Ctrl+Y` picks the active suggestion without submitting.
+- Reduced tmux preview reload flicker and fixed focus handling for the pipeline tmux split.
+- Capped, stabilized, and pruned tmux editor temp files so they don't accumulate.
+
 ## [0.4.1] - 2026-05-09
 
 ### Added
