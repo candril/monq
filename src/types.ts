@@ -306,6 +306,8 @@ export interface AppState {
 
   // Command palette
   commandPaletteVisible: boolean
+  /** Whether the keyboard shortcut help overlay is open */
+  shortcutHelpVisible: boolean
 
   // Messages
   message: { text: string; kind: "info" | "success" | "warning" | "error" } | null

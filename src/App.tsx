@@ -32,6 +32,7 @@ import { ExportCancelDialog } from "./components/ExportCancelDialog"
 import { WelcomeScreen } from "./components/WelcomeScreen"
 import { TabBar } from "./components/TabBar"
 import { CollectionSidebar, SIDEBAR_WIDTH } from "./components/CollectionSidebar"
+import { ShortcutHelp } from "./components/ShortcutHelp"
 import { appReducer, createInitialState } from "./state"
 import { useMongoConnection } from "./hooks/useMongoConnection"
 import { useKeyboardNav } from "./hooks/useKeyboardNav"
@@ -626,6 +627,12 @@ export function App({
         onHighlight={paletteMode === "themes" ? handleThemeHighlight : undefined}
         placeholder={effectivePlaceholder}
         title={effectiveTitle}
+      />
+
+      <ShortcutHelp
+        visible={state.shortcutHelpVisible}
+        keymap={keymap}
+        onClose={() => dispatch({ type: "CLOSE_SHORTCUT_HELP" })}
       />
 
       {state.pipelineConfirm && (

@@ -55,6 +55,9 @@ export type ActionName =
   | "nav.right"
   | "nav.half_page_down"
   | "nav.half_page_up"
+  | "nav.first_row"
+  | "nav.last_row"
+  | "nav.center_row"
   | "nav.first_column"
   | "nav.last_column"
   | "nav.column_mode"
@@ -104,8 +107,10 @@ export type ActionName =
   | "mark.jump"
   | "sidebar.toggle"
   | "sidebar.focus"
+  | "sidebar.blur"
   | "collection.peek_next"
   | "collection.peek_prev"
+  | "help.shortcuts"
   | "app.quit"
 
 /** Raw user-supplied keys config — each action maps to a string or string[]. */

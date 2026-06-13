@@ -130,6 +130,8 @@ export type AppAction =
   // Command palette
   | { type: "OPEN_COMMAND_PALETTE" }
   | { type: "CLOSE_COMMAND_PALETTE" }
+  | { type: "OPEN_SHORTCUT_HELP" }
+  | { type: "CLOSE_SHORTCUT_HELP" }
   // Messages
   | { type: "SHOW_MESSAGE"; message: string; kind?: "info" | "success" | "warning" | "error" }
   | { type: "CLEAR_MESSAGE" }
@@ -248,6 +250,7 @@ export function createInitialState(): AppState {
     explainLimited: false,
     explainLoading: false,
     commandPaletteVisible: false,
+    shortcutHelpVisible: false,
     message: null,
     error: null,
     selectionMode: "none",

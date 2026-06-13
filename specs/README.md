@@ -89,3 +89,4 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 054 | [Ephemeral Peek Tabs](./done/054-ephemeral-peek-tabs.md) | `{`/`}` to peek through collections in a single ephemeral tab |
 | 055 | [Sidebar-First Landing](./done/055-sidebar-first-landing.md) | Drop welcome step 2; auto-focus sidebar + auto-peek first collection |
 | 056 | [Column Navigation Shortcuts](./done/056-column-navigation-shortcuts.md) | `0`/`$` column jumps and `Ctrl+H` sidebar focus |
+| 057 | [Navigation QoL Shortcuts](./done/057-navigation-qol-shortcuts.md) | `g`/`G` row jumps, `z`, `*`, `Ctrl+L`, and `?` shortcut help |

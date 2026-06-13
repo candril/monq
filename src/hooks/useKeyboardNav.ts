@@ -224,6 +224,39 @@ export function useKeyboardNav({
     return false
   }
 
+  function selectDocument(index: number): void {
+    dispatch({ type: "SELECT_DOCUMENT", index })
+    docListScrollRef.current?.scrollTo(Math.max(0, index))
+  }
+
+  function centerSelectedDocument(): void {
+    const scrollbox = docListScrollRef.current
+    if (!scrollbox) {
+      return
+    }
+    const viewportHeight = scrollbox.viewport?.height ?? 20
+    scrollbox.scrollTo(Math.max(0, state.selectedIndex - Math.floor(viewportHeight / 2)))
+  }
+
+  function canOpenShortcutHelp(): boolean {
+    return Boolean(
+      state.dbName &&
+      !state.queryVisible &&
+      !state.historyPickerOpen &&
+      !state.commandPaletteVisible &&
+      !state.pipelineConfirm &&
+      !state.bulkEditConfirmation &&
+      !state.deleteConfirmation &&
+      !state.bulkQueryUpdateConfirmation &&
+      !state.bulkQueryDeleteConfirmation &&
+      !state.dropConfirmation &&
+      !state.createInput &&
+      !state.renameInput &&
+      !state.indexCreateConfirmation &&
+      !state.exportCancelConfirmation,
+    )
+  }
+
   useKeyboard((key) => {
     // ── Error screen ───────────────────────────────────────────────────
     // When stuck on the error view, only quit and back-to-connection work.
@@ -240,6 +273,15 @@ export function useKeyboardNav({
     }
 
     // ── Global intercepts (order-dependent) ────────────────────────────
+
+    if (state.shortcutHelpVisible) {
+      return
+    }
+
+    if (matches(key, keymap["help.shortcuts"]) && canOpenShortcutHelp()) {
+      dispatch({ type: "OPEN_SHORTCUT_HELP" })
+      return
+    }
 
     // Mark/jump pending modes — must run before ANY handler that could
     // claim a single letter (edit keys consume `e`/`i`/`D`, the doc handler
@@ -383,6 +425,10 @@ export function useKeyboardNav({
         handleSidebarEnter(state, dispatch)
         return
       }
+      if (matches(key, keymap["sidebar.blur"])) {
+        handleSidebarEnter(state, dispatch)
+        return
+      }
       if (key.name === "return") {
         handleSidebarEnter(state, dispatch)
         return
@@ -399,6 +445,10 @@ export function useKeyboardNav({
         return
       }
       if (matches(key, keymap["sidebar.focus"])) {
+        return
+      }
+      if (matches(key, keymap["help.shortcuts"])) {
+        dispatch({ type: "OPEN_SHORTCUT_HELP" })
         return
       }
       // Pass-throughs: global shortcuts that don't conflict with sidebar
@@ -454,6 +504,11 @@ export function useKeyboardNav({
 
     if (matches(key, keymap["sidebar.focus"]) && state.dbName) {
       dispatch({ type: state.sidebarOpen ? "FOCUS_SIDEBAR" : "TOGGLE_SIDEBAR" })
+      return
+    }
+
+    if (matches(key, keymap["sidebar.blur"]) && state.sidebarFocused) {
+      handleSidebarEnter(state, dispatch)
       return
     }
 
@@ -553,6 +608,24 @@ export function useKeyboardNav({
 
     if (matches(key, keymap["nav.last_column"])) {
       dispatch({ type: "SELECT_COLUMN", index: state.columns.filter((c) => c.visible).length - 1 })
+      return
+    }
+
+    if (matches(key, keymap["nav.first_row"])) {
+      selectDocument(0)
+      return
+    }
+
+    if (matches(key, keymap["nav.last_row"])) {
+      selectDocument(state.documents.length - 1)
+      if (!state.loadingMore && state.loadedCount < state.documentCount) {
+        dispatch({ type: "LOAD_MORE" })
+      }
+      return
+    }
+
+    if (matches(key, keymap["nav.center_row"])) {
+      centerSelectedDocument()
       return
     }
 

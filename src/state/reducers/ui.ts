@@ -51,6 +51,12 @@ export function uiReducer(state: AppState, action: AppAction): AppState | null {
     case "CLOSE_COMMAND_PALETTE":
       return { ...state, commandPaletteVisible: false }
 
+    case "OPEN_SHORTCUT_HELP":
+      return { ...state, shortcutHelpVisible: true }
+
+    case "CLOSE_SHORTCUT_HELP":
+      return { ...state, shortcutHelpVisible: false }
+
     // Messages
     case "SHOW_MESSAGE":
       return { ...state, message: { text: action.message, kind: action.kind ?? "info" } }
