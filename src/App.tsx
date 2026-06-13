@@ -52,6 +52,7 @@ import { formatDocumentCount, resolveSortField, resolveSortDirection } from "./u
 import { randomConnectionMessage } from "./utils/loadingMessages"
 import { usePipelineWatcher } from "./hooks/usePipelineWatcher"
 import type { Keymap, ThemeConfig } from "./config/types"
+import { updateDocumentPreviewSplit } from "./actions/documentPreviewSplit"
 
 type PaletteMode = "commands" | "collections" | "databases" | "themes"
 
@@ -310,6 +311,10 @@ export function App({
 
   const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
   const selectedDoc = state.documents[state.selectedIndex] ?? null
+
+  useEffect(() => {
+    void updateDocumentPreviewSplit(selectedDoc)
+  }, [selectedDoc])
 
   // Set of collection names that currently have a *real* (non-ephemeral)
   // open tab — used by the collection sidebar to brighten those rows. The

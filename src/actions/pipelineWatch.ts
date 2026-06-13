@@ -125,7 +125,7 @@ export function openTmuxSplit(filePath: string): "tmux" | "clipboard" | "none" {
     // editor directly rather than trying to exec a shell command string.
     // Any extra args from $EDITOR (e.g. "nvim --noplugin") are split here too.
     const editorArgs = editor.split(/\s+/)
-    spawn("tmux", ["split-window", splitFlag, "-p", pct, ...editorArgs, filePath], {
+    spawn("tmux", ["split-window", "-d", splitFlag, "-p", pct, ...editorArgs, filePath], {
       detached: true,
       stdio: "ignore",
     }).unref()

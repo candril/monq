@@ -9,6 +9,7 @@ import { explainFind, explainAggregate } from "../../providers/mongodb"
 import { copyToClipboard } from "../../utils/clipboard"
 import { yankDocument, yankCell } from "../yank"
 import { hideColumn } from "../hideColumn"
+import { openDocumentPreviewSplit } from "../documentPreviewSplit"
 
 export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
   const { state, dispatch, renderer } = ctx
@@ -44,6 +45,47 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       dispatch({ type: "CYCLE_PREVIEW_POSITION" })
       return true
+    case "view:open-preview-tmux": {
+      dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+      const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+      const document = state.documents[state.selectedIndex]
+      if (!activeTab || !document) {
+        return true
+      }
+      openDocumentPreviewSplit(document, {
+        dbName: state.dbName,
+        collectionName: activeTab.collectionName,
+      })
+        .then((result) => {
+          if (result === "tmux") {
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: "Opened document preview in tmux",
+              kind: "info",
+            })
+          } else if (result === "clipboard") {
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: "Preview path copied to clipboard",
+              kind: "info",
+            })
+          } else {
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: "Could not open tmux preview",
+              kind: "error",
+            })
+          }
+        })
+        .catch((err: Error) => {
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Preview failed: ${err.message}`,
+            kind: "error",
+          })
+        })
+      return true
+    }
     case "view:explain": {
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)

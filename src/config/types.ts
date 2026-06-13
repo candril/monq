@@ -70,6 +70,7 @@ export type ActionName =
   | "doc.delete"
   | "doc.bulk_query_update"
   | "doc.bulk_query_delete"
+  | "doc.open_preview_tmux"
   | "doc.yank_cell"
   | "doc.yank_document"
   | "preview.toggle"

@@ -144,6 +144,14 @@ export function buildCommands(state: AppState, keymap: Keymap): Command[] {
       category: "view",
       shortcut: hintFor(keymap, "preview.cycle_position"),
     })
+    if (state.documents.length > 0) {
+      commands.push({
+        id: "view:open-preview-tmux",
+        label: "Open Document Preview in Tmux Split",
+        category: "view",
+        shortcut: hintFor(keymap, "doc.open_preview_tmux"),
+      })
+    }
     commands.push({
       id: "view:cycle-column-mode",
       label: "Cycle Column Width Mode",

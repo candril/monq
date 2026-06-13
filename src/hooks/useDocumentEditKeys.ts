@@ -19,6 +19,7 @@ import { openEditorForIndexes } from "../actions/index"
 import { explainFind, explainAggregate, fetchDocuments } from "../providers/mongodb"
 import { resolveCurrentQuery, resolveActiveFilter } from "../utils/query"
 import { openExplainInEditor } from "../actions/explain"
+import { openDocumentPreviewSplit } from "../actions/documentPreviewSplit"
 
 /** Stable string key for a Mongo _id (handles ObjectId and primitive ids). */
 function idKey(doc: Document): string {
@@ -48,6 +49,49 @@ export function useDocumentEditKeys({
     }
     if (state.queryVisible) {
       return false
+    }
+
+    // doc.open_preview_tmux: external read-only document preview
+    if (matches(key, keymap["doc.open_preview_tmux"])) {
+      const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
+      const document = state.documents[state.selectedIndex]
+      if (!activeTab || !document) {
+        return true
+      }
+
+      void openDocumentPreviewSplit(document, {
+        dbName: state.dbName,
+        collectionName: activeTab.collectionName,
+      })
+        .then((result) => {
+          if (result === "tmux") {
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: "Opened document preview in tmux",
+              kind: "info",
+            })
+          } else if (result === "clipboard") {
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: "Preview path copied to clipboard",
+              kind: "info",
+            })
+          } else {
+            dispatch({
+              type: "SHOW_MESSAGE",
+              message: "Could not open tmux preview",
+              kind: "error",
+            })
+          }
+        })
+        .catch((err: Error) => {
+          dispatch({
+            type: "SHOW_MESSAGE",
+            message: `Preview failed: ${err.message}`,
+            kind: "error",
+          })
+        })
+      return true
     }
 
     // doc.edit: edit document(s)
