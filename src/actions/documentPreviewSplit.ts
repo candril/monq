@@ -1,7 +1,7 @@
 /** External document editor in a tmux split that follows the row cursor. */
 
 import { watch, type FSWatcher } from "fs"
-import { mkdir } from "fs/promises"
+import { mkdir, readdir, rm, stat } from "fs/promises"
 import { spawn, spawnSync } from "child_process"
 import { join } from "path"
 import { tmpdir } from "os"
@@ -42,6 +42,7 @@ let session: PreviewSession | null = null
 let watcher: FSWatcher | null = null
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 const previewFiles = new Map<string, PreviewFile>()
+const MAX_PREVIEW_FILES = 20
 
 export async function openDocumentPreviewSplit(
   document: Document,
@@ -121,6 +122,7 @@ async function writePreviewFile(
   await mkdir(previewDir(), { recursive: true })
   previewFiles.set(filePath, { ...file, originalDoc: document })
   await Bun.write(filePath, `${serializeDocumentRelaxed(document)}\n`)
+  await prunePreviewFiles(filePath)
 }
 
 function openDetachedTmuxPane(filePath: string): string | null {
@@ -201,6 +203,40 @@ function startWatchingPreviewDir(): void {
     })
   } catch {
     watcher = null
+  }
+}
+
+async function prunePreviewFiles(activeFilePath: string): Promise<void> {
+  let names: string[]
+  try {
+    names = await readdir(previewDir())
+  } catch {
+    return
+  }
+
+  const files = await Promise.all(
+    names.map(async (name) => {
+      const filePath = join(previewDir(), name)
+      try {
+        const info = await stat(filePath)
+        return info.isFile() ? { filePath, mtimeMs: info.mtimeMs } : null
+      } catch {
+        return null
+      }
+    }),
+  )
+
+  const removable = files
+    .filter((file): file is { filePath: string; mtimeMs: number } => file !== null)
+    .sort((a, b) => b.mtimeMs - a.mtimeMs)
+    .slice(MAX_PREVIEW_FILES)
+
+  for (const file of removable) {
+    if (file.filePath === activeFilePath) {
+      continue
+    }
+    previewFiles.delete(file.filePath)
+    await rm(file.filePath, { force: true }).catch(() => {})
   }
 }
 
