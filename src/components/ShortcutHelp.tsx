@@ -32,6 +32,8 @@ const GROUPS: Array<[title: string, items: ShortcutItem[]]> = [
       ["sidebar.focus", "focus sidebar"],
       ["sidebar.blur", "return to documents"],
       ["sidebar.toggle", "toggle sidebar"],
+      ["collection.select_prev", "previous selected collection"],
+      ["collection.select_next", "next selected collection"],
       ["collection.peek_prev", "peek previous collection"],
       ["collection.peek_next", "peek next collection"],
     ],

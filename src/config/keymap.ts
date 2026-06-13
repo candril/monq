@@ -72,6 +72,8 @@ const DEFAULT_BINDINGS: Record<ActionName, string[]> = {
   "sidebar.toggle": ["ctrl+b"],
   "sidebar.focus": ["ctrl+h"],
   "sidebar.blur": ["ctrl+l"],
+  "collection.select_next": ["ctrl+j"],
+  "collection.select_prev": ["ctrl+k"],
   "collection.peek_next": ["}"],
   "collection.peek_prev": ["{"],
   "help.shortcuts": ["?", "shift+/"],

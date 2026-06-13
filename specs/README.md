@@ -91,3 +91,4 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 056 | [Column Navigation Shortcuts](./done/056-column-navigation-shortcuts.md) | `0`/`$` column jumps and `Ctrl+H` sidebar focus |
 | 057 | [Navigation QoL Shortcuts](./done/057-navigation-qol-shortcuts.md) | `g`/`G` row jumps, `z`, `*`, `Ctrl+L`, and `?` shortcut help |
 | 058 | [Table Focus and Column Cursor Clarity](./done/058-table-focus-column-cursor-clarity.md) | Focus-aware table cursor and clearer selected-column rendering |
+| 059 | [Ctrl-JK Collection Switch](./done/059-ctrl-jk-collection-switch.md) | `Ctrl+J/K` switch the selected collection from the sidebar cursor |

@@ -410,6 +410,14 @@ export function useKeyboardNav({
         dispatch({ type: "PEEK_COLLECTION", delta: -1, anchor: "cursor" })
         return
       }
+      if (matches(key, keymap["collection.select_next"])) {
+        dispatch({ type: "PEEK_COLLECTION", delta: 1, anchor: "cursor" })
+        return
+      }
+      if (matches(key, keymap["collection.select_prev"])) {
+        dispatch({ type: "PEEK_COLLECTION", delta: -1, anchor: "cursor" })
+        return
+      }
       if (matches(key, keymap["nav.right"])) {
         // `l` exits the sidebar back into the doc list, committing whatever
         // collection is currently peeked. Symmetric with `h` on the leftmost
@@ -509,6 +517,16 @@ export function useKeyboardNav({
 
     if (matches(key, keymap["sidebar.blur"]) && state.sidebarFocused) {
       handleSidebarEnter(state, dispatch)
+      return
+    }
+
+    if (matches(key, keymap["collection.select_next"]) && state.dbName) {
+      dispatch({ type: "PEEK_COLLECTION", delta: 1, anchor: "cursor" })
+      return
+    }
+
+    if (matches(key, keymap["collection.select_prev"]) && state.dbName) {
+      dispatch({ type: "PEEK_COLLECTION", delta: -1, anchor: "cursor" })
       return
     }
 
