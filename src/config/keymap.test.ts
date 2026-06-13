@@ -9,8 +9,8 @@ describe("default keymap", () => {
     expect(keymap["nav.last_row"][0]).toMatchObject({ name: "g", shift: true })
     expect(keymap["nav.center_row"][0]).toMatchObject({ name: "z" })
     expect(keymap["sidebar.blur"][0]).toMatchObject({ name: "l", ctrl: true })
-    expect(keymap["collection.select_next"][0]).toMatchObject({ name: "j", ctrl: true })
-    expect(keymap["collection.select_prev"][0]).toMatchObject({ name: "k", ctrl: true })
+    expect(keymap["collection.select_next"][0]).toMatchObject({ name: "j", shift: true })
+    expect(keymap["collection.select_prev"][0]).toMatchObject({ name: "k", shift: true })
     expect(keymap["help.shortcuts"][0]).toMatchObject({ name: "?" })
   })
 
