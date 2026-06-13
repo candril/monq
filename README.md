@@ -33,7 +33,7 @@ Open the filter bar with `/` and the schema dropdown appears — every field wit
 
 ### Write aggregation pipelines with live feedback
 
-Press `Ctrl+F` to open the pipeline editor in `$EDITOR` with JSON Schema autocompletion. Results update instantly on save. Press `Ctrl+E` to open a tmux split alongside monq and iterate without leaving the terminal. Press `Shift+P` to open a detached tmux document editor that follows row navigation and saves back to MongoDB.
+Press `Ctrl+F` to open the pipeline editor in `$EDITOR` with JSON Schema autocompletion. Results update instantly on save. Press `Ctrl+E` to open a tmux split alongside monq and iterate without leaving the terminal. Press `Shift+E` to open a detached tmux document editor that follows row navigation and saves back to MongoDB.
 
 <img src="site/src/assets/screenshots/pipeline-editor.png" alt="Pipeline editor open in a tmux split alongside live results" width="100%" />
 
@@ -159,7 +159,7 @@ monq                                        # shows saved connections or URI pro
 | Key | Action |
 |-----|--------|
 | `p` | Toggle inline preview pane |
-| `Shift+P` | Open document editor in tmux split |
+| `Shift+E` | Open document editor in tmux split |
 | `e` | Edit document in `$EDITOR` |
 | `i` | Insert new document |
 | `Shift+I` | Manage indexes (edit all in `$EDITOR`) |

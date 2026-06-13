@@ -26,4 +26,4 @@ Open the currently selected document in an external editor inside a tmux split p
 - Store the preview file under the OS temporary directory and rewrite it on selection changes.
 - Use a stable file per document id so saving a dirty buffer after row navigation still applies to the document the buffer represents.
 - Capture the tmux pane id with `split-window -d -P -F '#{pane_id}'` so updates can target the preview pane without focusing it.
-- Default binding: `Shift+P` via `doc.open_preview_tmux`.
+- Default binding: `Shift+E` via `doc.open_preview_tmux`.

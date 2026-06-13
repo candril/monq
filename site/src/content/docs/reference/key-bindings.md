@@ -73,7 +73,7 @@ These operations are also available from the command palette, making them access
 | Key | Action |
 |-----|--------|
 | `p` | Toggle inline preview pane |
-| `Shift+P` | Open document editor in tmux split |
+| `Shift+E` | Open document editor in tmux split |
 | `e` | Edit document in `$EDITOR` |
 | `i` | Insert new document |
 | `Shift+I` | Manage indexes (edit all in `$EDITOR`) |
