@@ -1,7 +1,7 @@
 /** External document editor in a tmux split that follows the row cursor. */
 
 import { watch, type FSWatcher } from "fs"
-import { access, mkdir, readdir, rm, stat } from "fs/promises"
+import { mkdir } from "fs/promises"
 import { spawn, spawnSync } from "child_process"
 import { join } from "path"
 import { tmpdir } from "os"
@@ -25,37 +25,27 @@ interface PreviewContext {
 interface PreviewSession {
   paneId: string
   filePath: string
-  dbName: string
-  collectionName: string
 }
 
 interface PreviewFile {
-  dbName: string
   collectionName: string
   originalDoc: Document
   dispatch: Dispatch<AppAction>
 }
 
-type PreviewFileContext = Omit<PreviewFile, "originalDoc">
-
 let session: PreviewSession | null = null
+let previewFile: PreviewFile | null = null
 let watcher: FSWatcher | null = null
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
-const previewFiles = new Map<string, PreviewFile>()
-const MAX_PREVIEW_FILES = 20
 
 export async function openDocumentPreviewSplit(
   document: Document,
   context: PreviewContext,
   dispatch: Dispatch<AppAction>,
 ): Promise<PreviewOpenResult> {
-  const filePath = previewFilePath(context, document)
-  await writePreviewFile(filePath, document, {
-    dbName: context.dbName,
-    collectionName: context.collectionName,
-    dispatch,
-  })
-  startWatchingPreviewDir()
+  const filePath = previewFilePath(context)
+  await writePreviewFile(filePath, document, { collectionName: context.collectionName, dispatch })
+  startWatching(filePath)
 
   if (!process.env.TMUX) {
     await copyToClipboard(filePath).catch(() => {})
@@ -67,41 +57,30 @@ export async function openDocumentPreviewSplit(
     return "none"
   }
 
-  session = { paneId, filePath, dbName: context.dbName, collectionName: context.collectionName }
+  session = { paneId, filePath }
   return "tmux"
 }
 
 export async function updateDocumentPreviewSplit(document: Document | null): Promise<void> {
-  if (!session || !document) {
+  if (!session || !previewFile || !document) {
     return
   }
 
-  const file = previewFiles.get(session.filePath)
-  if (!file) {
-    return
-  }
-
-  const filePath = previewFilePath(
-    { dbName: file.dbName, collectionName: file.collectionName },
-    document,
-  )
-  await writePreviewFile(filePath, document, {
-    dbName: file.dbName,
-    collectionName: file.collectionName,
-    dispatch: file.dispatch,
+  await writePreviewFile(session.filePath, document, {
+    collectionName: previewFile.collectionName,
+    dispatch: previewFile.dispatch,
   })
-  session = { ...session, filePath, dbName: file.dbName, collectionName: file.collectionName }
-  loadPaneFile(session)
+  reloadPane(session)
 }
 
 function previewDir(): string {
   return join(tmpdir(), "monq", "document-preview")
 }
 
-function previewFilePath({ dbName, collectionName }: PreviewContext, document: Document): string {
+function previewFilePath({ dbName, collectionName }: PreviewContext): string {
   return join(
     previewDir(),
-    `monq-edit-${safePathPart(dbName)}-${safePathPart(collectionName)}-${safePathPart(docIdKey(document))}.jsonc`,
+    `monq-editor-${safePathPart(dbName)}-${safePathPart(collectionName)}.jsonc`,
   )
 }
 
@@ -117,24 +96,11 @@ function docIdKey(document: Document): string {
 async function writePreviewFile(
   filePath: string,
   document: Document,
-  file: PreviewFileContext,
+  file: Omit<PreviewFile, "originalDoc">,
 ): Promise<void> {
   await mkdir(previewDir(), { recursive: true })
-  const isNewFile = await isMissing(filePath)
-  previewFiles.set(filePath, { ...file, originalDoc: document })
+  previewFile = { ...file, originalDoc: document }
   await Bun.write(filePath, `${serializeDocumentRelaxed(document)}\n`)
-  if (isNewFile) {
-    await prunePreviewFiles(filePath)
-  }
-}
-
-async function isMissing(filePath: string): Promise<boolean> {
-  try {
-    await access(filePath)
-    return false
-  } catch {
-    return true
-  }
 }
 
 function openDetachedTmuxPane(filePath: string): string | null {
@@ -165,7 +131,7 @@ function buildEditorArgs(filePath: string): string[] {
   return [...editorArgs, ...liveEditArgs, filePath]
 }
 
-function loadPaneFile({ paneId, filePath }: PreviewSession): void {
+function reloadPane({ paneId }: PreviewSession): void {
   const result = spawnSync("tmux", ["display-message", "-p", "-t", paneId, "#{pane_id}"], {
     stdio: "ignore",
   })
@@ -174,36 +140,20 @@ function loadPaneFile({ paneId, filePath }: PreviewSession): void {
     return
   }
 
-  spawn(
-    "tmux",
-    [
-      "send-keys",
-      "-t",
-      paneId,
-      "Escape",
-      `:execute 'edit ' . fnameescape('${vimString(filePath)}')`,
-      "Enter",
-      "gg",
-    ],
-    { detached: true, stdio: "ignore" },
-  ).unref()
+  spawn("tmux", ["send-keys", "-t", paneId, "Escape", ":checktime", "Enter", "gg"], {
+    detached: true,
+    stdio: "ignore",
+  }).unref()
 }
 
-function startWatchingPreviewDir(): void {
+function startWatching(filePath: string): void {
   if (watcher) {
-    return
+    watcher.close()
   }
 
+  watcher = null
   try {
-    watcher = watch(previewDir(), (_event, name) => {
-      const filename = name?.toString()
-      if (!filename) {
-        return
-      }
-      const filePath = join(previewDir(), filename)
-      if (!previewFiles.has(filePath)) {
-        return
-      }
+    watcher = watch(filePath, () => {
       if (debounceTimer) {
         clearTimeout(debounceTimer)
       }
@@ -218,43 +168,8 @@ function startWatchingPreviewDir(): void {
   }
 }
 
-async function prunePreviewFiles(activeFilePath: string): Promise<void> {
-  let names: string[]
-  try {
-    names = await readdir(previewDir())
-  } catch {
-    return
-  }
-
-  const files = await Promise.all(
-    names.map(async (name) => {
-      const filePath = join(previewDir(), name)
-      try {
-        const info = await stat(filePath)
-        return info.isFile() ? { filePath, mtimeMs: info.mtimeMs } : null
-      } catch {
-        return null
-      }
-    }),
-  )
-
-  const removable = files
-    .filter((file): file is { filePath: string; mtimeMs: number } => file !== null)
-    .sort((a, b) => b.mtimeMs - a.mtimeMs)
-    .slice(MAX_PREVIEW_FILES)
-
-  for (const file of removable) {
-    if (file.filePath === activeFilePath) {
-      continue
-    }
-    previewFiles.delete(file.filePath)
-    await rm(file.filePath, { force: true }).catch(() => {})
-  }
-}
-
 async function applySavedPreviewFile(filePath: string): Promise<void> {
-  const file = previewFiles.get(filePath)
-  if (!file) {
+  if (!previewFile) {
     return
   }
 
@@ -262,7 +177,7 @@ async function applySavedPreviewFile(filePath: string): Promise<void> {
   try {
     edited = parseDocument(await Bun.file(filePath).text())
   } catch (err) {
-    file.dispatch({
+    previewFile.dispatch({
       type: "SHOW_MESSAGE",
       message: `Document edit parse error: ${(err as Error).message}`,
       kind: "warning",
@@ -270,8 +185,8 @@ async function applySavedPreviewFile(filePath: string): Promise<void> {
     return
   }
 
-  if (docIdKey(edited) !== docIdKey(file.originalDoc)) {
-    file.dispatch({
+  if (docIdKey(edited) !== docIdKey(previewFile.originalDoc)) {
+    previewFile.dispatch({
       type: "SHOW_MESSAGE",
       message: "Document _id cannot be changed",
       kind: "error",
@@ -279,7 +194,7 @@ async function applySavedPreviewFile(filePath: string): Promise<void> {
     return
   }
 
-  const { _id: _oldId, ...oldFields } = file.originalDoc
+  const { _id: _oldId, ...oldFields } = previewFile.originalDoc
   const { _id: _newId, ...newFields } = edited
   if (
     EJSON.stringify(oldFields, undefined, 0, { relaxed: true }) ===
@@ -289,17 +204,17 @@ async function applySavedPreviewFile(filePath: string): Promise<void> {
   }
 
   try {
-    await replaceDocument(file.collectionName, file.originalDoc._id, newFields)
-    previewFiles.set(filePath, { ...file, originalDoc: edited })
-    file.dispatch({
+    await replaceDocument(previewFile.collectionName, previewFile.originalDoc._id, newFields)
+    previewFile = { ...previewFile, originalDoc: edited }
+    previewFile.dispatch({
       type: "SHOW_MESSAGE",
       message: "Updated document from tmux split",
       kind: "success",
     })
-    file.dispatch({ type: "FREEZE_SELECTION" })
-    file.dispatch({ type: "RELOAD_DOCUMENTS" })
+    previewFile.dispatch({ type: "FREEZE_SELECTION" })
+    previewFile.dispatch({ type: "RELOAD_DOCUMENTS" })
   } catch (err) {
-    file.dispatch({
+    previewFile.dispatch({
       type: "SHOW_MESSAGE",
       message: `Document update failed: ${(err as Error).message}`,
       kind: "error",
@@ -313,8 +228,4 @@ function parseDocument(content: string): Document {
     throw new Error("Expected a single JSON document object")
   }
   return EJSON.deserialize(raw as Parameters<typeof EJSON.deserialize>[0]) as Document
-}
-
-function vimString(value: string): string {
-  return value.replace(/'/g, "''")
 }
