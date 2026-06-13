@@ -299,6 +299,10 @@ export function App({
   // `!activeTabId` gate that used to keep the welcome screen visible
   // between DB pick and first tab open — that's now the auto-land state.
   const showWelcome = !state.error && !state.collectionsLoading && !state.dbName
+  const sidebarWidth = state.sidebarOpen && state.dbName && !showWelcome ? SIDEBAR_WIDTH : 0
+  const mainContentWidth = Math.max(0, terminalWidth - sidebarWidth)
+  const docListViewportWidth =
+    state.previewPosition === "right" ? Math.floor(mainContentWidth / 2) : mainContentWidth
 
   const handleSelectDatabase = useCallback((name: string) => {
     dispatch({ type: "SELECT_DATABASE", dbName: name })
@@ -523,14 +527,10 @@ export function App({
                   selectionMode={state.selectionMode}
                   selectedRows={state.selectedRows}
                   loading={state.documentsLoading}
+                  focused={!state.sidebarFocused}
                   scrollRef={docListScrollRef}
                   themeVersion={themeVersion}
-                  viewportWidth={
-                    (state.previewPosition === "right"
-                      ? Math.floor(terminalWidth / 2)
-                      : terminalWidth) -
-                    (state.sidebarOpen && state.dbName && !showWelcome ? SIDEBAR_WIDTH : 0)
-                  }
+                  viewportWidth={docListViewportWidth}
                   marksForRow={marksForRow}
                 />
               </box>

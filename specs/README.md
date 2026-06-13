@@ -90,3 +90,4 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 055 | [Sidebar-First Landing](./done/055-sidebar-first-landing.md) | Drop welcome step 2; auto-focus sidebar + auto-peek first collection |
 | 056 | [Column Navigation Shortcuts](./done/056-column-navigation-shortcuts.md) | `0`/`$` column jumps and `Ctrl+H` sidebar focus |
 | 057 | [Navigation QoL Shortcuts](./done/057-navigation-qol-shortcuts.md) | `g`/`G` row jumps, `z`, `*`, `Ctrl+L`, and `?` shortcut help |
+| 058 | [Table Focus and Column Cursor Clarity](./done/058-table-focus-column-cursor-clarity.md) | Focus-aware table cursor and clearer selected-column rendering |

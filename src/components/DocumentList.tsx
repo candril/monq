@@ -40,6 +40,8 @@ interface DocumentListProps {
   selectionMode: SelectionMode
   selectedRows: Set<number>
   loading?: boolean
+  /** Whether keyboard focus is in the document table rather than the sidebar. */
+  focused?: boolean
   scrollRef?: React.RefObject<ScrollBoxRenderable>
   themeVersion?: number
   /** Effective viewport width in columns. Defaults to full terminal width. */
@@ -257,6 +259,7 @@ export function DocumentList({
   selectionMode,
   selectedRows,
   loading,
+  focused = true,
   scrollRef: externalScrollRef,
   viewportWidth: viewportWidthProp,
   marksForRow,
@@ -347,6 +350,7 @@ export function DocumentList({
         sortField={sortField}
         sortDirection={sortDirection}
         showMarkGutter={showMarkGutter}
+        focused={focused}
       />
       <scrollbox
         ref={scrollRef}
@@ -370,6 +374,7 @@ export function DocumentList({
               colWidthArray={colWidthArray}
               selected={i === selectedIndex}
               selectedColumnIndex={selectedColumnIndex}
+              focused={focused}
               scrollLeft={scrollLeft}
               viewportWidth={viewportWidth}
               rowSelected={selectedRows.has(i)}
@@ -393,6 +398,7 @@ function HeaderRow({
   sortField,
   sortDirection,
   showMarkGutter,
+  focused,
 }: {
   columns: DetectedColumn[]
   colWidthArray: number[]
@@ -402,6 +408,7 @@ function HeaderRow({
   sortField: string | null
   sortDirection: 1 | -1
   showMarkGutter: boolean
+  focused: boolean
 }) {
   const values = columns.map((col, i) => {
     const isSelectedCol = i === selectedColumnIndex
@@ -417,7 +424,9 @@ function HeaderRow({
       label = truncate(col.field, colW - sortIndicator.length) + sortIndicator
     }
     const color = isSelectedCol
-      ? theme.primary
+      ? focused
+        ? theme.primary
+        : theme.textMuted
       : isSorted
         ? theme.warning
         : col.displayMode === "minimized"
@@ -449,6 +458,7 @@ function DocumentRow({
   colWidthArray,
   selected,
   selectedColumnIndex,
+  focused,
   scrollLeft,
   viewportWidth,
   rowSelected,
@@ -461,6 +471,7 @@ function DocumentRow({
   colWidthArray: number[]
   selected: boolean
   selectedColumnIndex: number
+  focused: boolean
   scrollLeft: number
   viewportWidth: number
   rowSelected: boolean
@@ -474,7 +485,14 @@ function DocumentRow({
     const text = formatValue(val, w)
     const type = detectValueType(val)
     const isActiveCell = selected && i === selectedColumnIndex
-    const color = isActiveCell ? theme.primary : valueColor(type)
+    const isSelectedColumn = i === selectedColumnIndex
+    const color = isActiveCell
+      ? focused
+        ? theme.secondary
+        : theme.textMuted
+      : isSelectedColumn && focused
+        ? theme.primary
+        : valueColor(type)
     return { text, color }
   })
 
@@ -484,7 +502,7 @@ function DocumentRow({
   const bg =
     rowSelected && selectionMode !== "none"
       ? theme.selection
-      : selected
+      : selected && focused
         ? theme.headerBg
         : undefined
 
