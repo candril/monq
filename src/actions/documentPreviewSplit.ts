@@ -37,7 +37,7 @@ let session: PreviewSession | null = null
 let previewFile: PreviewFile | null = null
 let watcher: FSWatcher | null = null
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
-let suppressNextWatchEvent = false
+let suppressWatchEventsUntil = 0
 
 export async function openDocumentPreviewSplit(
   document: Document,
@@ -101,7 +101,7 @@ async function writePreviewFile(
 ): Promise<void> {
   await mkdir(previewDir(), { recursive: true })
   previewFile = { ...file, originalDoc: document }
-  suppressNextWatchEvent = true
+  suppressWatchEventsUntil = Date.now() + 500
   await Bun.write(filePath, `${serializeDocumentRelaxed(document)}\n`)
 }
 
@@ -156,8 +156,7 @@ function startWatching(filePath: string): void {
   watcher = null
   try {
     watcher = watch(filePath, () => {
-      if (suppressNextWatchEvent) {
-        suppressNextWatchEvent = false
+      if (Date.now() <= suppressWatchEventsUntil) {
         return
       }
       if (debounceTimer) {
