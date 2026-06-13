@@ -1,7 +1,7 @@
 /** External document editor in a tmux split that follows the row cursor. */
 
 import { watch, type FSWatcher } from "fs"
-import { mkdir, readdir, rm, stat } from "fs/promises"
+import { access, mkdir, readdir, rm, stat } from "fs/promises"
 import { spawn, spawnSync } from "child_process"
 import { join } from "path"
 import { tmpdir } from "os"
@@ -120,9 +120,21 @@ async function writePreviewFile(
   file: PreviewFileContext,
 ): Promise<void> {
   await mkdir(previewDir(), { recursive: true })
+  const isNewFile = await isMissing(filePath)
   previewFiles.set(filePath, { ...file, originalDoc: document })
   await Bun.write(filePath, `${serializeDocumentRelaxed(document)}\n`)
-  await prunePreviewFiles(filePath)
+  if (isNewFile) {
+    await prunePreviewFiles(filePath)
+  }
+}
+
+async function isMissing(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath)
+    return false
+  } catch {
+    return true
+  }
 }
 
 function openDetachedTmuxPane(filePath: string): string | null {
