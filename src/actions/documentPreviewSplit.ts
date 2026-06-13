@@ -253,6 +253,11 @@ async function refreshPreviewFileFromDatabase(filePath: string): Promise<void> {
       collectionName: previewFile.collectionName,
       dispatch: previewFile.dispatch,
     })
+    previewFile.dispatch({
+      type: "SHOW_MESSAGE",
+      message: "Reloaded document from MongoDB",
+      kind: "success",
+    })
     reloadPaneIfClean()
   } catch (err) {
     previewFile.dispatch({
