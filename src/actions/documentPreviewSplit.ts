@@ -13,7 +13,7 @@ import type { AppAction } from "../state"
 import { copyToClipboard } from "../utils/clipboard"
 import { serializeDocumentRelaxed } from "../utils/document"
 import { stripComments, stripErrorComment } from "../utils/editor"
-import { replaceDocument } from "../providers/mongodb"
+import { fetchDocuments, replaceDocument } from "../providers/mongodb"
 
 type PreviewOpenResult = "tmux" | "clipboard" | "none"
 
@@ -37,6 +37,7 @@ let session: PreviewSession | null = null
 let previewFile: PreviewFile | null = null
 let watcher: FSWatcher | null = null
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
+let suppressNextWatchEvent = false
 
 export async function openDocumentPreviewSplit(
   document: Document,
@@ -100,6 +101,7 @@ async function writePreviewFile(
 ): Promise<void> {
   await mkdir(previewDir(), { recursive: true })
   previewFile = { ...file, originalDoc: document }
+  suppressNextWatchEvent = true
   await Bun.write(filePath, `${serializeDocumentRelaxed(document)}\n`)
 }
 
@@ -154,6 +156,10 @@ function startWatching(filePath: string): void {
   watcher = null
   try {
     watcher = watch(filePath, () => {
+      if (suppressNextWatchEvent) {
+        suppressNextWatchEvent = false
+        return
+      }
       if (debounceTimer) {
         clearTimeout(debounceTimer)
       }
@@ -200,6 +206,7 @@ async function applySavedPreviewFile(filePath: string): Promise<void> {
     EJSON.stringify(oldFields, undefined, 0, { relaxed: true }) ===
     EJSON.stringify(newFields, undefined, 0, { relaxed: true })
   ) {
+    await refreshPreviewFileFromDatabase(filePath)
     return
   }
 
@@ -220,6 +227,47 @@ async function applySavedPreviewFile(filePath: string): Promise<void> {
       kind: "error",
     })
   }
+}
+
+async function refreshPreviewFileFromDatabase(filePath: string): Promise<void> {
+  if (!previewFile) {
+    return
+  }
+
+  try {
+    const { documents } = await fetchDocuments(
+      previewFile.collectionName,
+      { _id: previewFile.originalDoc._id },
+      { limit: 1 },
+    )
+    const fresh = documents[0]
+    if (!fresh) {
+      previewFile.dispatch({
+        type: "SHOW_MESSAGE",
+        message: "Document no longer exists in MongoDB",
+        kind: "error",
+      })
+      return
+    }
+    await writePreviewFile(filePath, fresh, {
+      collectionName: previewFile.collectionName,
+      dispatch: previewFile.dispatch,
+    })
+    reloadPaneIfClean()
+  } catch (err) {
+    previewFile.dispatch({
+      type: "SHOW_MESSAGE",
+      message: `Document refresh failed: ${(err as Error).message}`,
+      kind: "error",
+    })
+  }
+}
+
+function reloadPaneIfClean(): void {
+  if (!session) {
+    return
+  }
+  reloadPane(session)
 }
 
 function parseDocument(content: string): Document {
