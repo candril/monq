@@ -146,6 +146,12 @@ export function documentsReducer(state: AppState, action: AppAction): AppState |
       return { ...state, selectedColumnIndex: newColIndex }
     }
 
+    case "SELECT_COLUMN": {
+      const visibleCols = state.columns.filter((c) => c.visible)
+      const newColIndex = Math.max(0, Math.min(visibleCols.length - 1, action.index))
+      return { ...state, selectedColumnIndex: newColIndex }
+    }
+
     case "SET_MARKS":
       return { ...state, marks: action.marks }
 

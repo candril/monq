@@ -88,3 +88,4 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 053 | [Collection Sidebar](./done/053-collection-sidebar.md) | Vertical collapsible collection navigation pane (Ctrl+B) |
 | 054 | [Ephemeral Peek Tabs](./done/054-ephemeral-peek-tabs.md) | `{`/`}` to peek through collections in a single ephemeral tab |
 | 055 | [Sidebar-First Landing](./done/055-sidebar-first-landing.md) | Drop welcome step 2; auto-focus sidebar + auto-peek first collection |
+| 056 | [Column Navigation Shortcuts](./done/056-column-navigation-shortcuts.md) | `0`/`$` column jumps and `Ctrl+H` sidebar focus |

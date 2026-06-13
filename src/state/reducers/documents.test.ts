@@ -134,3 +134,29 @@ describe("MOVE_COLUMN", () => {
     expect(result.selectedColumnIndex).toBe(1) // only 2 visible
   })
 })
+
+describe("SELECT_COLUMN", () => {
+  const cols = [
+    { field: "a", frequency: 1, visible: true, displayMode: "normal" as const },
+    { field: "b", frequency: 1, visible: false, displayMode: "normal" as const },
+    { field: "c", frequency: 1, visible: true, displayMode: "normal" as const },
+  ]
+
+  test("selects the requested visible column index", () => {
+    const s = state({ columns: cols, selectedColumnIndex: 0 })
+    const result = documentsReducer(s, { type: "SELECT_COLUMN", index: 1 })!
+    expect(result.selectedColumnIndex).toBe(1)
+  })
+
+  test("clamps below the first column", () => {
+    const s = state({ columns: cols, selectedColumnIndex: 1 })
+    const result = documentsReducer(s, { type: "SELECT_COLUMN", index: -1 })!
+    expect(result.selectedColumnIndex).toBe(0)
+  })
+
+  test("clamps above the last visible column", () => {
+    const s = state({ columns: cols, selectedColumnIndex: 0 })
+    const result = documentsReducer(s, { type: "SELECT_COLUMN", index: 10 })!
+    expect(result.selectedColumnIndex).toBe(1)
+  })
+})

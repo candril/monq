@@ -398,6 +398,9 @@ export function useKeyboardNav({
         closeTabsForSidebarCursor(state, dispatch)
         return
       }
+      if (matches(key, keymap["sidebar.focus"])) {
+        return
+      }
       // Pass-throughs: global shortcuts that don't conflict with sidebar
       // navigation. The sidebar is blurred for tab-switch actions because the
       // user clearly wants to land in that tab; palette opens overlay on top
@@ -446,6 +449,11 @@ export function useKeyboardNav({
     // active tab but is past the welcome screen).
     if (matches(key, keymap["sidebar.toggle"]) && state.dbName) {
       dispatch({ type: "TOGGLE_SIDEBAR" })
+      return
+    }
+
+    if (matches(key, keymap["sidebar.focus"]) && state.dbName) {
+      dispatch({ type: state.sidebarOpen ? "FOCUS_SIDEBAR" : "TOGGLE_SIDEBAR" })
       return
     }
 
@@ -536,6 +544,16 @@ export function useKeyboardNav({
         }
         return
       }
+    }
+
+    if (matches(key, keymap["nav.first_column"])) {
+      dispatch({ type: "SELECT_COLUMN", index: 0 })
+      return
+    }
+
+    if (matches(key, keymap["nav.last_column"])) {
+      dispatch({ type: "SELECT_COLUMN", index: state.columns.filter((c) => c.visible).length - 1 })
+      return
     }
 
     // `h` (nav.left) on the leftmost column focuses the sidebar — single

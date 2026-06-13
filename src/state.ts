@@ -81,6 +81,7 @@ export type AppAction =
   | { type: "MOVE_DOCUMENT"; delta: number }
   | { type: "SET_COLUMNS"; columns: DetectedColumn[] }
   | { type: "MOVE_COLUMN"; delta: number }
+  | { type: "SELECT_COLUMN"; index: number }
   | { type: "CYCLE_COLUMN_MODE" }
   | { type: "SET_SCHEMA"; schemaMap: import("./query/schema").SchemaMap }
   | { type: "CYCLE_SORT"; field: string }
