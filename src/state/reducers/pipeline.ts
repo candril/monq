@@ -2,10 +2,10 @@
 
 import type { AppState } from "../../types"
 import type { AppAction } from "../../state"
-import { EJSON } from "bson"
 import { parseSimpleQueryFull } from "../../query/parser"
 import { buildMarkIdMap } from "../../utils/query"
 import { stageOf } from "../../query/pipeline"
+import { serializePipelineSource } from "../../utils/document"
 
 export function pipelineReducer(state: AppState, action: AppAction): AppState | null {
   switch (action.type) {
@@ -127,7 +127,7 @@ export function pipelineReducer(state: AppState, action: AppAction): AppState | 
         return { $match: { ...existingMatch, [action.field]: action.value } }
       })
 
-      const newSource = EJSON.stringify({ pipeline: updatedPipeline }, undefined, 2)
+      const newSource = serializePipelineSource(updatedPipeline)
 
       return {
         ...state,

@@ -8,6 +8,7 @@ import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import { projectionToSimple, parseSimpleQueryFull } from "../query/parser"
 import { classifyPipeline, stageOf } from "../query/pipeline"
+import { serializePipelineSource } from "../utils/document"
 
 /** Toggle column hidden/shown for the currently selected column. */
 export function hideColumn(state: AppState, dispatch: Dispatch<AppAction>): void {
@@ -50,7 +51,7 @@ function hideColumnPipeline(state: AppState, dispatch: Dispatch<AppAction>, fiel
     newPipeline = [...state.pipeline, { $project: existingProj }]
   }
 
-  const newSource = JSON.stringify({ pipeline: newPipeline }, null, 2)
+  const newSource = serializePipelineSource(newPipeline)
   dispatch({
     type: "SET_PIPELINE",
     pipeline: newPipeline,

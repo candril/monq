@@ -3,6 +3,7 @@
 import type { AppState } from "../../types"
 import type { AppAction } from "../../state"
 import { stageOf } from "../../query/pipeline"
+import { serializePipelineSource } from "../../utils/document"
 
 export function documentsReducer(state: AppState, action: AppAction): AppState | null {
   switch (action.type) {
@@ -116,7 +117,7 @@ export function documentsReducer(state: AppState, action: AppAction): AppState |
             newPipeline.splice(matchIdx !== -1 ? matchIdx + 1 : 0, 0, newSortStage)
           }
         }
-        const newSource = JSON.stringify({ pipeline: newPipeline }, null, 2)
+        const newSource = serializePipelineSource(newPipeline)
         return {
           ...state,
           pipeline: newPipeline,

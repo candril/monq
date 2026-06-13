@@ -7,9 +7,11 @@ import { tmpdir } from "os"
 import { join } from "path"
 import { mkdir } from "fs/promises"
 import JSON5 from "json5"
+import { EJSON } from "bson"
 import type { Document, Filter } from "mongodb"
 import { updateManyDocuments, countDocuments, deleteManyDocuments } from "../providers/mongodb"
 import { getEditor, stripComments, stripErrorComment, openEditorWithError } from "../utils/editor"
+import { serializeDocumentRelaxed } from "../utils/document"
 import type { SchemaMap } from "../query/schema"
 
 // ── Temp dir ─────────────────────────────────────────────────────────────────
@@ -262,10 +264,12 @@ function isUpdateEmpty(update: Document): boolean {
 
 function parseTemplate(json: string): ParsedQueryUpdate {
   const clean = stripComments(json)
-  const raw = JSON5.parse(clean) as Record<string, unknown>
-  if (typeof raw !== "object" || raw === null) {
+  const parsed = JSON5.parse(clean)
+  if (typeof parsed !== "object" || parsed === null) {
     throw new Error("Expected a JSON object")
   }
+  // Restore BSON types from relaxed EJSON (e.g. { "$oid": "..." } → ObjectId)
+  const raw = EJSON.deserialize(parsed) as Record<string, unknown>
   const filter = (raw.filter ?? {}) as Filter<Document>
   const update = raw.update as Document
   if (!update || typeof update !== "object") {
@@ -319,7 +323,7 @@ export async function openEditorForQueryUpdate(
     update: { $set: {} },
     upsert: false,
   }
-  const body = JSON.stringify(templateObj, null, 2)
+  const body = serializeDocumentRelaxed(templateObj)
   const header = buildHeader(collectionName, dbName)
 
   await Bun.write(tmpFile, header + body)
@@ -459,7 +463,7 @@ export async function openEditorForQueryDelete(
     $schema: schemaFile,
     filter: activeFilter,
   }
-  const body = JSON.stringify(templateObj, null, 2)
+  const body = serializeDocumentRelaxed(templateObj)
   const header = buildDeleteHeader(collectionName, dbName)
 
   await Bun.write(tmpFile, header + body)
@@ -490,10 +494,12 @@ export async function openEditorForQueryDelete(
       return { cancelled: true }
     }
     try {
-      const raw = JSON5.parse(clean) as Record<string, unknown>
-      if (typeof raw !== "object" || raw === null) {
+      const parsed = JSON5.parse(clean)
+      if (typeof parsed !== "object" || parsed === null) {
         throw new Error("Expected a JSON object")
       }
+      // Restore BSON types from relaxed EJSON (e.g. { "$oid": "..." } → ObjectId)
+      const raw = EJSON.deserialize(parsed) as Record<string, unknown>
       filter = (raw.filter ?? {}) as Filter<Document>
       break
     } catch (err) {

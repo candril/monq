@@ -16,6 +16,11 @@ export function serializeDocumentRelaxed(doc: Document): string {
   return EJSON.stringify(doc, undefined, 2, { relaxed: true })
 }
 
+/** Serialize a pipeline to relaxed-EJSON source (matches the Ctrl+E editor format) */
+export function serializePipelineSource(pipeline: Document[]): string {
+  return EJSON.stringify({ pipeline }, undefined, 2, { relaxed: true })
+}
+
 /** Deserialize EJSON string back to a document */
 export function deserializeDocument(json: string): Document {
   return EJSON.deserialize(JSON.parse(json)) as Document
