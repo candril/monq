@@ -72,8 +72,8 @@ These operations are also available from the command palette, making them access
 
 | Key | Action |
 |-----|--------|
-| `p` / `P` | Toggle / cycle preview pane |
-| `Ctrl+Shift+E` | Open document preview in tmux split |
+| `p` | Toggle inline preview pane |
+| `Shift+P` | Open document preview in tmux split |
 | `e` | Edit document in `$EDITOR` |
 | `i` | Insert new document |
 | `Shift+I` | Manage indexes (edit all in `$EDITOR`) |

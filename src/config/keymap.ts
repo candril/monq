@@ -34,11 +34,11 @@ const DEFAULT_BINDINGS: Record<ActionName, string[]> = {
   "doc.delete": ["shift+d"],
   "doc.bulk_query_update": [], // no default binding — use command palette
   "doc.bulk_query_delete": [], // no default binding — use command palette
-  "doc.open_preview_tmux": ["ctrl+shift+e"],
+  "doc.open_preview_tmux": ["shift+p"],
   "doc.yank_cell": ["y"],
   "doc.yank_document": ["shift+y"],
   "preview.toggle": ["p"],
-  "preview.cycle_position": ["shift+p"],
+  "preview.cycle_position": [],
   "query.open": ["/"],
   "query.clear": ["backspace"],
   "query.toggle_mode": ["tab"],

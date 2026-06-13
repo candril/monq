@@ -121,7 +121,7 @@ Every remappable action and its default key combo(s):
 | `doc.yank_cell` | `y` | Copy current cell to clipboard |
 | `doc.yank_document` | `Y` (shift+y) | Copy whole document to clipboard |
 | `preview.toggle` | `p` | Toggle preview panel |
-| `preview.cycle_position` | `P` (shift+p) | Cycle preview position (right / bottom / off) |
+| `preview.cycle_position` | _(none)_ | Cycle preview position (right / bottom / off) |
 | `query.open` | `/` | Open query bar |
 | `query.clear` | `backspace` | Clear current query / pipeline |
 | `query.toggle_mode` | `tab` | Toggle simple ↔ BSON mode |

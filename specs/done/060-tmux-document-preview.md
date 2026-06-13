@@ -24,4 +24,4 @@ Open the currently selected document in an external editor inside a tmux split p
 - Use the existing relaxed EJSON serialization used by the in-app preview.
 - Store the preview file under the OS temporary directory and rewrite it on selection changes.
 - Capture the tmux pane id with `split-window -d -P -F '#{pane_id}'` so updates can target the preview pane without focusing it.
-- Default binding: `Ctrl+Shift+e` via `doc.open_preview_tmux`.
+- Default binding: `Shift+P` via `doc.open_preview_tmux`.

@@ -85,13 +85,13 @@ function buildEditorArgs(filePath: string): string[] {
   const editorArgs = editor.split(/\s+/).filter(Boolean)
   const editorName = editorArgs[0]?.split("/").at(-1) ?? ""
   const readonlyArgs = /^(?:n?vim|view)$/.test(editorName)
-    ? ["-R", "+setlocal nomodifiable", "+normal! gg"]
+    ? ["-R", "+setlocal autoread readonly nomodifiable", "+normal! gg"]
     : []
 
   return [...editorArgs, ...readonlyArgs, filePath]
 }
 
-function reloadPane({ paneId, filePath }: PreviewSession): void {
+function reloadPane({ paneId }: PreviewSession): void {
   const result = spawnSync("tmux", ["display-message", "-p", "-t", paneId, "#{pane_id}"], {
     stdio: "ignore",
   })
@@ -100,21 +100,8 @@ function reloadPane({ paneId, filePath }: PreviewSession): void {
     return
   }
 
-  spawn(
-    "tmux",
-    [
-      "send-keys",
-      "-t",
-      paneId,
-      "Escape",
-      `:execute 'edit! ' . fnameescape('${vimString(filePath)}')`,
-      "Enter",
-      "gg",
-    ],
-    { detached: true, stdio: "ignore" },
-  ).unref()
-}
-
-function vimString(value: string): string {
-  return value.replace(/'/g, "''")
+  spawn("tmux", ["send-keys", "-t", paneId, "Escape", ":checktime", "Enter", "gg"], {
+    detached: true,
+    stdio: "ignore",
+  }).unref()
 }

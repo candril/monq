@@ -51,11 +51,11 @@ All remappable actions:
 | `doc.delete` | `D` | Delete selected document(s) |
 | `doc.bulk_query_update` | _(none)_ | Bulk update via MongoDB query (`updateMany`) |
 | `doc.bulk_query_delete` | _(none)_ | Bulk delete via MongoDB query (`deleteMany`) |
-| `doc.open_preview_tmux` | `ctrl+shift+e` | Open document preview in tmux split |
+| `doc.open_preview_tmux` | `shift+p` | Open document preview in tmux split |
 | `doc.yank_cell` | `y` | Copy cell to clipboard |
 | `doc.yank_document` | `Y` | Copy full document JSON to clipboard |
 | `preview.toggle` | `p` | Toggle preview panel |
-| `preview.cycle_position` | `P` | Cycle preview position |
+| `preview.cycle_position` | _(none)_ | Cycle preview position |
 | `query.open` | `/` | Open query bar |
 | `query.clear` | `backspace` | Clear current query / pipeline |
 | `query.toggle_mode` | `tab` | Toggle simple ↔ BSON mode |
