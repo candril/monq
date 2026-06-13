@@ -51,7 +51,7 @@ All remappable actions:
 | `doc.delete` | `D` | Delete selected document(s) |
 | `doc.bulk_query_update` | _(none)_ | Bulk update via MongoDB query (`updateMany`) |
 | `doc.bulk_query_delete` | _(none)_ | Bulk delete via MongoDB query (`deleteMany`) |
-| `doc.open_preview_tmux` | `shift+p` | Open document preview in tmux split |
+| `doc.open_preview_tmux` | `shift+p` | Open document editor in tmux split |
 | `doc.yank_cell` | `y` | Copy cell to clipboard |
 | `doc.yank_document` | `Y` | Copy full document JSON to clipboard |
 | `preview.toggle` | `p` | Toggle preview panel |

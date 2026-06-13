@@ -52,15 +52,19 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
       if (!activeTab || !document) {
         return true
       }
-      openDocumentPreviewSplit(document, {
-        dbName: state.dbName,
-        collectionName: activeTab.collectionName,
-      })
+      openDocumentPreviewSplit(
+        document,
+        {
+          dbName: state.dbName,
+          collectionName: activeTab.collectionName,
+        },
+        dispatch,
+      )
         .then((result) => {
           if (result === "tmux") {
             dispatch({
               type: "SHOW_MESSAGE",
-              message: "Opened document preview in tmux",
+              message: "Opened document editor in tmux",
               kind: "info",
             })
           } else if (result === "clipboard") {
@@ -72,7 +76,7 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
           } else {
             dispatch({
               type: "SHOW_MESSAGE",
-              message: "Could not open tmux preview",
+              message: "Could not open tmux document editor",
               kind: "error",
             })
           }

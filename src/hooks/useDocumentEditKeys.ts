@@ -51,7 +51,7 @@ export function useDocumentEditKeys({
       return false
     }
 
-    // doc.open_preview_tmux: external read-only document preview
+    // doc.open_preview_tmux: external document editor in tmux split
     if (matches(key, keymap["doc.open_preview_tmux"])) {
       const activeTab = state.tabs.find((t) => t.id === state.activeTabId)
       const document = state.documents[state.selectedIndex]
@@ -59,15 +59,19 @@ export function useDocumentEditKeys({
         return true
       }
 
-      void openDocumentPreviewSplit(document, {
-        dbName: state.dbName,
-        collectionName: activeTab.collectionName,
-      })
+      void openDocumentPreviewSplit(
+        document,
+        {
+          dbName: state.dbName,
+          collectionName: activeTab.collectionName,
+        },
+        dispatch,
+      )
         .then((result) => {
           if (result === "tmux") {
             dispatch({
               type: "SHOW_MESSAGE",
-              message: "Opened document preview in tmux",
+              message: "Opened document editor in tmux",
               kind: "info",
             })
           } else if (result === "clipboard") {
@@ -79,7 +83,7 @@ export function useDocumentEditKeys({
           } else {
             dispatch({
               type: "SHOW_MESSAGE",
-              message: "Could not open tmux preview",
+              message: "Could not open tmux document editor",
               kind: "error",
             })
           }

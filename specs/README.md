@@ -92,4 +92,4 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 057 | [Navigation QoL Shortcuts](./done/057-navigation-qol-shortcuts.md) | `g`/`G` row jumps, `z`, `*`, `Ctrl+L`, and `?` shortcut help |
 | 058 | [Table Focus and Column Cursor Clarity](./done/058-table-focus-column-cursor-clarity.md) | Focus-aware table cursor and clearer selected-column rendering |
 | 059 | [Shift-JK Collection Switch](./done/059-ctrl-jk-collection-switch.md) | `J/K` switch the selected collection from the sidebar cursor |
-| 060 | [Tmux Document Preview](./done/060-tmux-document-preview.md) | External tmux/nvim document preview that follows row navigation |
+| 060 | [Tmux Document Preview](./done/060-tmux-document-preview.md) | External tmux/nvim document editor that follows row navigation |

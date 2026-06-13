@@ -147,7 +147,7 @@ export function buildCommands(state: AppState, keymap: Keymap): Command[] {
     if (state.documents.length > 0) {
       commands.push({
         id: "view:open-preview-tmux",
-        label: "Open Document Preview in Tmux Split",
+        label: "Open Document Editor in Tmux Split",
         category: "view",
         shortcut: hintFor(keymap, "doc.open_preview_tmux"),
       })

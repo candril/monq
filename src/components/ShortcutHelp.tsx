@@ -56,7 +56,7 @@ const GROUPS: Array<[title: string, items: ShortcutItem[]]> = [
       ["query.open", "query"],
       ["pipeline.open", "pipeline"],
       ["preview.toggle", "preview"],
-      ["doc.open_preview_tmux", "tmux preview"],
+      ["doc.open_preview_tmux", "tmux editor"],
       ["palette.open", "commands"],
       ["help.shortcuts", "shortcuts"],
       ["app.quit", "quit"],
