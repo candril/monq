@@ -202,10 +202,7 @@ async function applySavedPreviewFile(filePath: string): Promise<void> {
 
   const { _id: _oldId, ...oldFields } = previewFile.originalDoc
   const { _id: _newId, ...newFields } = edited
-  if (
-    EJSON.stringify(oldFields, undefined, 0, { relaxed: true }) ===
-    EJSON.stringify(newFields, undefined, 0, { relaxed: true })
-  ) {
+  if (canonicalEjson(oldFields) === canonicalEjson(newFields)) {
     await refreshPreviewFileFromDatabase(filePath)
     return
   }
@@ -281,4 +278,23 @@ function parseDocument(content: string): Document {
     throw new Error("Expected a single JSON document object")
   }
   return EJSON.deserialize(raw as Parameters<typeof EJSON.deserialize>[0]) as Document
+}
+
+function canonicalEjson(value: unknown): string {
+  return JSON.stringify(sortKeysDeep(EJSON.serialize(value, { relaxed: false })))
+}
+
+function sortKeysDeep(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sortKeysDeep)
+  }
+  if (!value || typeof value !== "object") {
+    return value
+  }
+
+  const record = value as Record<string, unknown>
+  const sortedEntries = Object.keys(record)
+    .sort()
+    .map((key) => [key, sortKeysDeep(record[key])] as const)
+  return Object.fromEntries(sortedEntries)
 }
