@@ -111,8 +111,6 @@ export type ActionName =
   | "sidebar.blur"
   | "collection.select_next"
   | "collection.select_prev"
-  | "collection.peek_next"
-  | "collection.peek_prev"
   | "help.shortcuts"
   | "app.quit"
 

@@ -164,10 +164,6 @@ export function useKeyboardNav({
     ["doc.yank_cell", () => yankCell(state, dispatch)],
     ["doc.filter_value", () => filterBySelectedValue(state, dispatch)],
     ["doc.hide_column", () => hideColumn(state, dispatch)],
-
-    // Ephemeral peek (spec 054) — `}` / `{` browse collections in place
-    ["collection.peek_next", () => dispatch({ type: "PEEK_COLLECTION", delta: 1 })],
-    ["collection.peek_prev", () => dispatch({ type: "PEEK_COLLECTION", delta: -1 })],
   ]
 
   /** Scroll half a page up or down, or scroll preview when preview is focused. */
