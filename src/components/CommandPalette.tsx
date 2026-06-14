@@ -190,6 +190,12 @@ export function CommandPalette({
       (key.ctrl && key.name === "j")
     ) {
       setSelectedIndex((i) => Math.min(commandCount - 1, i + 1))
+    } else if (key.ctrl && key.name === "u") {
+      const page = Math.max(1, Math.floor(scrollboxHeight / 2))
+      setSelectedIndex((i) => Math.max(0, i - page))
+    } else if (key.ctrl && key.name === "d") {
+      const page = Math.max(1, Math.floor(scrollboxHeight / 2))
+      setSelectedIndex((i) => Math.min(commandCount - 1, i + page))
     } else if (key.ctrl && key.name === "w") {
       setQuery((q) => q.replace(/\S+\s*$/, ""))
       setSelectedIndex(0)
