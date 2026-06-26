@@ -11,7 +11,7 @@ import { EJSON } from "bson"
 import type { Document, Filter } from "mongodb"
 import { updateManyDocuments, countDocuments, deleteManyDocuments } from "../providers/mongodb"
 import { getEditor, stripComments, stripErrorComment, openEditorWithError } from "../utils/editor"
-import { serializeDocumentRelaxed } from "../utils/document"
+import { serializeForEdit } from "../utils/document"
 import type { SchemaMap } from "../query/schema"
 
 // ── Temp dir ─────────────────────────────────────────────────────────────────
@@ -323,7 +323,7 @@ export async function openEditorForQueryUpdate(
     update: { $set: {} },
     upsert: false,
   }
-  const body = serializeDocumentRelaxed(templateObj)
+  const body = serializeForEdit(templateObj)
   const header = buildHeader(collectionName, dbName)
 
   await Bun.write(tmpFile, header + body)
@@ -463,7 +463,7 @@ export async function openEditorForQueryDelete(
     $schema: schemaFile,
     filter: activeFilter,
   }
-  const body = serializeDocumentRelaxed(templateObj)
+  const body = serializeForEdit(templateObj)
   const header = buildDeleteHeader(collectionName, dbName)
 
   await Bun.write(tmpFile, header + body)

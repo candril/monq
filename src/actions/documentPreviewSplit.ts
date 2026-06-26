@@ -11,9 +11,10 @@ import type { Document } from "mongodb"
 import type { Dispatch } from "react"
 import type { AppAction } from "../state"
 import { copyToClipboard } from "../utils/clipboard"
-import { serializeDocumentRelaxed } from "../utils/document"
+import { serializeForEdit } from "../utils/document"
+import { reconcileTypes } from "../utils/bsonReconcile"
 import { stripComments, stripErrorComment } from "../utils/editor"
-import { fetchDocuments, replaceDocument } from "../providers/mongodb"
+import { fetchDocuments, fetchRawDocuments, replaceDocument } from "../providers/mongodb"
 
 type PreviewOpenResult = "tmux" | "clipboard" | "none"
 
@@ -101,7 +102,7 @@ async function writePreviewFile(
 ): Promise<void> {
   await mkdir(previewDir(), { recursive: true })
   previewFile = { ...file, originalDoc: document }
-  const content = `${serializeDocumentRelaxed(document)}\n`
+  const content = `${serializeForEdit(document)}\n`
   ignoredSnapshot = content
   await Bun.write(filePath, content)
 }
@@ -217,15 +218,31 @@ async function applySavedPreviewFile(filePath: string): Promise<void> {
     return
   }
 
-  const { _id: _oldId, ...oldFields } = previewFile.originalDoc
-  const { _id: _newId, ...newFields } = edited
+  // Re-read the original with true BSON types so numeric fields (Long/Int32/Double)
+  // survive the relaxed-EJSON edit round-trip instead of collapsing to Int32.
+  let rawOriginal: Document | undefined
+  try {
+    const [raw] = await fetchRawDocuments(
+      previewFile.collectionName,
+      { _id: previewFile.originalDoc._id },
+      { limit: 1 },
+    )
+    rawOriginal = raw
+  } catch {
+    rawOriginal = undefined
+  }
+  const original = rawOriginal ?? previewFile.originalDoc
+
+  const { _id: _oldId, ...oldFields } = original
+  const { _id: _newId, ...editedFields } = edited
+  const newFields = reconcileTypes(editedFields, oldFields) as Document
   if (canonicalEjson(oldFields) === canonicalEjson(newFields)) {
     await refreshPreviewFileFromDatabase(filePath)
     return
   }
 
   try {
-    await replaceDocument(previewFile.collectionName, previewFile.originalDoc._id, newFields)
+    await replaceDocument(previewFile.collectionName, original._id, newFields)
     previewFile = { ...previewFile, originalDoc: edited }
     previewFile.dispatch({
       type: "SHOW_MESSAGE",

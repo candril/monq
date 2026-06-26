@@ -113,6 +113,25 @@ export async function fetchDocuments(
   return { documents, count, totalCount: hasFilter ? totalCount : count }
 }
 
+/**
+ * Fetch documents with BSON type promotion disabled, so numeric values keep their
+ * true types (`Int32`/`Long`/`Double`) instead of collapsing to plain JS numbers.
+ * Used by the edit flows to obtain a type-faithful original to reconcile against.
+ */
+export async function fetchRawDocuments(
+  collectionName: string,
+  filter: Filter<Document>,
+  options: { limit?: number } = {},
+): Promise<Document[]> {
+  const cursor = getDb()
+    .collection(collectionName)
+    .find(filter, { promoteValues: false, promoteLongs: false })
+  if (options.limit) {
+    cursor.limit(options.limit)
+  }
+  return cursor.toArray()
+}
+
 /** Run an aggregation pipeline */
 export async function fetchAggregate(
   collectionName: string,

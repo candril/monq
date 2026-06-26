@@ -16,6 +16,21 @@ export function serializeDocumentRelaxed(doc: Document): string {
   return EJSON.stringify(doc, undefined, 2, { relaxed: true })
 }
 
+/**
+ * The single JSON format every document editor buffer uses: relaxed EJSON, 2-space
+ * indent. Keeping all write/edit paths on one serializer guarantees a document looks
+ * (and round-trips) identically whether edited via the single-doc split, bulk edit,
+ * or query-update template. Type fidelity on save is handled by `reconcileTypes`.
+ */
+export function serializeForEdit(doc: Document): string {
+  return EJSON.stringify(doc, undefined, 2, { relaxed: true })
+}
+
+/** Array variant of {@link serializeForEdit} for the bulk editors. */
+export function serializeForEditArray(docs: Document[]): string {
+  return EJSON.stringify(docs, undefined, 2, { relaxed: true })
+}
+
 /** Serialize a pipeline to relaxed-EJSON source (matches the Ctrl+E editor format) */
 export function serializePipelineSource(pipeline: Document[]): string {
   return EJSON.stringify({ pipeline }, undefined, 2, { relaxed: true })

@@ -4,8 +4,15 @@ import { mkdir } from "fs/promises"
 import { EJSON } from "bson"
 import JSON5 from "json5"
 import type { Document } from "mongodb"
-import { replaceDocument, insertDocument, deleteDocument } from "../providers/mongodb"
+import {
+  replaceDocument,
+  insertDocument,
+  deleteDocument,
+  fetchRawDocuments,
+} from "../providers/mongodb"
 import { getEditor, stripComments, stripErrorComment, openEditorWithError } from "../utils/editor"
+import { serializeForEditArray } from "../utils/document"
+import { reconcileTypes } from "../utils/bsonReconcile"
 import type { SchemaMap } from "../query/schema"
 
 export interface EditManyResult {
@@ -146,7 +153,7 @@ function buildInsertHeader(collectionName: string, dbName: string, schemaMap?: S
 // ── Serialization ─────────────────────────────────────────────────────────────
 
 function serializeArray(docs: Document[], schemaPath?: string): string {
-  const serialized = EJSON.stringify(docs, undefined, 2, { relaxed: true })
+  const serialized = serializeForEditArray(docs)
   if (!schemaPath) {
     return serialized
   }
@@ -209,8 +216,10 @@ export function diffDocs(originalDocs: Document[], editedDocs: Document[]): Diff
     }
     const { _id: _a, ...origFields } = orig
     const { _id: _b, ...editedFields } = editedDoc
-    const origJson = EJSON.stringify(origFields, undefined, 0, { relaxed: true })
-    const editedJson = EJSON.stringify(editedFields, undefined, 0, { relaxed: true })
+    // Canonical (non-relaxed) EJSON so a pure type change (e.g. Long -> Int32) is
+    // detected as a change rather than a false "unchanged".
+    const origJson = EJSON.stringify(origFields, undefined, 0, { relaxed: false })
+    const editedJson = EJSON.stringify(editedFields, undefined, 0, { relaxed: false })
     if (origJson === editedJson) {
       unchanged.push(editedDoc)
     } else {
@@ -229,6 +238,53 @@ export function diffDocs(originalDocs: Document[], editedDocs: Document[]): Diff
     result: { updated: toReplace.length, unchanged: unchanged.length, missing, added, errors },
     toReplace,
   }
+}
+
+/**
+ * Re-read the edited documents' originals with BSON promotion disabled, then restore
+ * the true numeric types onto the edited docs (which lost them via relaxed EJSON).
+ * Returns the typed originals (for an accurate diff) and the reconciled edited docs.
+ */
+async function reconcileEditedDocs(
+  collectionName: string,
+  originalDocs: Document[],
+  editedDocs: Document[],
+): Promise<{ typedOriginals: Document[]; reconciledEdited: Document[] }> {
+  const ids = originalDocs.map((d) => d._id).filter((id) => id !== undefined && id !== null)
+
+  let rawById = new Map<string, Document>()
+  if (ids.length > 0) {
+    try {
+      const raw = await fetchRawDocuments(collectionName, { _id: { $in: ids } })
+      for (const doc of raw) {
+        const key = docIdKey(doc)
+        if (key) {
+          rawById.set(key, doc)
+        }
+      }
+    } catch {
+      rawById = new Map()
+    }
+  }
+
+  // Prefer the type-faithful raw original; fall back to the in-memory one.
+  const typedOriginals = originalDocs.map((d) => {
+    const key = docIdKey(d)
+    return (key && rawById.get(key)) || d
+  })
+
+  const reconciledEdited = editedDocs.map((d) => {
+    const key = docIdKey(d)
+    const raw = key ? rawById.get(key) : undefined
+    if (!raw) {
+      return d
+    }
+    const { _id, ...editedFields } = d
+    const { _id: _rawId, ...origFields } = raw
+    return { _id, ...(reconcileTypes(editedFields, origFields) as Document) }
+  })
+
+  return { typedOriginals, reconciledEdited }
 }
 
 // ── Main entry points ─────────────────────────────────────────────────────────
@@ -313,7 +369,18 @@ export async function openEditorForMany(
     }
   }
 
-  const { result, toReplace } = diffDocs(originalDocs, editedDocs)
+  // Re-read the originals with true BSON types and reconcile the edited docs against
+  // them, so numeric fields (Long/Int32/Double) survive the relaxed-EJSON round-trip
+  // instead of collapsing to Int32. Falls back to the in-memory originals if the raw
+  // re-read fails. The typed originals are used for the diff so untouched fields are
+  // correctly detected as unchanged.
+  const { typedOriginals, reconciledEdited } = await reconcileEditedDocs(
+    collectionName,
+    originalDocs,
+    editedDocs,
+  )
+
+  const { result, toReplace } = diffDocs(typedOriginals, reconciledEdited)
 
   const applyEdits = async () => {
     for (const { originalId, newDoc } of toReplace) {
@@ -325,7 +392,7 @@ export async function openEditorForMany(
     }
   }
 
-  return { cancelled: false, result, editedDocs, applyEdits }
+  return { cancelled: false, result, editedDocs: reconciledEdited, applyEdits }
 }
 
 export async function openEditorForInsert(
