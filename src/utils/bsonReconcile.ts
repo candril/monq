@@ -30,37 +30,55 @@ function isBsonNumeric(value: unknown): boolean {
   return t === "Long" || t === "Int32" || t === "Double" || t === "Decimal128"
 }
 
-/** Re-apply `original`'s numeric BSON type to the plain `edited` number. */
-function retypeNumber(edited: number, original: unknown): unknown {
-  const t = bsonType(original)
-
+/** Construct a numeric BSON value of the given type from a plain number. */
+function retypeNumberByType(edited: number, t: string | undefined): unknown {
   if (t === "Long") {
-    if (!Number.isInteger(edited)) {
-      // A fractional value can't be represented as Long — promote to Double.
-      return new Double(edited)
-    }
-    // Unchanged value: return the original verbatim so big-int precision is kept.
-    if (edited === (original as Long).toNumber()) {
-      return original
-    }
-    return Long.fromNumber(edited)
+    // A fractional value can't be represented as Long — promote to Double.
+    return Number.isInteger(edited) ? Long.fromNumber(edited) : new Double(edited)
   }
-
   if (t === "Int32") {
     return Number.isInteger(edited) ? new Int32(edited) : new Double(edited)
   }
-
   if (t === "Double") {
     // Keep Double even for integer-valued edits (e.g. 5.0 stays a double).
     return new Double(edited)
   }
-
   if (t === "Decimal128") {
     return Decimal128.fromString(String(edited))
   }
-
-  // Original wasn't a typed number (plain number or non-numeric) — can't infer.
+  // Not a known typed number — can't infer.
   return edited
+}
+
+/** Re-apply `original`'s numeric BSON type to the plain `edited` number. */
+function retypeNumber(edited: number, original: unknown): unknown {
+  const t = bsonType(original)
+  // Unchanged Long: return the original verbatim so big-int precision is kept.
+  if (t === "Long" && Number.isInteger(edited) && edited === (original as Long).toNumber()) {
+    return original
+  }
+  return retypeNumberByType(edited, t)
+}
+
+/**
+ * The single numeric BSON type shared by all numeric elements of an array, or
+ * undefined if the array has no numeric elements or mixes numeric types. Used to
+ * recover the type of array elements that were reordered/inserted so their positional
+ * original no longer lines up (e.g. an array of int64s shuffled in the editor).
+ */
+function dominantNumericType(arr: unknown[]): string | undefined {
+  let found: string | undefined
+  for (const el of arr) {
+    if (isBsonNumeric(el)) {
+      const t = bsonType(el)
+      if (found === undefined) {
+        found = t
+      } else if (found !== t) {
+        return undefined // mixed numeric types — can't safely infer
+      }
+    }
+  }
+  return found
 }
 
 /** True for a plain JS object we should recurse into (not array / Date / BSON wrapper). */
@@ -80,7 +98,8 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  *
  * - Plain number + numeric-typed original -> re-typed to the original's BSON type.
  * - Edited value already a BSON wrapper (explicit user EJSON) -> honored as-is.
- * - Arrays -> reconciled element-wise by index.
+ * - Arrays -> reconciled element-wise by index, with a homogeneous-numeric fallback so
+ *   reordered/inserted elements of a single-typed numeric array keep that type.
  * - Plain objects -> reconciled per key; keys absent from the original are kept as-is.
  * - Everything else (string, boolean, null, Date, ObjectId, ...) -> kept as-is.
  */
@@ -96,7 +115,16 @@ export function reconcileTypes(edited: unknown, original: unknown): unknown {
 
   if (Array.isArray(edited)) {
     const origArr = Array.isArray(original) ? original : []
-    return edited.map((item, i) => reconcileTypes(item, origArr[i]))
+    const fallbackType = dominantNumericType(origArr)
+    return edited.map((item, i) => {
+      const positional = origArr[i]
+      // When the positional original isn't a numeric type (reordered/inserted element),
+      // fall back to the array's single numeric type if it has one.
+      if (typeof item === "number" && !isBsonNumeric(positional) && fallbackType !== undefined) {
+        return retypeNumberByType(item, fallbackType)
+      }
+      return reconcileTypes(item, positional)
+    })
   }
 
   if (isPlainObject(edited)) {

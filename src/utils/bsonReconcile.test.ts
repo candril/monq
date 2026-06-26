@@ -183,14 +183,51 @@ describe("reconcileTypes — nested structures", () => {
     expect(bsonOf(result.scores[1])).toBe("Long")
   })
 
-  test("newly appended array element with no original is left as a plain number", () => {
+  test("a newly appended element adopts the array's homogeneous numeric type", () => {
     const original = { scores: [Long.fromNumber(1)] }
     const edited = { scores: [1, 2] }
 
     const result = reconcileTypes(edited, original) as { scores: unknown[] }
 
     expect(bsonOf(result.scores[0])).toBe("Long")
-    expect(result.scores[1]).toBe(2) // plain number — no original to infer from
+    expect(bsonOf(result.scores[1])).toBe("Long")
+    expect((result.scores[1] as Long).toNumber()).toBe(2)
+  })
+})
+
+describe("reconcileTypes — array hardening (reorder / heterogeneous)", () => {
+  test("reordered element of a homogeneous Long array keeps Long even past a non-numeric slot", () => {
+    // original mixes a Long and a string; the user reorders them
+    const original = { arr: [Long.fromNumber(1), "tag"] }
+    const edited = { arr: ["tag", 1] }
+
+    const result = reconcileTypes(edited, original) as { arr: unknown[] }
+
+    expect(result.arr[0]).toBe("tag")
+    // positional original for index 1 is "tag" (non-numeric); fallback = the array's
+    // single numeric type (Long)
+    expect(bsonOf(result.arr[1])).toBe("Long")
+    expect((result.arr[1] as Long).toNumber()).toBe(1)
+  })
+
+  test("inserting at the front of a homogeneous Long array keeps every element Long", () => {
+    const original = { ids: [Long.fromNumber(10), Long.fromNumber(20)] }
+    const edited = { ids: [5, 10, 20] } // user prepended 5
+
+    const result = reconcileTypes(edited, original) as { ids: unknown[] }
+
+    expect(result.ids.map(bsonOf)).toEqual(["Long", "Long", "Long"])
+  })
+
+  test("mixed-type numeric array has no safe fallback (positional only)", () => {
+    // No dominant type, so we fall back to positional matching only.
+    const original = { vals: [Long.fromNumber(1), new Int32(2)] }
+    const edited = { vals: [1, 2] } // not reordered — positional still correct
+
+    const result = reconcileTypes(edited, original) as { vals: unknown[] }
+
+    expect(bsonOf(result.vals[0])).toBe("Long")
+    expect(bsonOf(result.vals[1])).toBe("Int32")
   })
 })
 

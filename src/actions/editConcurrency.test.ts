@@ -91,4 +91,18 @@ describe("resolveWritesPure", () => {
     expect(writes).toEqual([])
     expect(conflicts).toEqual([])
   })
+
+  test("a reordered homogeneous numeric array still writes with its type recovered", () => {
+    // The array fallback recovers Long even when elements moved past a non-numeric slot.
+    const display: Document = { _id: "1", vals: [1, "x"] }
+    const fresh: Document = { _id: "1", vals: [Long.fromNumber(1), "x"] }
+    const toReplace = [{ originalId: "1", newDoc: { vals: ["x", 1] } as Document }]
+
+    const { writes, conflicts } = resolveWritesPure(toReplace, [display], [fresh])
+
+    expect(conflicts).toEqual([])
+    expect(writes).toHaveLength(1)
+    const vals = (writes[0].newDoc as { vals: unknown[] }).vals
+    expect(bsonOf(vals[1])).toBe("Long")
+  })
 })

@@ -114,8 +114,11 @@ Walk `edited` alongside `original`:
   - original is a plain number / non-numeric: leave `edited` as-is.
 - **edited is already a BSON wrapper** (user wrote explicit `{ "$numberLong": .. }`):
   honor it, return `edited` unchanged.
-- **edited is an array**: reconcile element-wise against `original[i]` (index-aligned;
-  elements without a matching original are left as-is).
+- **edited is an array**: reconcile element-wise against `original[i]` (index-aligned).
+  When the positional original isn't numeric (a reordered/inserted element) but the
+  original array has a single numeric BSON type across its elements, fall back to that
+  type — so a shuffled or extended array of e.g. int64s keeps `Long`. Arrays that mix
+  numeric types have no safe fallback and use positional matching only.
 - **edited is a plain object**: recurse per key against `original[key]`; keys not
   present in original are left as-is. Do *not* recurse into BSON wrappers, `Date`,
   `ObjectId`.
