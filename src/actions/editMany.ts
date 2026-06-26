@@ -3,7 +3,7 @@ import { join } from "path"
 import { mkdir } from "fs/promises"
 import { EJSON } from "bson"
 import JSON5 from "json5"
-import type { Document } from "mongodb"
+import type { Document, Filter } from "mongodb"
 import {
   replaceDocument,
   insertDocument,
@@ -13,6 +13,7 @@ import {
 import { getEditor, stripComments, stripErrorComment, openEditorWithError } from "../utils/editor"
 import { serializeForEditArray } from "../utils/document"
 import { reconcileTypes } from "../utils/bsonReconcile"
+import { sameByValue } from "../utils/docCompare"
 import type { SchemaMap } from "../query/schema"
 
 export interface EditManyResult {
@@ -240,51 +241,90 @@ export function diffDocs(originalDocs: Document[], editedDocs: Document[]): Diff
   }
 }
 
+export interface ResolvedWrites {
+  writes: Array<{ originalId: unknown; newDoc: Document }>
+  conflicts: string[]
+}
+
+function byId(docs: Document[]): Map<string, Document> {
+  const map = new Map<string, Document>()
+  for (const doc of docs) {
+    const key = docIdKey(doc)
+    if (key) {
+      map.set(key, doc)
+    }
+  }
+  return map
+}
+
 /**
- * Re-read the edited documents' originals with BSON promotion disabled, then restore
- * the true numeric types onto the edited docs (which lost them via relaxed EJSON).
- * Returns the typed originals (for an accurate diff) and the reconciled edited docs.
+ * Pure conflict resolution: given the user's intended replacements, the on-screen
+ * snapshots, and the freshly re-read stored docs, decide which writes are safe.
+ *
+ * A replacement is a conflict (skipped) if the stored doc was deleted, or changed by
+ * value since the user opened it (concurrent/remote edit). Safe writes have their
+ * numeric BSON types reconciled against the fresh original.
  */
-async function reconcileEditedDocs(
+export function resolveWritesPure(
+  toReplace: Array<{ originalId: unknown; newDoc: Document }>,
+  originalDocs: Document[],
+  freshDocs: Document[],
+): ResolvedWrites {
+  const conflicts: string[] = []
+  const freshById = byId(freshDocs)
+  const displayById = byId(originalDocs)
+
+  const writes: Array<{ originalId: unknown; newDoc: Document }> = []
+  for (const { originalId, newDoc } of toReplace) {
+    const key = docIdKey({ _id: originalId } as Document)
+    const fresh = key ? freshById.get(key) : undefined
+    if (!fresh) {
+      conflicts.push(`${String(originalId)}: deleted in MongoDB — not saved`)
+      continue
+    }
+    const display = key ? displayById.get(key) : undefined
+    const { _id: _freshId, ...freshFields } = fresh
+    if (display) {
+      const { _id: _displayId, ...displayFields } = display
+      if (!sameByValue(freshFields, displayFields)) {
+        conflicts.push(`${String(originalId)}: changed in MongoDB — not saved`)
+        continue
+      }
+    }
+    writes.push({ originalId, newDoc: reconcileTypes(newDoc, freshFields) as Document })
+  }
+
+  return { writes, conflicts }
+}
+
+/**
+ * Re-read the stored versions of the docs the user changed and resolve safe writes.
+ * If the re-read fails, refuse every write rather than overwrite blindly.
+ */
+async function resolveWrites(
   collectionName: string,
   originalDocs: Document[],
-  editedDocs: Document[],
-): Promise<{ typedOriginals: Document[]; reconciledEdited: Document[] }> {
-  const ids = originalDocs.map((d) => d._id).filter((id) => id !== undefined && id !== null)
+  toReplace: Array<{ originalId: unknown; newDoc: Document }>,
+): Promise<ResolvedWrites> {
+  if (toReplace.length === 0) {
+    return { writes: [], conflicts: [] }
+  }
 
-  let rawById = new Map<string, Document>()
-  if (ids.length > 0) {
-    try {
-      const raw = await fetchRawDocuments(collectionName, { _id: { $in: ids } })
-      for (const doc of raw) {
-        const key = docIdKey(doc)
-        if (key) {
-          rawById.set(key, doc)
-        }
-      }
-    } catch {
-      rawById = new Map()
+  const ids = toReplace.map((t) => t.originalId).filter((id) => id !== undefined && id !== null)
+  const filter = { _id: { $in: ids } } as unknown as Filter<Document>
+  let freshDocs: Document[]
+  try {
+    freshDocs = await fetchRawDocuments(collectionName, filter)
+  } catch {
+    return {
+      writes: [],
+      conflicts: toReplace.map(
+        (t) => `${String(t.originalId)}: could not re-read from MongoDB — not saved`,
+      ),
     }
   }
 
-  // Prefer the type-faithful raw original; fall back to the in-memory one.
-  const typedOriginals = originalDocs.map((d) => {
-    const key = docIdKey(d)
-    return (key && rawById.get(key)) || d
-  })
-
-  const reconciledEdited = editedDocs.map((d) => {
-    const key = docIdKey(d)
-    const raw = key ? rawById.get(key) : undefined
-    if (!raw) {
-      return d
-    }
-    const { _id, ...editedFields } = d
-    const { _id: _rawId, ...origFields } = raw
-    return { _id, ...(reconcileTypes(editedFields, origFields) as Document) }
-  })
-
-  return { typedOriginals, reconciledEdited }
+  return resolveWritesPure(toReplace, originalDocs, freshDocs)
 }
 
 // ── Main entry points ─────────────────────────────────────────────────────────
@@ -369,21 +409,16 @@ export async function openEditorForMany(
     }
   }
 
-  // Re-read the originals with true BSON types and reconcile the edited docs against
-  // them, so numeric fields (Long/Int32/Double) survive the relaxed-EJSON round-trip
-  // instead of collapsing to Int32. Falls back to the in-memory originals if the raw
-  // re-read fails. The typed originals are used for the diff so untouched fields are
-  // correctly detected as unchanged.
-  const { typedOriginals, reconciledEdited } = await reconcileEditedDocs(
-    collectionName,
-    originalDocs,
-    editedDocs,
-  )
-
-  const { result, toReplace } = diffDocs(typedOriginals, reconciledEdited)
+  // Diff against the on-screen snapshot to find what the user actually changed, then
+  // resolve those into safe writes: each is re-read from MongoDB to (a) restore true
+  // numeric BSON types and (b) abort if it changed remotely since the user opened it.
+  const { result, toReplace } = diffDocs(originalDocs, editedDocs)
+  const { writes, conflicts } = await resolveWrites(collectionName, originalDocs, toReplace)
+  result.errors.push(...conflicts)
+  result.updated = writes.length
 
   const applyEdits = async () => {
-    for (const { originalId, newDoc } of toReplace) {
+    for (const { originalId, newDoc } of writes) {
       try {
         await replaceDocument(collectionName, originalId, newDoc)
       } catch (err) {
@@ -392,7 +427,7 @@ export async function openEditorForMany(
     }
   }
 
-  return { cancelled: false, result, editedDocs: reconciledEdited, applyEdits }
+  return { cancelled: false, result, editedDocs, applyEdits }
 }
 
 export async function openEditorForInsert(

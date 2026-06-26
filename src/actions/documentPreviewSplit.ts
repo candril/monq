@@ -13,6 +13,7 @@ import type { AppAction } from "../state"
 import { copyToClipboard } from "../utils/clipboard"
 import { serializeForEdit } from "../utils/document"
 import { reconcileTypes } from "../utils/bsonReconcile"
+import { sameByValue, sameCanonical } from "../utils/docCompare"
 import { stripComments, stripErrorComment } from "../utils/editor"
 import { fetchDocuments, fetchRawDocuments, replaceDocument } from "../providers/mongodb"
 
@@ -218,31 +219,67 @@ async function applySavedPreviewFile(filePath: string): Promise<void> {
     return
   }
 
-  // Re-read the original with true BSON types so numeric fields (Long/Int32/Double)
-  // survive the relaxed-EJSON edit round-trip instead of collapsing to Int32.
-  let rawOriginal: Document | undefined
+  // Re-read the current stored document with true BSON types. It is both the
+  // type-faithful base for reconciliation and the value we compare against the
+  // on-screen snapshot to detect a concurrent (remote) change.
+  let fresh: Document | undefined
+  let fetchFailed = false
   try {
     const [raw] = await fetchRawDocuments(
       previewFile.collectionName,
       { _id: previewFile.originalDoc._id },
       { limit: 1 },
     )
-    rawOriginal = raw
+    fresh = raw
   } catch {
-    rawOriginal = undefined
+    fetchFailed = true
   }
-  const original = rawOriginal ?? previewFile.originalDoc
 
-  const { _id: _oldId, ...oldFields } = original
+  if (fetchFailed) {
+    // Don't risk a blind overwrite when we can't verify the current state.
+    previewFile.dispatch({
+      type: "SHOW_MESSAGE",
+      message: "Could not re-read document from MongoDB — not saved. Save again to retry.",
+      kind: "error",
+    })
+    return
+  }
+
+  if (!fresh) {
+    previewFile.dispatch({
+      type: "SHOW_MESSAGE",
+      message: "Document no longer exists in MongoDB — not saved",
+      kind: "error",
+    })
+    await refreshPreviewFileFromDatabase(filePath)
+    return
+  }
+
+  const { _id: _fid, ...freshFields } = fresh
+  const { _id: _sid, ...snapshotFields } = previewFile.originalDoc
+
+  // Concurrency guard: refuse to overwrite if the stored document changed (by value)
+  // since the user opened it. Last-writer-wins would silently lose the remote edit.
+  if (!sameByValue(freshFields, snapshotFields)) {
+    previewFile.dispatch({
+      type: "SHOW_MESSAGE",
+      message:
+        "Document changed in MongoDB since you opened it — reloaded, not saved. Re-apply your edit.",
+      kind: "warning",
+    })
+    await refreshPreviewFileFromDatabase(filePath)
+    return
+  }
+
   const { _id: _newId, ...editedFields } = edited
-  const newFields = reconcileTypes(editedFields, oldFields) as Document
-  if (canonicalEjson(oldFields) === canonicalEjson(newFields)) {
+  const newFields = reconcileTypes(editedFields, freshFields) as Document
+  if (sameCanonical(freshFields, newFields)) {
     await refreshPreviewFileFromDatabase(filePath)
     return
   }
 
   try {
-    await replaceDocument(previewFile.collectionName, original._id, newFields)
+    await replaceDocument(previewFile.collectionName, fresh._id, newFields)
     previewFile = { ...previewFile, originalDoc: edited }
     previewFile.dispatch({
       type: "SHOW_MESSAGE",
@@ -312,23 +349,4 @@ function parseDocument(content: string): Document {
     throw new Error("Expected a single JSON document object")
   }
   return EJSON.deserialize(raw as Parameters<typeof EJSON.deserialize>[0]) as Document
-}
-
-function canonicalEjson(value: unknown): string {
-  return JSON.stringify(sortKeysDeep(EJSON.serialize(value, { relaxed: false })))
-}
-
-function sortKeysDeep(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(sortKeysDeep)
-  }
-  if (!value || typeof value !== "object") {
-    return value
-  }
-
-  const record = value as Record<string, unknown>
-  const sortedEntries = Object.keys(record)
-    .sort()
-    .map((key) => [key, sortKeysDeep(record[key])] as const)
-  return Object.fromEntries(sortedEntries)
 }
