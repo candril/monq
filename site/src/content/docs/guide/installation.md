@@ -26,8 +26,8 @@ nix profile install github:candril/monq     # keep it
 ```
 
 Or as a flake input — `inputs.monq.url = "github:candril/monq"`, then
-`inputs.monq.packages.${system}.default`. The flake is deliberately unlocked and re-exports
-the package from the tap, so it always resolves to the latest release.
+`inputs.monq.packages.${system}.default`. The flake packages the release binary; the release
+workflow writes its `release.json`, so `nix run` and `nix flake update` land on the newest release.
 
 ### Installer script
 
