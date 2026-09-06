@@ -8,7 +8,6 @@ dist/
 .astro/
 
 # Bun
-bun.lock
 
 # TypeScript
 tsconfig.tsbuildinfo
@@ -27,3 +26,6 @@ tsconfig.tsbuildinfo
 # Override global gitignore to track OpenCode commands
 !.opencode/
 !.opencode/commands/
+
+# Nix: the flake is deliberately unlocked (see flake.nix)
+flake.lock

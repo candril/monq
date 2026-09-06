@@ -1,81 +1,84 @@
 ---
 title: Installation
-description: How to install monq on your system.
+description: Install monq and point it at a database.
 ---
 
-## Quick install
+## Install
 
-The fastest way to install monq is with the install script. It downloads the latest release binary for your platform and verifies the checksum:
+Prebuilt binaries for macOS (Apple Silicon and Intel) and Linux (x64 and arm64), by any of three
+routes. All three install the same binary: the one attached to the latest
+[release](https://github.com/candril/monq/releases), verified against its `SHA256SUMS`.
+
+### Homebrew
+
+```sh
+brew install candril/tap/monq
+```
+
+The tap is [candril/homebrew-tap](https://github.com/candril/homebrew-tap); `brew upgrade` picks
+up new releases.
+
+### Nix
+
+```sh
+nix run github:candril/monq                 # run it once
+nix profile install github:candril/monq     # keep it
+```
+
+Or as a flake input — `inputs.monq.url = "github:candril/monq"`, then
+`inputs.monq.packages.${system}.default`. The flake is deliberately unlocked and re-exports
+the package from the tap, so it always resolves to the latest release.
+
+### Installer script
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/candril/monq/main/scripts/install.sh | bash
 ```
 
-To install a specific version:
+The installer detects your platform, downloads the latest release, verifies its SHA256 against the
+release's `SHA256SUMS`, and puts `monq` in `/usr/local/bin`. Two variables change that:
 
 ```sh
-MONQ_VERSION=0.1.0 curl -fsSL https://raw.githubusercontent.com/candril/monq/main/scripts/install.sh | bash
+MONQ_INSTALL_DIR=~/.local/bin …   # somewhere else on your PATH
+MONQ_VERSION=0.1.0 …              # a specific release
 ```
 
-To install to a custom directory:
+Or download `monq-<os>-<arch>.gz` from the releases page by hand, `gunzip` it, and put it on
+your `PATH`.
+
+### From source
+
+monq is a [Bun](https://bun.sh) application, so a clone runs as it is:
 
 ```sh
-MONQ_INSTALL_DIR=~/.local/bin curl -fsSL https://raw.githubusercontent.com/candril/monq/main/scripts/install.sh | bash
-```
-
-You can also download binaries directly from [GitHub Releases](https://github.com/candril/monq/releases).
-
-## Build from source
-
-### Prerequisites
-
-- [Bun](https://bun.sh) — monq uses Bun as its runtime and build tool
-- [just](https://github.com/casey/just) — used to run the build recipe
-
-Install Bun if you don't have it:
-
-```sh
-curl -fsSL https://bun.sh/install | bash
-```
-
-## Build from source
-
-Clone the repository and build the binary:
-
-```sh
-git clone https://github.com/candril/monq
+git clone https://github.com/candril/monq.git
 cd monq
 bun install
-just build
+bun src/index.tsx --uri mongodb://localhost:27017/mydb   # run from source
+bun scripts/build.ts                                     # → dist/monq, a standalone binary
 ```
 
-This produces a self-contained binary at `dist/monq`.
+With [just](https://github.com/casey/just): `just build`, or `just install-bin` to build and
+install it to `~/.local/bin`. `just dev` runs from source with hot reload.
 
-## Add to PATH
+## Requirements
 
-Move or symlink the binary to somewhere on your `$PATH`:
+- A MongoDB you can reach — `monq --uri mongodb://…`, or saved connection profiles in
+  `~/.config/monq/config.toml` with `uri_cmd` for secrets from Vault, 1Password or the like.
+- A terminal with truecolor and a decent Unicode set — WezTerm, Ghostty, kitty, iTerm2 and
+  Alacritty are all fine.
+- `$EDITOR` for document, pipeline and index editing; tmux for the split-pane editors.
+- **[Bun](https://bun.sh)** 1.x only if you build from source.
+
+## First run
 
 ```sh
-# Option 1: copy to a directory already on your PATH
-cp dist/monq /usr/local/bin/monq
-
-# Option 2: symlink
-ln -s "$(pwd)/dist/monq" /usr/local/bin/monq
+monq --uri mongodb://localhost:27017/mydb
+monq --uri mongodb://localhost:27017        # picks the database interactively
+monq                                        # saved connections, or a URI prompt
 ```
 
-Verify the installation:
-
-```sh
-monq --help
-```
-
-## Run without installing
-
-You can run monq directly with Bun without building a binary:
-
-```sh
-bun src/index.tsx --uri mongodb://localhost:27017/mydb
-```
+Press `Ctrl+P` for the command palette, `q` to quit.
 
 ## Next steps
 

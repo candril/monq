@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/candril/monq.git"
   },
-  "homepage": "https://github.com/candril/monq",
+  "homepage": "https://candril.github.io/monq/",
   "keywords": [
     "mongodb",
     "terminal",
@@ -24,12 +24,13 @@
   },
   "scripts": {
     "dev": "bun run src/index.tsx",
-    "build": "bun build src/index.tsx --compile --outfile dist/monq",
+    "build": "bun scripts/build.ts",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint src",
     "lint:fix": "oxlint --fix src",
     "fmt": "oxfmt src",
-    "fmt:check": "oxfmt --check src"
+    "fmt:check": "oxfmt --check src",
+    "build:all": "bun scripts/build.ts --all"
   },
   "devDependencies": {
     "@types/bun": "latest",
