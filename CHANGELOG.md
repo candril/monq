@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-06
+
+### Added
+
+- **Optimistic concurrency** — a document or bulk edit is aborted when the document changed
+  remotely since it was loaded, instead of silently overwriting (spec 063).
+- Command palette scrolls with `Ctrl+D` / `Ctrl+U`.
+- Homebrew (`brew install candril/tap/monq`) and Nix (`nix run github:candril/monq`) via
+  [candril/homebrew-tap](https://github.com/candril/homebrew-tap), alongside the curl installer.
+  All three install the release binary, verified against `SHA256SUMS`.
+- The installer, build script and release workflow shared with the sibling tools; a released
+  binary reports its tag, and the release writes `release.json` for the Nix flake.
+
+### Changed
+
+- The README got the logo, tagline and doc links the sibling tools have; README and docs site
+  carry the shared spec-driven notice, the same install section, and a footer linking them.
+- The docs site builds with bun; both lockfiles are tracked so CI installs are reproducible.
+
+### Fixed
+
+- Editing a document preserves BSON numeric types (`Int32`, `Long`, `Double`, `Decimal128`),
+  including reordered and extended numeric arrays.
+- Removed the broken `{}` collection-peek binding from the palette.
+
 ## [0.5.0] - 2026-06-13
 
 ### Added
