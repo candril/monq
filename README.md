@@ -104,7 +104,8 @@ All three install the same binary — the one attached to the latest
 for macOS (Apple Silicon, Intel) and Linux (x64, arm64). The installer puts it in `/usr/local/bin`;
 `MONQ_INSTALL_DIR=~/.local/bin` moves it, `MONQ_VERSION=0.1.0` pins it.
 
-From source, with [Bun](https://bun.sh): `git clone https://github.com/candril/monq.git && cd monq && bun install && just install-bin`.
+From source, with [Bun](https://bun.sh) 1.4.0 or newer: `git clone https://github.com/candril/monq.git && cd monq && bun install && just install-bin`.
+(The MongoDB driver's BSON library calls `v8.startupSnapshot.isBuildingSnapshot()` at import time, which Bun only implements from 1.4.0. Released binaries are unaffected — they ship their own runtime.)
 
 ## Usage
 
