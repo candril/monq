@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **OpenTUI 0.1.87 to 0.5.11**, the terminal renderer everything is drawn with, together with
+  `@opentui/react` and React 19.3. The one API break was the renderer's console option; screenshots
+  taken before and after are pixel-identical, so nothing about the rendering changed.
+- Docs site to Astro 7 and Starlight 0.42, two majors.
+- **mongodb driver 6.12 to 7.6**, a major upgrade, plus `snappy` 7.4.3, oxlint 1.82 and oxfmt 0.67.
+- GitHub Actions moved to the Node 24 majors ahead of Node 20 being removed from hosted runners on
+  23 September 2026.
+
+### Requirements
+
+- **Bun 1.4.0 or newer is now required.** The mongodb 7 driver uses APIs that older Bun does not
+  implement, and on Bun 1.3.x the test suite fails at import time and the app does not start.
+
 ## [0.6.0] - 2026-09-06
 
 ### Added
