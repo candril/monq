@@ -22,6 +22,9 @@
   "bin": {
     "monq": "./dist/monq"
   },
+  "engines": {
+    "bun": ">=1.4.0"
+  },
   "scripts": {
     "dev": "bun run src/index.tsx",
     "build": "bun scripts/build.ts",
