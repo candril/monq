@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-12
+
 ### Changed
 
 - **OpenTUI 0.1.87 to 0.5.11**, the terminal renderer everything is drawn with, together with
@@ -16,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **mongodb driver 6.12 to 7.6**, a major upgrade, plus `snappy` 7.4.3, oxlint 1.82 and oxfmt 0.67.
 - GitHub Actions moved to the Node 24 majors ahead of Node 20 being removed from hosted runners on
   23 September 2026.
+- The build now declares the minimum Bun it needs and refuses to run below it, so an incompatible
+  runtime says so instead of failing later with an unexplained internal error.
 
 ### Requirements
 
