@@ -90,7 +90,7 @@ await tsClient.initialize()
 
 const renderer = await createCliRenderer({
   exitOnCtrlC: false,
-  useConsole: true,
+  consoleMode: "console-overlay",
   consoleOptions: {
     position: ConsolePosition.BOTTOM,
     sizePercent: 30,

@@ -34,7 +34,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/react": "^18.2.0",
+    "@types/react": "^19.3.0",
     "@typescript/native-preview": "^7.0.0-dev.20260329.1",
     "oxfmt": "^0.42.0",
     "oxlint": "^1.57.0"
@@ -43,11 +43,11 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@opentui/core": "0.1.87",
-    "@opentui/react": "0.1.87",
+    "@opentui/core": "0.5.11",
+    "@opentui/react": "0.5.11",
     "json5": "^2.2.3",
     "mongodb": "^6.12.0",
-    "react": "19",
+    "react": "19.3.0",
     "snappy": "^7.3.3"
   }
 }

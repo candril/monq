@@ -31,7 +31,7 @@ import { useDocumentEditKeys } from "./useDocumentEditKeys"
 interface UseKeyboardNavOptions {
   state: AppState
   dispatch: Dispatch<AppAction>
-  docListScrollRef: RefObject<ScrollBoxRenderable>
+  docListScrollRef: RefObject<ScrollBoxRenderable | null>
   keymap: Keymap
   /** Open the palette in collections-picker mode (Ctrl+O fast switch). */
   onOpenCollectionPalette: () => void

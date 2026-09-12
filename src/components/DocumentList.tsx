@@ -42,7 +42,7 @@ interface DocumentListProps {
   loading?: boolean
   /** Whether keyboard focus is in the document table rather than the sidebar. */
   focused?: boolean
-  scrollRef?: React.RefObject<ScrollBoxRenderable>
+  scrollRef?: React.RefObject<ScrollBoxRenderable | null>
   themeVersion?: number
   /** Effective viewport width in columns. Defaults to full terminal width. */
   viewportWidth?: number
