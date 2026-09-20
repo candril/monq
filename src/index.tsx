@@ -8,6 +8,7 @@ import { Shell } from "./components/Shell"
 import { registerSyntaxParsers } from "./syntax-parsers"
 import { stopWatching } from "./actions/pipelineWatch"
 import { disconnect } from "./providers/mongodb"
+import { DEMO_URI } from "./providers/demo"
 import { loadProfiles } from "./config/connections"
 import type { ConnectionProfile } from "./config/connections"
 import { registerSwitchConnection } from "./navigation"
@@ -34,6 +35,7 @@ process.on("SIGTERM", () => {
 //   monq --version / -v       (print version and exit)
 //   monq --uri mongodb://...
 //   monq mongodb://...        (bare positional)
+//   monq --demo               (a shop's data, in memory — no server, no config)
 //   monq                      (shows ConnectionScreen or URI input screen)
 const args = process.argv.slice(2)
 
@@ -45,7 +47,9 @@ const uriIndex = args.indexOf("--uri")
 const flagUri = uriIndex !== -1 ? (args[uriIndex + 1] ?? null) : null
 const positionalUri =
   args.find((a) => a.startsWith("mongodb://") || a.startsWith("mongodb+srv://")) ?? null
-const initialUri = flagUri ?? positionalUri
+// The demo names its database in the URI, so the connection hook loads collections
+// straight away instead of opening the picker on a server that isn't there.
+const initialUri = args.includes("--demo") ? DEMO_URI : (flagUri ?? positionalUri)
 
 // Load user config — resolve theme + keymap before the renderer starts.
 let userConfig

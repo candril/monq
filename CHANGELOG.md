@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`monq --demo`** — a fictional shop's two databases and five collections, served from
+  memory: no MongoDB, no connection string, nothing written to disk. Browsing, filtering,
+  sorting, aggregating and editing all work; the seed is the same on every launch.
+
 ## [0.7.0] - 2026-09-14
 
 ### Changed

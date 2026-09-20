@@ -14,9 +14,12 @@ import {
   type AggregationCursor,
 } from "mongodb"
 import type { CollectionInfo, IndexInfo } from "../types"
+import { createDemoStore, isDemoUri, type DemoStore } from "./demo"
 
 let client: MongoClient | null = null
 let activeDb: string | null = null
+/** Set instead of `client` by the demo URI; every path below checks it first. */
+let demo: DemoStore | null = null
 
 /** Parse connection info from URI without connecting */
 export function parseUri(uri: string): { host: string; dbName: string } {
@@ -35,6 +38,13 @@ export function parseUri(uri: string): { host: string; dbName: string } {
 
 /** Initialize the client (lazy — actual connection happens on first operation) */
 export function init(uri: string, dbName?: string): void {
+  if (isDemoUri(uri)) {
+    demo = createDemoStore()
+    client = null
+    activeDb = dbName ?? "shop"
+    return
+  }
+  demo = null
   client = new MongoClient(uri, {
     serverSelectionTimeoutMS: 5000,
     connectTimeoutMS: 5000,
@@ -49,6 +59,9 @@ export function switchDatabase(dbName: string): void {
 
 /** List all databases on the server */
 export async function listDatabases(): Promise<string[]> {
+  if (demo) {
+    return demo.databaseNames()
+  }
   if (!client) {
     throw new Error("Not connected")
   }
@@ -58,6 +71,9 @@ export async function listDatabases(): Promise<string[]> {
 
 /** Get the database instance */
 function getDb(): Db {
+  if (demo) {
+    return demo.db(activeDb) as unknown as Db
+  }
   if (!client) {
     throw new Error("Not connected")
   }
@@ -66,6 +82,7 @@ function getDb(): Db {
 
 /** Close the connection */
 export async function disconnect(): Promise<void> {
+  demo = null
   if (client) {
     await client.close(true)
     client = null
@@ -213,6 +230,10 @@ export async function createCollection(collectionName: string): Promise<void> {
 
 /** Create a new database by creating a first collection inside it */
 export async function createDatabase(dbName: string, firstCollection: string): Promise<void> {
+  if (demo) {
+    await demo.db(dbName).createCollection(firstCollection)
+    return
+  }
   if (!client) {
     throw new Error("Not connected")
   }
@@ -231,6 +252,10 @@ export async function dropCollection(collectionName: string): Promise<void> {
 
 /** Drop a database */
 export async function dropDatabase(dbName: string): Promise<void> {
+  if (demo) {
+    await demo.db(dbName).dropDatabase()
+    return
+  }
   if (!client) {
     throw new Error("Not connected")
   }

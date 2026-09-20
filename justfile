@@ -10,6 +10,10 @@ run uri="":
 dev uri="":
     bun --watch src/index.tsx {{ if uri != "" { '--uri "' + uri + '"' } else { "" } }}
 
+# A shop's data, in memory: no server, no config
+demo *args:
+    bun src/index.tsx --demo {{args}}
+
 # Install dependencies
 install:
     bun install
