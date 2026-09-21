@@ -9,6 +9,7 @@ import { explainFind, explainAggregate } from "../../providers/mongodb"
 import { copyToClipboard } from "../../utils/clipboard"
 import { yankDocument, yankCell } from "../yank"
 import { hideColumn } from "../hideColumn"
+import { toggleIdAsDate } from "../idAsDate"
 import { openDocumentPreviewSplit } from "../documentPreviewSplit"
 
 export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
@@ -219,6 +220,10 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
     case "view:toggle-filter-bar":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       dispatch({ type: "TOGGLE_FILTER_BAR" })
+      return true
+    case "view:toggle-id-date":
+      dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+      toggleIdAsDate(state, dispatch)
       return true
     case "view:reload":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })

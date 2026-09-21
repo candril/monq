@@ -191,6 +191,12 @@ export function buildCommands(state: AppState, keymap: Keymap): Command[] {
       shortcut: hintFor(keymap, "filter_bar.toggle"),
     })
     commands.push({
+      id: "view:toggle-id-date",
+      label: state.idAsDate ? "Show _id as ObjectId" : "Show _id as Creation Date",
+      category: "view",
+      shortcut: hintFor(keymap, "doc.toggle_id_date"),
+    })
+    commands.push({
       id: "view:reload",
       label: "Reload Documents",
       category: "view",

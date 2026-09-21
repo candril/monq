@@ -63,6 +63,7 @@ const DEFAULT_BINDINGS: Record<ActionName, string[]> = {
   "tab.switch_8": ["8"],
   "tab.switch_9": ["9"],
   "filter_bar.toggle": ["shift+f"],
+  "doc.toggle_id_date": ["shift+t"],
   "palette.open": ["ctrl+p"],
   "palette.open_collections": ["ctrl+o"],
   "index.open": ["shift+i"],

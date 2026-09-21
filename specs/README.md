@@ -95,3 +95,4 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 058 | [Table Focus and Column Cursor Clarity](./done/058-table-focus-column-cursor-clarity.md) | Focus-aware table cursor and clearer selected-column rendering |
 | 059 | [Shift-JK Collection Switch](./done/059-ctrl-jk-collection-switch.md) | `J/K` switch the selected collection from the sidebar cursor |
 | 060 | [Tmux Document Preview](./done/060-tmux-document-preview.md) | External tmux/nvim document editor that follows row navigation |
+| 066 | [Date Display](./done/066-date-display.md) | Full UTC timestamps in date cells, `Shift+T` shows `_id` as ObjectId creation date |

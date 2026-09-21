@@ -72,6 +72,7 @@ All remappable actions:
 | `tab.next` | `]` | Go to next tab |
 | `tab.switch_1`–`tab.switch_9` | `1`–`9` | Switch to tab N |
 | `filter_bar.toggle` | `shift+f` | Show / hide filter bar |
+| `doc.toggle_id_date` | `shift+t` | Toggle `_id` column between ObjectId and creation date |
 | `palette.open` | `ctrl+p` | Open command palette |
 | `app.quit` | `q` | Quit monq |
 

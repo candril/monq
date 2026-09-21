@@ -18,6 +18,7 @@ import {
   padRight,
   truncate,
   getNestedValue,
+  type FormatOptions,
 } from "../utils/format"
 import { markDocId } from "../utils/marks"
 import { Loading } from "./Loading"
@@ -51,6 +52,12 @@ interface DocumentListProps {
    * 1-char gutter is rendered to the left of each row.
    */
   marksForRow?: Map<string, string>
+  /** Render ObjectId values in the _id column as their creation time */
+  idAsDate?: boolean
+}
+
+function cellFormatOptions(field: string, idAsDate: boolean): FormatOptions {
+  return { objectIdAsDate: idAsDate && field === "_id" }
 }
 
 /** Compute natural column widths, then expand capped columns to fill available screen width */
@@ -58,6 +65,7 @@ function computeColumnWidths(
   documents: Document[],
   columns: DetectedColumn[],
   availableWidth: number,
+  idAsDate: boolean,
 ): Map<string, number> {
   const visible = columns.filter((c) => c.visible)
   if (visible.length === 0) {
@@ -81,7 +89,7 @@ function computeColumnWidths(
     let naturalW = headerMinW
     for (const doc of sample) {
       const val = getNestedValue(doc, col.field)
-      const formatted = formatValue(val, 200)
+      const formatted = formatValue(val, 200, cellFormatOptions(col.field, idAsDate))
       naturalW = Math.max(naturalW, formatted.length)
       maxW = Math.max(maxW, Math.min(MAX_COL_WIDTH, formatted.length))
     }
@@ -263,6 +271,7 @@ export function DocumentList({
   scrollRef: externalScrollRef,
   viewportWidth: viewportWidthProp,
   marksForRow,
+  idAsDate = false,
 }: DocumentListProps) {
   // Always reserve the gutter so the layout never shifts when the first mark
   // appears in a collection. Costs 2 chars of horizontal space, but avoids the
@@ -305,8 +314,8 @@ export function DocumentList({
   const effectiveTerminalWidth = viewportWidthProp ?? terminalWidth
   const viewportWidth = effectiveTerminalWidth - 2 - (showMarkGutter ? 2 : 0)
   const colWidths = useMemo(
-    () => computeColumnWidths(documents, columns, viewportWidth),
-    [documents, columns, viewportWidth],
+    () => computeColumnWidths(documents, columns, viewportWidth, idAsDate),
+    [documents, columns, viewportWidth, idAsDate],
   )
   // Persist the horizontal scroll across renders so we can keep the
   // viewport stable while the cursor moves through already-visible columns.
@@ -381,6 +390,7 @@ export function DocumentList({
               selectionMode={selectionMode}
               showMarkGutter={showMarkGutter}
               markLetter={markLetter}
+              idAsDate={idAsDate}
             />
           )
         })}
@@ -465,6 +475,7 @@ function DocumentRow({
   selectionMode,
   showMarkGutter,
   markLetter,
+  idAsDate,
 }: {
   doc: Document
   columns: DetectedColumn[]
@@ -478,12 +489,15 @@ function DocumentRow({
   selectionMode: SelectionMode
   showMarkGutter: boolean
   markLetter: string | null
+  idAsDate: boolean
 }) {
   const values = columns.map((col, i) => {
     const w = colWidthArray[i]
     const val = getNestedValue(doc, col.field)
-    const text = formatValue(val, w)
-    const type = detectValueType(val)
+    const options = cellFormatOptions(col.field, idAsDate)
+    const text = formatValue(val, w, options)
+    const rawType = detectValueType(val)
+    const type = options.objectIdAsDate && rawType === "objectid" ? "date" : rawType
     const isActiveCell = selected && i === selectedColumnIndex
     const isSelectedColumn = i === selectedColumnIndex
     const color = isActiveCell

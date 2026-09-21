@@ -22,6 +22,7 @@ import { getExportAbort } from "../actions/palette/document"
 import { filterBySelectedValue } from "../actions/filterValue"
 import { yankDocument, yankCell } from "../actions/yank"
 import { hideColumn } from "../actions/hideColumn"
+import { toggleIdAsDate } from "../actions/idAsDate"
 import { toggleMarkOnSelection, jumpToMark, clearMarkJump } from "../actions/marks"
 import { handleSidebarEnter, closeTabsForSidebarCursor } from "../actions/sidebar"
 import { useDialogKeys } from "./useDialogKeys"
@@ -99,6 +100,7 @@ export function useKeyboardNav({
 
     // Filter bar
     ["filter_bar.toggle", () => dispatch({ type: "TOGGLE_FILTER_BAR" })],
+    ["doc.toggle_id_date", () => toggleIdAsDate(state, dispatch)],
 
     // Navigation
     [

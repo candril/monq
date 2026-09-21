@@ -160,6 +160,7 @@ monq                                        # shows saved connections or URI pro
 | `s` | Cycle sort on current column |
 | `-` | Hide current column (adds `-field` projection token) |
 | `w` | Cycle column width mode |
+| `Shift+T` | Toggle `_id` column between ObjectId and creation date (UTC) |
 | `Ctrl+F` | Open pipeline editor in `$EDITOR` |
 | `Ctrl+E` | Open pipeline file in tmux split (or copy path) |
 | `Backspace` | Clear query / pipeline |

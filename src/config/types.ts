@@ -99,6 +99,7 @@ export type ActionName =
   | "tab.switch_8"
   | "tab.switch_9"
   | "filter_bar.toggle"
+  | "doc.toggle_id_date"
   | "palette.open"
   | "palette.open_collections"
   | "index.open"

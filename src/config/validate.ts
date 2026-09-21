@@ -80,6 +80,7 @@ const ACTION_NAMES = new Set<ActionName>([
   "tab.switch_8",
   "tab.switch_9",
   "filter_bar.toggle",
+  "doc.toggle_id_date",
   "palette.open",
   "app.quit",
 ])

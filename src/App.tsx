@@ -537,6 +537,7 @@ export function App({
                   themeVersion={themeVersion}
                   viewportWidth={docListViewportWidth}
                   marksForRow={marksForRow}
+                  idAsDate={state.idAsDate}
                 />
               </box>
             ) : null}

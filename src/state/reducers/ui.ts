@@ -68,6 +68,9 @@ export function uiReducer(state: AppState, action: AppAction): AppState | null {
     case "TOGGLE_FILTER_BAR":
       return { ...state, filterBarVisible: !state.filterBarVisible }
 
+    case "TOGGLE_ID_AS_DATE":
+      return { ...state, idAsDate: !state.idAsDate }
+
     // Confirmation dialogs
     case "SHOW_BULK_EDIT_CONFIRM":
       return { ...state, bulkEditConfirmation: action.confirmation }

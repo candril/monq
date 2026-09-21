@@ -119,6 +119,7 @@ export type AppAction =
   | { type: "START_PIPELINE_WATCH" }
   | { type: "STOP_PIPELINE_WATCH" }
   | { type: "TOGGLE_FILTER_BAR" }
+  | { type: "TOGGLE_ID_AS_DATE" }
   // Preview
   | { type: "TOGGLE_PREVIEW" }
   | { type: "CYCLE_PREVIEW_POSITION" }
@@ -241,6 +242,7 @@ export function createInitialState(): AppState {
     pipelineConfirm: null,
     pipelineWatching: false,
     filterBarVisible: true,
+    idAsDate: false,
     loadedCount: 0,
     loadingMore: false,
     previewPosition: null,

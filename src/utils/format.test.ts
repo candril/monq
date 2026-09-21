@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { ObjectId } from "mongodb"
+import { ObjectId, Timestamp } from "mongodb"
 import {
   formatValue,
   detectValueType,
@@ -35,6 +35,34 @@ describe("formatValue", () => {
 
     // act / assert
     expect(formatValue(id, 40)).toContain(id.toHexString())
+  })
+
+  test("ObjectId as date shows its creation time in UTC", () => {
+    // arrange
+    const id = ObjectId.createFromTime(Date.UTC(2026, 8, 21, 23, 30, 5) / 1000)
+
+    // act / assert
+    expect(formatValue(id, 40, { objectIdAsDate: true })).toBe("2026-09-21 23:30:05Z")
+  })
+
+  test("date shows full UTC timestamp", () => {
+    // arrange
+    const date = new Date("2026-09-21T23:30:05.123Z")
+
+    // act / assert
+    expect(formatValue(date, 40)).toBe("2026-09-21 23:30:05Z")
+  })
+
+  test("BSON Timestamp shows its seconds as UTC timestamp", () => {
+    // arrange
+    const ts = new Timestamp({ t: Date.UTC(2026, 8, 21, 23, 30, 5) / 1000, i: 1 })
+
+    // act / assert
+    expect(formatValue(ts, 40)).toBe("2026-09-21 23:30:05Z")
+  })
+
+  test("out-of-range date does not throw", () => {
+    expect(formatValue(new Date(Number.NaN), 40)).toBe("Invalid Date")
   })
 
   test("array shows bracket notation", () => {

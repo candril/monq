@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`monq --demo`** — a fictional shop's two databases and five collections, served from
   memory: no MongoDB, no connection string, nothing written to disk. Browsing, filtering,
   sorting, aggregating and editing all work; the seed is the same on every launch.
+- **`Shift+T` shows `_id` as the ObjectId's creation date** (UTC) in the document list, and
+  back. Display only: yank, filter and edit still use the ObjectId (spec 066).
+
+### Fixed
+
+- Date cells show the full UTC timestamp (`2026-09-21 23:30:05Z`) instead of only the UTC day,
+  which put late-evening documents on the following day for anyone east of UTC.
+- A BSON `Timestamp` value no longer crashes the row it is in; it shows as a UTC timestamp.
 
 ## [0.7.0] - 2026-09-14
 

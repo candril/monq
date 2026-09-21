@@ -66,8 +66,13 @@ export function valueColor(type: JsonValueType): string {
   }
 }
 
+export interface FormatOptions {
+  /** Render an ObjectId as its embedded creation time instead of hex */
+  objectIdAsDate?: boolean
+}
+
 /** Format a value for display in a table cell */
-export function formatValue(value: unknown, maxWidth: number): string {
+export function formatValue(value: unknown, maxWidth: number, options: FormatOptions = {}): string {
   const type = detectValueType(value)
 
   let text: string
@@ -85,13 +90,13 @@ export function formatValue(value: unknown, maxWidth: number): string {
       text = value as string
       break
     case "objectid":
-      text = String(value)
+      text = options.objectIdAsDate
+        ? formatUtcDateTime((value as { getTimestamp(): Date }).getTimestamp())
+        : String(value)
       break
-    case "date": {
-      const d = value instanceof Date ? value : new Date(String(value))
-      text = d.toISOString().slice(0, 10)
+    case "date":
+      text = formatUtcDateTime(toDate(value))
       break
-    }
     case "array":
       text = compactJson(value, maxWidth)
       break
@@ -103,6 +108,33 @@ export function formatValue(value: unknown, maxWidth: number): string {
   }
 
   return truncate(text, maxWidth)
+}
+
+function toDate(value: unknown): Date {
+  if (value instanceof Date) {
+    return value
+  }
+  // Matched by _bsontype: the driver and top-level bson are separate copies, so instanceof misses
+  if (isBsonTimestamp(value)) {
+    return new Date(value.t * 1000)
+  }
+  return new Date(String(value))
+}
+
+function isBsonTimestamp(value: unknown): value is { t: number } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as { _bsontype?: string })._bsontype === "Timestamp"
+  )
+}
+
+/** `YYYY-MM-DD HH:MM:SSZ` — sub-second precision is noise in a table cell */
+function formatUtcDateTime(date: Date): string {
+  if (Number.isNaN(date.getTime())) {
+    return "Invalid Date"
+  }
+  return date.toISOString().slice(0, 19).replace("T", " ") + "Z"
 }
 
 /** Compact JSON representation that fits in maxWidth */
