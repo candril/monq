@@ -39,15 +39,15 @@
     "@types/bun": "latest",
     "@types/react": "^19.3.0",
     "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-    "oxfmt": "^0.68.0",
-    "oxlint": "^1.83.0"
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
-    "@opentui/core": "0.5.11",
-    "@opentui/react": "0.5.11",
+    "@opentui/core": "0.5.12",
+    "@opentui/react": "0.5.12",
     "json5": "^2.2.3",
     "mongodb": "^7.6.0",
     "react": "19.3.0",
