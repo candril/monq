@@ -32,6 +32,8 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 028 | [Connection Error Handling](./028-connection-error-handling.md) | Draft | Graceful handling of connection failures and timeouts |
 | 062 | [BSON Type Preservation](./062-bson-type-preservation.md) | In Progress | Stop edits changing Long→Int32; unify the write/edit JSON format |
 | 063 | [Optimistic Concurrency](./063-optimistic-concurrency.md) | In Progress | Abort document writes when the doc changed remotely since open |
+| 068 | [Column Picker](./068-column-picker.md) | Draft | `c` quick-pick for columns; nested `+a.b` projections flatten into their own column |
+| 069 | [Negated Search](./069-negated-search.md) | Draft | `!term` hides documents containing the term in any searchable field |
 
 ## Done Specs
 
