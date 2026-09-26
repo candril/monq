@@ -16,7 +16,7 @@ import {
   valueColor,
   detectValueType,
   padRight,
-  truncate,
+  truncateHeader,
   type FormatOptions,
 } from "../utils/format"
 import { getNestedValue } from "../utils/document"
@@ -450,11 +450,11 @@ function HeaderRow({
     const colW = colWidthArray[i]
     let label: string
     if (col.displayMode === "minimized") {
-      label = truncate(col.field, MINIMIZED_COL_WIDTH)
+      label = truncateHeader(col.field, MINIMIZED_COL_WIDTH)
     } else {
       // Column widths already reserve SORT_INDICATOR_WIDTH, so the indicator always fits.
       // Truncate only to the available column width minus indicator length.
-      label = truncate(col.field, colW - sortIndicator.length) + sortIndicator
+      label = truncateHeader(col.field, colW - sortIndicator.length) + sortIndicator
     }
     const color = isSelectedCol
       ? focused

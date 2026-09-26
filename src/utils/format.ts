@@ -161,6 +161,17 @@ export function truncate(text: string, maxWidth: number): string {
   return text.slice(0, maxWidth - 1) + "~"
 }
 
+/**
+ * Truncate a column header. A dot path keeps its tail — `…Contract.Username`
+ * — because the leaf is what tells sibling columns apart.
+ */
+export function truncateHeader(field: string, maxWidth: number): string {
+  if (!field.includes(".") || field.length <= maxWidth || maxWidth <= 3) {
+    return truncate(field, maxWidth)
+  }
+  return "~" + field.slice(field.length - maxWidth + 1)
+}
+
 /** Pad string right to exact width */
 export function padRight(text: string, width: number): string {
   if (text.length >= width) {

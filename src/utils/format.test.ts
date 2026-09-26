@@ -5,6 +5,7 @@ import {
   detectValueType,
   padRight,
   truncate,
+  truncateHeader,
   formatDocumentCount,
   summarise,
 } from "./format"
@@ -158,5 +159,19 @@ describe("summarise", () => {
     const json = JSON.stringify(obj)
     expect(json.length).toBe(60)
     expect(summarise(obj)).toBe(json)
+  })
+})
+
+describe("truncateHeader", () => {
+  test("dot path keeps its tail", () => {
+    expect(truncateHeader("TvContract.Username", 12)).toBe("~ct.Username")
+  })
+
+  test("plain field truncates at the end", () => {
+    expect(truncateHeader("TerminationReason", 8)).toBe("Termina~")
+  })
+
+  test("fits → unchanged", () => {
+    expect(truncateHeader("a.b", 5)).toBe("a.b")
   })
 })
