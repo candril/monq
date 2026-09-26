@@ -21,6 +21,7 @@ import {
   type FormatOptions,
 } from "../utils/format"
 import { markDocId } from "../utils/marks"
+import { searchHighlightPattern, splitMatches } from "../utils/highlight"
 import { Loading } from "./Loading"
 import { randomDocumentMessage } from "../utils/loadingMessages"
 
@@ -54,6 +55,8 @@ interface DocumentListProps {
   marksForRow?: Map<string, string>
   /** Render ObjectId values in the _id column as their creation time */
   idAsDate?: boolean
+  /** Search terms whose matches are highlighted in cells */
+  searchTerms?: string[]
 }
 
 function cellFormatOptions(field: string, idAsDate: boolean): FormatOptions {
@@ -206,15 +209,31 @@ function computeScrollLeft(
   return Math.max(0, Math.min(scrollLeft, maxScroll))
 }
 
-/** Build segments for a row: each column padded to width, separated by gaps */
+interface Segment {
+  text: string
+  color: string
+  bg?: string
+}
+
+/**
+ * Build segments for a row: each column padded to width, separated by gaps.
+ * Parts of a cell matching `highlight` get their own highlighted segment.
+ */
 function buildRowSegments(
   values: { text: string; color: string }[],
   colWidths: number[],
-): { text: string; color: string }[] {
-  const segments: { text: string; color: string }[] = []
+  highlight: RegExp | null = null,
+): Segment[] {
+  const segments: Segment[] = []
   for (let i = 0; i < values.length; i++) {
     const w = colWidths[i]
-    segments.push({ text: padRight(values[i].text, w), color: values[i].color })
+    for (const part of splitMatches(padRight(values[i].text, w), highlight)) {
+      segments.push(
+        part.match
+          ? { text: part.text, color: theme.bg, bg: theme.warning }
+          : { text: part.text, color: values[i].color },
+      )
+    }
     if (i < values.length - 1) {
       segments.push({ text: " ", color: theme.bg })
     }
@@ -223,12 +242,8 @@ function buildRowSegments(
 }
 
 /** Slice segments to fit in a horizontal viewport */
-function sliceSegments(
-  segments: { text: string; color: string }[],
-  scrollLeft: number,
-  viewportWidth: number,
-): { text: string; color: string }[] {
-  const result: { text: string; color: string }[] = []
+function sliceSegments(segments: Segment[], scrollLeft: number, viewportWidth: number): Segment[] {
+  const result: Segment[] = []
   let pos = 0
 
   for (const seg of segments) {
@@ -249,7 +264,7 @@ function sliceSegments(
     const end = Math.min(seg.text.length, scrollLeft + viewportWidth - pos)
     const sliced = seg.text.slice(start, end)
     if (sliced.length > 0) {
-      result.push({ text: sliced, color: seg.color })
+      result.push({ ...seg, text: sliced })
     }
     pos = segEnd
   }
@@ -272,7 +287,14 @@ export function DocumentList({
   viewportWidth: viewportWidthProp,
   marksForRow,
   idAsDate = false,
+  searchTerms,
 }: DocumentListProps) {
+  // Keyed on the terms' content: App derives a fresh array on every render
+  const searchKey = searchTerms?.join("\u0000") ?? ""
+  const highlight = useMemo(
+    () => searchHighlightPattern(searchKey ? searchKey.split("\u0000") : []),
+    [searchKey],
+  )
   // Always reserve the gutter so the layout never shifts when the first mark
   // appears in a collection. Costs 2 chars of horizontal space, but avoids the
   // jarring jump that the conditional gutter caused.
@@ -391,6 +413,7 @@ export function DocumentList({
               showMarkGutter={showMarkGutter}
               markLetter={markLetter}
               idAsDate={idAsDate}
+              highlight={highlight}
             />
           )
         })}
@@ -453,7 +476,7 @@ function HeaderRow({
       {showMarkGutter && <box width={2} />}
       <text>
         {visible.map((seg, i) => (
-          <span key={i} fg={seg.color}>
+          <span key={i} fg={seg.color} bg={seg.bg}>
             {seg.text}
           </span>
         ))}
@@ -476,6 +499,7 @@ function DocumentRow({
   showMarkGutter,
   markLetter,
   idAsDate,
+  highlight,
 }: {
   doc: Document
   columns: DetectedColumn[]
@@ -490,6 +514,7 @@ function DocumentRow({
   showMarkGutter: boolean
   markLetter: string | null
   idAsDate: boolean
+  highlight: RegExp | null
 }) {
   const values = columns.map((col, i) => {
     const w = colWidthArray[i]
@@ -510,7 +535,7 @@ function DocumentRow({
     return { text, color }
   })
 
-  const segments = buildRowSegments(values, colWidthArray)
+  const segments = buildRowSegments(values, colWidthArray, highlight)
   const visible = sliceSegments(segments, scrollLeft, viewportWidth)
 
   const bg =
@@ -542,7 +567,7 @@ function DocumentRow({
       )}
       <text>
         {visible.map((seg, i) => (
-          <span key={i} fg={seg.color}>
+          <span key={i} fg={seg.color} bg={seg.bg}>
             {seg.text}
           </span>
         ))}

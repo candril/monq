@@ -32,7 +32,6 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 028 | [Connection Error Handling](./028-connection-error-handling.md) | Draft | Graceful handling of connection failures and timeouts |
 | 062 | [BSON Type Preservation](./062-bson-type-preservation.md) | In Progress | Stop edits changing Long→Int32; unify the write/edit JSON format |
 | 063 | [Optimistic Concurrency](./063-optimistic-concurrency.md) | In Progress | Abort document writes when the doc changed remotely since open |
-| 067 | [Global Search](./067-global-search.md) | In Progress | Bare words in the simple bar search all string fields, live as you type |
 
 ## Done Specs
 
@@ -97,3 +96,4 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 059 | [Shift-JK Collection Switch](./done/059-ctrl-jk-collection-switch.md) | `J/K` switch the selected collection from the sidebar cursor |
 | 060 | [Tmux Document Preview](./done/060-tmux-document-preview.md) | External tmux/nvim document editor that follows row navigation |
 | 066 | [Date Display](./done/066-date-display.md) | Full UTC timestamps in date cells, `Shift+T` shows `_id` as ObjectId creation date |
+| 067 | [Global Search](./done/067-global-search.md) | Bare words in the simple bar search all string fields, live as you type |

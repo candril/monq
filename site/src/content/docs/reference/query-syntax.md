@@ -33,7 +33,7 @@ A term that parses as a value also matches fields of that type:
 | Fields | Only fields the schema sample has seen. With none, the search matches nothing |
 | Cost | Regex search can't use an index; it scans the collection and times out after 10 s |
 
-The filter bar shows the engine and field count while a query searches, e.g. `⌕ regex · 12 fields`. Switch to BSON mode (`Tab`) to see the generated `$or`.
+Matches are highlighted in the document list. The filter bar shows the engine and field count while a query searches, e.g. `⌕ regex · 12 fields`. Switch to BSON mode (`Tab`) to see the generated `$or`.
 
 ### Full-text search
 

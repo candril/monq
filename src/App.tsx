@@ -38,7 +38,7 @@ import { useMongoConnection } from "./hooks/useMongoConnection"
 import { useKeyboardNav } from "./hooks/useKeyboardNav"
 import { useDocumentLoader } from "./hooks/useDocumentLoader"
 import { useLiveSearch } from "./hooks/useLiveSearch"
-import { searchIndicator } from "./query/search"
+import { searchIndicator, searchTermsOf } from "./query/search"
 import { buildCommands } from "./commands/builder"
 import { loadHistory, appendHistory } from "./utils/history"
 import { loadMarks, marksForScope, lettersInScope } from "./utils/marks"
@@ -545,6 +545,11 @@ export function App({
                   viewportWidth={docListViewportWidth}
                   marksForRow={marksForRow}
                   idAsDate={state.idAsDate}
+                  searchTerms={
+                    activeTab.queryMode === "simple" && !state.pipelineMode
+                      ? searchTermsOf(activeTab.query)
+                      : undefined
+                  }
                 />
               </box>
             ) : null}

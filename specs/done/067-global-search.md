@@ -1,6 +1,6 @@
 # Global Search
 
-**Status**: In Progress
+**Status**: Done
 
 ## Description
 
@@ -92,7 +92,7 @@ text index can opt into `$text` instead, which is indexed but matches whole word
   - The engine is part of the tab snapshot, so it survives tab switches.
   - Toggling re-runs the query when it has search terms.
 
-### P3 - Nice to Have
+### P3 - Nice to Have — Done
 
 - **Match highlighting.** In the document list, the parts of a cell that match
   a search term (case-insensitive) render in the highlight colour. This works in
