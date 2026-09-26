@@ -100,6 +100,7 @@ export type AppAction =
   | { type: "TOGGLE_BSON_PROJECTION" }
   | { type: "FORMAT_BSON_SECTION" }
   | { type: "SUBMIT_QUERY" }
+  | { type: "LIVE_QUERY" }
   | { type: "CLEAR_QUERY" }
   // Pipeline
   | {

@@ -11,6 +11,7 @@
  *   +field               -> projection include  (bare, no colon)
  *   -field               -> projection exclude  (bare, no colon)
  *   @<letter>            -> _id: { $in: [...marked ids] } (mark register, vim @-style)
+ *   word / "a phrase"    -> search across string fields (see ./search.ts)
  *
  * Examples:
  *   "Author:Peter"              -> filter: { "Author": "Peter" }
@@ -31,6 +32,8 @@ import type { Filter, Document } from "mongodb"
 import { ObjectId } from "mongodb"
 import { EJSON } from "bson"
 import { getArrayAncestor, type SchemaMap } from "./schema"
+import { tokenize } from "./tokenize"
+import { buildSearchFilter, isSearchToken, searchTermOf } from "./search"
 
 /**
  * Set a filter value, using $elemMatch if the field path crosses an array.
@@ -178,42 +181,13 @@ function coerceValue(value: string): string | number | boolean | null | ObjectId
   return value
 }
 
-/** Tokenize query string, respecting quoted values */
-function tokenize(input: string): string[] {
-  const tokens: string[] = []
-  let current = ""
-  let inQuote: string | null = null
-
-  for (const ch of input) {
-    if (inQuote) {
-      current += ch
-      if (ch === inQuote) {
-        inQuote = null
-      }
-    } else if (ch === '"' || ch === "'") {
-      inQuote = ch
-      current += ch
-    } else if (ch === " ") {
-      if (current) {
-        tokens.push(current)
-      }
-      current = ""
-    } else {
-      current += ch
-    }
-  }
-  if (current) {
-    tokens.push(current)
-  }
-  return tokens
-}
-
 /** Valid bare field name: word chars and dots only */
 const VALID_FIELD = /^[\w.]+$/
 
 export interface ParsedSimpleQuery {
   filter: Filter<Document>
   projection: Record<string, 0 | 1> | undefined
+  searchTerms: string[]
 }
 
 /**
@@ -245,14 +219,23 @@ export function parseSimpleQueryFull(
 ): ParsedSimpleQuery {
   const trimmed = input.trim()
   if (!trimmed) {
-    return { filter: {}, projection: undefined }
+    return { filter: {}, projection: undefined, searchTerms: [] }
   }
 
   const tokens = tokenize(trimmed)
   const filter: Record<string, unknown> = {}
   const proj: Record<string, 0 | 1> = {}
+  const searchTerms: string[] = []
 
   for (let token of tokens) {
+    if (isSearchToken(token)) {
+      const term = searchTermOf(token)
+      if (term) {
+        searchTerms.push(term)
+      }
+      continue
+    }
+
     // @<letter> → mark register: _id: { $in: [...marked ids] }
     // Single lowercase letter only. Unknown letters resolve to an empty $in
     // (matches nothing) so the user gets explicit feedback when a register
@@ -368,12 +351,18 @@ export function parseSimpleQueryFull(
       continue
     }
 
-    // Bare text — skip (partial input, no operator)
+    // Anything left is a half-typed operator token — skip it
+  }
+
+  const searchClause = buildSearchFilter(searchTerms, schemaMap ?? new Map())
+  if (searchClause) {
+    Object.assign(filter, searchClause)
   }
 
   return {
     filter,
     projection: Object.keys(proj).length > 0 ? proj : undefined,
+    searchTerms,
   }
 }
 

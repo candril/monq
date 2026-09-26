@@ -1,6 +1,6 @@
 # Global Search
 
-**Status**: Draft
+**Status**: In Progress
 
 ## Description
 
@@ -31,7 +31,7 @@ text index can opt into `$text` instead, which is indexed but matches whole word
 
 ## Capabilities
 
-### P1 - Must Have
+### P1 - Must Have — Done
 
 - **Bare terms are search terms.** In simple mode, a token that is not
   `field:value`, `field>v`, `+field`, `-field` or `@a` is a search term. A

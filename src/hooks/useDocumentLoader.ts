@@ -18,6 +18,12 @@ import { resolveCurrentQuery } from "../utils/query"
  * _id must always be fetched so edit/delete commands can find the document.
  * Returns the sanitized projection and whether _id was suppressed.
  */
+/**
+ * A global search is an unindexed regex scan (spec 067); bound it so a live
+ * keystroke on a huge collection can't tie up the server.
+ */
+const SEARCH_MAX_TIME_MS = 10_000
+
 function sanitizeProjection(projection: Record<string, 0 | 1> | undefined): {
   projection: Record<string, 0 | 1> | undefined
   idHidden: boolean
@@ -149,6 +155,7 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
     const filter = resolved.mode === "find" ? resolved.filter : {}
     const sort = resolved.mode === "find" ? resolved.sort : undefined
     const projection = resolved.mode === "find" ? resolved.projection : undefined
+    const searching = resolved.mode === "find" && resolved.searching === true
 
     // Always fetch _id so edit/delete commands work; hide it in the column list
     // if the user explicitly excluded it via projection.
@@ -158,6 +165,7 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
       sort,
       projection: safeProjection,
       limit: pageSize,
+      maxTimeMS: searching ? SEARCH_MAX_TIME_MS : undefined,
     })
       .then(({ documents, count, totalCount }) => {
         if (cancelled) {
@@ -221,8 +229,10 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
 
         // When projection is active in simple mode, merge new schema into existing
         // so that excluded fields are still available for filter suggestions and
-        // the pipeline JSON schema sidecar.
-        if (hasSimpleProjection) {
+        // the pipeline JSON schema sidecar. A search merges too: its fields come
+        // from the schema, so a narrow (or empty) result page must not shrink
+        // the field set the next keystroke searches.
+        if (hasSimpleProjection || searching) {
           const merged = new Map(state.schemaMap)
           for (const [key, val] of buildSchemaMap(documents)) {
             merged.set(key, val)
@@ -233,7 +243,15 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
         }
       })
       .catch((err: Error) => {
-        if (!cancelled) {
+        if (cancelled) {
+          return
+        }
+        // While the bar is open this is a live search; the error screen would
+        // throw the user out of the input they're still typing in.
+        if (state.queryVisible) {
+          dispatch({ type: "SET_DOCUMENTS_LOADING", loading: false })
+          dispatch({ type: "SHOW_MESSAGE", message: `Query failed: ${err.message}`, kind: "error" })
+        } else {
           dispatch({ type: "SET_ERROR", error: err.message })
         }
       })
@@ -257,6 +275,7 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
     const filter = resolved.mode === "find" ? resolved.filter : {}
     const sort = resolved.mode === "find" ? resolved.sort : undefined
     const projection = resolved.mode === "find" ? resolved.projection : undefined
+    const searching = resolved.mode === "find" && resolved.searching === true
 
     // Always fetch _id so edit/delete commands work (same logic as Effect 1)
     const { projection: safeProjection } = sanitizeProjection(projection)
@@ -266,6 +285,7 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
       projection: safeProjection,
       skip: state.loadedCount,
       limit: pageSize,
+      maxTimeMS: searching ? SEARCH_MAX_TIME_MS : undefined,
     })
       .then(({ documents }) => {
         if (cancelled || documents.length === 0) {

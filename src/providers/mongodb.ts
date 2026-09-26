@@ -109,21 +109,24 @@ export async function fetchDocuments(
     limit?: number
     sort?: Record<string, 1 | -1>
     projection?: Record<string, 0 | 1>
+    maxTimeMS?: number
   } = {},
 ): Promise<{ documents: Document[]; count: number; totalCount: number }> {
   const collection = getDb().collection(collectionName)
-  const { skip = 0, limit = 50, sort, projection } = options
+  const { skip = 0, limit = 50, sort, projection, maxTimeMS } = options
 
   const hasFilter = Object.keys(filter).length > 0
 
-  const cursor = collection.find(filter, projection ? { projection } : undefined)
+  const cursor = collection.find(filter, { ...(projection ? { projection } : {}), maxTimeMS })
   const [documents, count, totalCount] = await Promise.all([
     cursor
       .sort(sort ?? { _id: -1 })
       .skip(skip)
       .limit(limit)
       .toArray(),
-    hasFilter ? collection.countDocuments(filter) : collection.estimatedDocumentCount(),
+    hasFilter
+      ? collection.countDocuments(filter, { maxTimeMS })
+      : collection.estimatedDocumentCount(),
     hasFilter ? collection.estimatedDocumentCount() : Promise.resolve(0),
   ])
 

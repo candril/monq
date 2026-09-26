@@ -42,6 +42,8 @@ export type ResolvedQuery =
       filter: Filter<Document>
       sort?: Record<string, 1 | -1>
       projection?: Record<string, 0 | 1>
+      /** The filter carries a global search (spec 067) — an unindexed scan. */
+      searching?: boolean
     }
   | {
       mode: "aggregate"
@@ -63,6 +65,7 @@ export function resolveCurrentQuery(state: AppState): ResolvedQuery {
   // Simple / BSON filter mode
   let filter: Filter<Document> = {}
   let projection: Record<string, 0 | 1> | undefined
+  let searching = false
   try {
     if (state.queryInput.trim()) {
       if (state.queryMode === "bson") {
@@ -75,6 +78,7 @@ export function resolveCurrentQuery(state: AppState): ResolvedQuery {
         )
         filter = parsed.filter
         projection = parsed.projection
+        searching = parsed.searchTerms.length > 0
       }
     }
   } catch {
@@ -102,7 +106,7 @@ export function resolveCurrentQuery(state: AppState): ResolvedQuery {
     }
   }
 
-  return { mode: "find", filter, sort, projection }
+  return { mode: "find", filter, sort, projection, searching }
 }
 
 /**

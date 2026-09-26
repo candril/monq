@@ -167,6 +167,23 @@ export function queryReducer(state: AppState, action: AppAction): AppState | nul
         ),
       }
 
+    // Live search (spec 067): re-query while the bar stays open. The current
+    // rows stay on screen until the new page lands, so typing doesn't flash
+    // the loading screen on every keystroke.
+    case "LIVE_QUERY":
+      return {
+        ...state,
+        documentsLoading: true,
+        reloadCounter: state.reloadCounter + 1,
+        selectedIndex: 0,
+        loadingMore: false,
+        tabs: state.tabs.map((t) =>
+          t.id === state.activeTabId
+            ? { ...t, query: state.queryInput, queryMode: state.queryMode }
+            : t,
+        ),
+      }
+
     case "CLEAR_QUERY":
       return {
         ...state,

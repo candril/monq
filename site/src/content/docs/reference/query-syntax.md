@@ -5,6 +5,28 @@ description: Reference for monq's simple query syntax and inline projection toke
 
 monq's simple query mode lets you filter and project in a single query string — no separator needed. Open it with `/`.
 
+## Search
+
+A word with no `field:` searches every string field, and the results update as you type.
+
+```
+alice                           → "alice" in any string field (case-insensitive)
+alice berlin                    → both words, possibly in different fields
+"new york"                      → one phrase
+alice status:active             → search AND status=active
+```
+
+Each term becomes a case-insensitive substring `$regex` over every string field in the sampled schema, nested paths included (up to 40 fields), OR-ed together. Several terms AND together.
+
+| Detail | Behaviour |
+|--------|-----------|
+| Live | Re-queries 300 ms after the terms change, once every term has 2+ characters. Enter still submits and records history |
+| Special characters | A term containing `:`, `<`, `>`, `=` or `!` must be quoted: `"a:b"`. Regex characters are matched literally |
+| Fields | Only fields the schema sample has seen. With none, the search matches nothing |
+| Cost | Regex search can't use an index; it scans the collection and times out after 10 s |
+
+Switch to BSON mode (`Tab`) to see the generated `$or`.
+
 ## Filters
 
 ### Equality

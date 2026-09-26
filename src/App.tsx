@@ -37,6 +37,7 @@ import { appReducer, createInitialState } from "./state"
 import { useMongoConnection } from "./hooks/useMongoConnection"
 import { useKeyboardNav } from "./hooks/useKeyboardNav"
 import { useDocumentLoader } from "./hooks/useDocumentLoader"
+import { useLiveSearch } from "./hooks/useLiveSearch"
 import { buildCommands } from "./commands/builder"
 import { loadHistory, appendHistory } from "./utils/history"
 import { loadMarks, marksForScope, lettersInScope } from "./utils/marks"
@@ -138,6 +139,10 @@ export function App({
       return
     }
     prevReloadCounter.current = state.reloadCounter
+    // A reload with the bar still open is a live search keystroke, not a submit
+    if (state.queryVisible) {
+      return
+    }
     const submittingTab = state.tabs.find((t) => t.id === state.activeTabId)
     const col = submittingTab?.collectionName ?? ""
     if (state.queryMode === "simple" && state.queryInput.trim() && state.dbName && col) {
@@ -192,6 +197,7 @@ export function App({
     }, []),
   })
   useDocumentLoader({ state, dispatch, pageSize })
+  useLiveSearch(state, dispatch)
 
   // Build palette commands based on mode (for in-app switching via Ctrl+P)
   const mainCommands = useMemo(() => buildCommands(state, keymap), [state, keymap])

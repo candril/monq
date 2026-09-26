@@ -66,7 +66,7 @@ monq supports three ways to query a collection:
 
 | Mode | How to activate | Best for |
 |------|----------------|----------|
-| **Simple** | `/` to open query bar | Quick key:value filters |
+| **Simple** | `/` to open query bar | Global search as you type, quick key:value filters |
 | **BSON JSON** | `Tab` from simple mode | Raw MongoDB query objects |
 | **Pipeline** | `Tab` again, or `Ctrl+F` | Aggregation pipelines |
 

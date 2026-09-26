@@ -1,10 +1,39 @@
 import { describe, test, expect } from "bun:test"
 import { queryReducer } from "./query"
 import { createInitialState } from "../../state"
-import type { AppState } from "../../types"
+import type { AppState, Tab } from "../../types"
 
 function state(overrides: Partial<AppState> = {}): AppState {
   return { ...createInitialState(), ...overrides }
+}
+
+function tab(id: string): Tab {
+  return {
+    id,
+    collectionName: "users",
+    query: "",
+    queryMode: "simple",
+    bsonSort: "",
+    bsonProjection: "",
+    selectedIndex: 0,
+    selectedColumnIndex: 0,
+    scrollOffset: 0,
+    sortField: null,
+    sortDirection: -1,
+    columns: [],
+    previewPosition: null,
+    previewScrollOffset: 0,
+    documents: [],
+    documentCount: 0,
+    totalDocumentCount: 0,
+    selectionMode: "none",
+    selectedIds: new Set(),
+    pipelineMode: false,
+    pipeline: [],
+    pipelineSource: "",
+    pipelineIsAggregate: false,
+    pipelineWatching: false,
+  }
 }
 
 describe("TOGGLE_QUERY_MODE", () => {
@@ -83,6 +112,27 @@ describe("SUBMIT_QUERY", () => {
     expect(result.queryVisible).toBe(false)
     // Tab query should be updated
     expect(result.tabs[0].query).toBe("status:active")
+  })
+})
+
+describe("LIVE_QUERY", () => {
+  test("reloads with the bar open and the current rows kept", () => {
+    const s = state({
+      queryInput: "alice",
+      queryVisible: true,
+      reloadCounter: 3,
+      documents: [{ _id: 1 }],
+      activeTabId: "tab-1",
+      tabs: [tab("tab-1")],
+    })
+
+    const result = queryReducer(s, { type: "LIVE_QUERY" })!
+
+    expect(result.documentsLoading).toBe(true)
+    expect(result.reloadCounter).toBe(4)
+    expect(result.queryVisible).toBe(true)
+    expect(result.documents).toEqual([{ _id: 1 }])
+    expect(result.tabs[0].query).toBe("alice")
   })
 })
 

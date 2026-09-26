@@ -22,7 +22,7 @@ monq --uri mongodb://localhost:27017/mydb
 
 ### Browse collections with smart columns
 
-Auto-detects document fields, sorts, hides columns, and scrolls horizontally. Press `/` to open the query bar — filter with `price<20`, `customer:Alice`, regex, arrays and more. Switch to raw BSON JSON or a full aggregation pipeline with `Tab`.
+Auto-detects document fields, sorts, hides columns, and scrolls horizontally. Press `/` to open the query bar — type a word to search every text field as you type, or filter with `price<20`, `customer:Alice`, regex, arrays and more. Switch to raw BSON JSON or a full aggregation pipeline with `Tab`.
 
 <img src="site/src/assets/screenshots/document-list.png" alt="Document list with smart columns and inline query bar" width="100%" />
 
@@ -68,6 +68,7 @@ Define named profiles in `~/.config/monq/config.toml`. Use `uri_cmd` to fetch UR
 
 ## Features
 
+- **Global search** — bare words search every string field, live as you type
 - **Expressive filter bar** — `field:value`, ranges (`price:10..200`), dates (`createdAt>ago(7d)`), regex, arrays, nested fields, relative expressions
 - **Two query modes** — simple filter bar or raw BSON JSON, switch with `Tab`
 - **Inline projection** — `+field` / `-field` directly in the query bar, no separate step
@@ -232,6 +233,17 @@ Author:Peter -_id -tags         → filter by Author, exclude _id and tags
 ```
 
 `+field` = include, bare `-field` = exclude. `-field:value` is still a `$ne` filter.
+
+**Search terms** (bare words, live as you type):
+
+```
+alice                           → "alice" in any string field (case-insensitive)
+alice berlin                    → both words, possibly in different fields
+"new york"                      → one phrase
+alice status:active             → search AND status=active
+```
+
+A word with no `field:` is a search term. It becomes a case-insensitive substring `$regex` over every string field the sampled schema knows (up to 40), OR-ed together. The list updates 300 ms after you stop typing, once every term has two characters. Quote a term that contains `:`, `<`, `>`, `=` or `!`. Search can't use an index, so it scans the collection; searches time out after 10 s.
 
 **Mark register tokens** (inline, composable):
 
