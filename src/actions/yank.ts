@@ -5,7 +5,8 @@
 import type { Dispatch } from "react"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
-import { getNestedValue, formatCellValue } from "../utils/format"
+import { formatCellValue } from "../utils/format"
+import { getNestedValue } from "../utils/document"
 import { serializeDocument } from "../utils/document"
 import { copyToClipboard } from "../utils/clipboard"
 

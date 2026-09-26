@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test"
 import { ObjectId } from "mongodb"
-import { serializeDocument, deserializeDocument, detectColumns } from "./document"
+import { serializeDocument, deserializeDocument, detectColumns, getNestedValue } from "./document"
 
 describe("serializeDocument / deserializeDocument", () => {
   test("round-trips a plain document", () => {
@@ -140,5 +140,60 @@ describe("detectColumns", () => {
 
     // assert
     expect(cols).toContain("sparse")
+  })
+})
+
+describe("getNestedValue", () => {
+  const doc = {
+    name: "Peter",
+    address: {
+      city: "Berlin",
+      zip: { code: "10115" },
+    },
+    tags: ["a", "b"],
+  }
+
+  test("top-level field", () => {
+    expect(getNestedValue(doc, "name")).toBe("Peter")
+  })
+
+  test("nested field", () => {
+    expect(getNestedValue(doc, "address.city")).toBe("Berlin")
+  })
+
+  test("deeply nested field", () => {
+    expect(getNestedValue(doc, "address.zip.code")).toBe("10115")
+  })
+
+  test("missing field returns undefined", () => {
+    expect(getNestedValue(doc, "email")).toBeUndefined()
+  })
+
+  test("missing nested field returns undefined", () => {
+    expect(getNestedValue(doc, "address.country")).toBeUndefined()
+  })
+
+  test("path through non-object returns undefined", () => {
+    expect(getNestedValue(doc, "name.first")).toBeUndefined()
+  })
+
+  test("array field returns array", () => {
+    expect(getNestedValue(doc, "tags")).toEqual(["a", "b"])
+  })
+
+  test("array step collects from each element", () => {
+    const orders = { items: [{ name: "a" }, { name: "b" }, {}] }
+
+    expect(getNestedValue(orders, "items.name")).toEqual(["a", "b"])
+  })
+
+  test("numeric step indexes into an array", () => {
+    expect(getNestedValue({ items: [{ name: "a" }, { name: "b" }] }, "items.1.name")).toBe("b")
+  })
+
+  test("nested arrays flatten one level per array step", () => {
+    const doc = { a: [{ b: [{ c: 1 }, { c: 2 }] }, { b: [{ c: 3 }] }] }
+
+    expect(getNestedValue(doc, "a.b.c")).toEqual([1, 2, 3])
   })
 })

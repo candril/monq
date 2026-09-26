@@ -3,7 +3,6 @@ import { ObjectId, Timestamp } from "mongodb"
 import {
   formatValue,
   detectValueType,
-  getNestedValue,
   padRight,
   truncate,
   formatDocumentCount,
@@ -82,45 +81,6 @@ describe("formatValue", () => {
 
     // assert
     expect(result.length).toBeLessThanOrEqual(10)
-  })
-})
-
-describe("getNestedValue", () => {
-  const doc = {
-    name: "Peter",
-    address: {
-      city: "Berlin",
-      zip: { code: "10115" },
-    },
-    tags: ["a", "b"],
-  }
-
-  test("top-level field", () => {
-    expect(getNestedValue(doc, "name")).toBe("Peter")
-  })
-
-  test("nested field", () => {
-    expect(getNestedValue(doc, "address.city")).toBe("Berlin")
-  })
-
-  test("deeply nested field", () => {
-    expect(getNestedValue(doc, "address.zip.code")).toBe("10115")
-  })
-
-  test("missing field returns undefined", () => {
-    expect(getNestedValue(doc, "email")).toBeUndefined()
-  })
-
-  test("missing nested field returns undefined", () => {
-    expect(getNestedValue(doc, "address.country")).toBeUndefined()
-  })
-
-  test("path through non-object returns undefined", () => {
-    expect(getNestedValue(doc, "name.first")).toBeUndefined()
-  })
-
-  test("array field returns array", () => {
-    expect(getNestedValue(doc, "tags")).toEqual(["a", "b"])
   })
 })
 

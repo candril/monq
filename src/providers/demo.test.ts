@@ -73,6 +73,26 @@ describe("cursors", () => {
     expect(Object.keys(doc!).sort()).toEqual(["_id", "sku"])
   })
 
+  test("dotted inclusion nests like MongoDB", async () => {
+    const [doc] = await shop()
+      .collection("customers")
+      .find({}, { projection: { "address.street": 1, _id: 0 } })
+      .limit(1)
+      .toArray()
+    expect(Object.keys(doc!)).toEqual(["address"])
+    expect(Object.keys(doc!.address)).toEqual(["street"])
+  })
+
+  test("dotted exclusion removes only the nested field", async () => {
+    const [doc] = await shop()
+      .collection("customers")
+      .find({}, { projection: { "address.street": 0 } })
+      .limit(1)
+      .toArray()
+    expect(doc!.address).not.toHaveProperty("street")
+    expect(doc!.address).toHaveProperty("zip")
+  })
+
   test("counts distinguish filtered from total", async () => {
     const orders = shop().collection("orders")
     const placed = await orders.countDocuments({ status: "placed" })

@@ -17,9 +17,9 @@ import {
   detectValueType,
   padRight,
   truncate,
-  getNestedValue,
   type FormatOptions,
 } from "../utils/format"
+import { getNestedValue } from "../utils/document"
 import { markDocId } from "../utils/marks"
 import { searchHighlightPattern, splitMatches } from "../utils/highlight"
 import { Loading } from "./Loading"

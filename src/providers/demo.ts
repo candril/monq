@@ -210,26 +210,79 @@ function sortDocs(docs: Document[], spec: Record<string, 1 | -1>): Document[] {
   })
 }
 
+function isPlainObject(value: unknown): value is Document {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    !(value instanceof Date) &&
+    !("_bsontype" in value)
+  )
+}
+
+/**
+ * The part of `value` a dotted inclusion keeps, nested as MongoDB returns it:
+ * `address.street` → `{ address: { street } }`, and through an array each
+ * object element keeps its own part.
+ */
+function includePath(value: unknown, parts: string[]): unknown {
+  if (parts.length === 0) {
+    return value
+  }
+  if (Array.isArray(value)) {
+    return value.filter(isPlainObject).map((element) => includePath(element, parts) ?? {})
+  }
+  if (!isPlainObject(value)) {
+    return undefined
+  }
+  const [head, ...rest] = parts
+  const inner = includePath(value[head], rest)
+  return inner === undefined ? undefined : { [head]: inner }
+}
+
+function mergeInto(target: Document, source: Document): void {
+  for (const [key, value] of Object.entries(source)) {
+    if (isPlainObject(target[key]) && isPlainObject(value)) {
+      mergeInto(target[key] as Document, value)
+    } else {
+      target[key] = value
+    }
+  }
+}
+
+function excludePath(value: unknown, parts: string[]): unknown {
+  if (Array.isArray(value)) {
+    return value.map((element) => excludePath(element, parts))
+  }
+  if (!isPlainObject(value)) {
+    return value
+  }
+  const [head, ...rest] = parts
+  const copy = { ...value }
+  if (rest.length === 0) {
+    delete copy[head]
+  } else if (head in copy) {
+    copy[head] = excludePath(copy[head], rest)
+  }
+  return copy
+}
+
 function project(doc: Document, spec: Record<string, 0 | 1>): Document {
   const including = Object.entries(spec).some(([field, mode]) => mode === 1 && field !== "_id")
   if (!including) {
-    const copy = { ...doc }
-    for (const [field, mode] of Object.entries(spec)) {
-      if (mode === 0) {
-        delete copy[field]
-      }
-    }
-    return copy
+    return Object.entries(spec)
+      .filter(([, mode]) => mode === 0)
+      .reduce((acc, [field]) => excludePath(acc, field.split(".")) as Document, doc)
   }
   const picked: Document = {}
-  if (spec._id !== 0 && "_id" in doc) {
-    picked._id = doc._id
+  if (spec["_id"] !== 0 && "_id" in doc) {
+    picked["_id"] = doc["_id"]
   }
   for (const [field, mode] of Object.entries(spec)) {
     if (mode === 1) {
-      const value = valueAt(doc, field)
-      if (value !== undefined) {
-        picked[field] = value
+      const part = includePath(doc, field.split("."))
+      if (isPlainObject(part)) {
+        mergeInto(picked, part)
       }
     }
   }

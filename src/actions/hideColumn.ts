@@ -6,7 +6,8 @@ import type { Dispatch } from "react"
 import type { Document } from "mongodb"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
-import { projectionToSimple, parseSimpleQueryFull } from "../query/parser"
+import { parseSimpleQueryFull } from "../query/parser"
+import { isInclusion, replaceProjectionTokens, type Projection } from "../query/projection"
 import { classifyPipeline, stageOf } from "../query/pipeline"
 import { serializePipelineSource } from "../utils/document"
 
@@ -61,10 +62,15 @@ function hideColumnPipeline(state: AppState, dispatch: Dispatch<AppAction>, fiel
 }
 
 function hideColumnSimple(state: AppState, dispatch: Dispatch<AppAction>, field: string): void {
-  const { projection: projObj } = parseSimpleQueryFull(state.queryInput)
-  const proj: Record<string, 0 | 1> = { ...(projObj ?? {}) }
+  const { projection } = parseSimpleQueryFull(state.queryInput)
+  const proj: Projection = { ...projection }
 
-  if (proj[field] === 0) {
+  // MongoDB rejects a projection that mixes inclusions and exclusions (except
+  // `_id`), so under `+field` tokens hiding a column means dropping its token.
+  if (isInclusion(proj) && field !== "_id") {
+    delete proj[field]
+    dispatch({ type: "SHOW_MESSAGE", message: `Hiding ${field}`, kind: "info" })
+  } else if (proj[field] === 0) {
     delete proj[field]
     dispatch({ type: "SHOW_MESSAGE", message: `Showing ${field}`, kind: "info" })
   } else {
@@ -73,22 +79,6 @@ function hideColumnSimple(state: AppState, dispatch: Dispatch<AppAction>, field:
     dispatch({ type: "SHOW_MESSAGE", message: `Hiding ${field}`, kind: "info" })
   }
 
-  const nonProjTokens = state.queryInput
-    .trim()
-    .split(/\s+/)
-    .filter((t: string) => {
-      if (!t) {
-        return false
-      }
-      if (t.startsWith("+")) {
-        return false
-      }
-      if (t.startsWith("-") && !/[><!:]/.test(t.slice(1))) {
-        return false
-      }
-      return true
-    })
-  const projStr = Object.keys(proj).length > 0 ? " " + projectionToSimple(proj) : ""
-  dispatch({ type: "SET_QUERY_INPUT", input: (nonProjTokens.join(" ") + projStr).trim() })
+  dispatch({ type: "SET_QUERY_INPUT", input: replaceProjectionTokens(state.queryInput, proj) })
   dispatch({ type: "SUBMIT_QUERY" })
 }

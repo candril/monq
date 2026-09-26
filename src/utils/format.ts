@@ -252,16 +252,3 @@ export function formatCellValue(val: unknown): string {
   }
   return String(val)
 }
-
-/** Resolve a dot-separated field path from a document object */
-export function getNestedValue(doc: Record<string, unknown>, field: string): unknown {
-  const parts = field.split(".")
-  let current: unknown = doc
-  for (const part of parts) {
-    if (current === null || typeof current !== "object") {
-      return undefined
-    }
-    current = (current as Record<string, unknown>)[part]
-  }
-  return current
-}

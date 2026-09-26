@@ -5,6 +5,7 @@
 
 import { useEffect } from "react"
 import type { Dispatch } from "react"
+import type { Document } from "mongodb"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import { fetchDocuments, fetchAggregate, explainFind, explainAggregate } from "../providers/mongodb"
@@ -12,6 +13,7 @@ import { detectColumns } from "../utils/document"
 import { buildSchemaMap } from "../query/schema"
 import { classifyPipeline, extractFindParts } from "../query/pipeline"
 import { resolveCurrentQuery } from "../utils/query"
+import { projectionColumns } from "../query/projection"
 
 /**
  * Strip `_id: 0` from a projection before sending to MongoDB.
@@ -73,7 +75,14 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
         SHAPE_PRESERVING.has(Object.keys(stage)[0]),
       )
 
-      let pipelineIdHidden = false
+      // A trailing 0/1 `$project` names the columns, like a simple-mode
+      // inclusion — whether or not the pipeline runs as a find.
+      const lastStage = state.pipeline.at(-1)
+      const trailingProjection =
+        lastStage && "$project" in lastStage ? (lastStage.$project as Document) : undefined
+      const pipelineInclusion = projectionColumns(trailingProjection)
+
+      let pipelineIdHidden = trailingProjection?.["_id"] === 0
       const fetchPipeline = isAggregate
         ? fetchAggregate(activeTab.collectionName, state.pipeline, { limit: pageSize })
         : (() => {
@@ -92,11 +101,11 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
           if (cancelled) {
             return
           }
-          const detectedFields = detectColumns(documents)
+          const detectedFields = pipelineInclusion ?? detectColumns(documents)
           const detectedSet = new Set(detectedFields)
 
           let columns
-          if (pipelinePreservesShape) {
+          if (pipelinePreservesShape || pipelineInclusion) {
             // Merge: keep existing display modes, preserve columns not in this page
             const existingByField = new Map(existingColumns.map((c) => [c.field, c]))
             const newColumns = detectedFields.map((field) => {
@@ -105,7 +114,9 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
                 existing ?? { field, frequency: 1, visible: true, displayMode: "normal" as const }
               )
             })
-            const preserved = existingColumns.filter((c) => !detectedSet.has(c.field))
+            const preserved = pipelineInclusion
+              ? []
+              : existingColumns.filter((c) => !detectedSet.has(c.field))
             columns = [...newColumns, ...preserved]
           } else {
             // Pipeline reshapes documents — detect fresh from results only
@@ -171,7 +182,8 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
         if (cancelled) {
           return
         }
-        const detectedFields = detectColumns(documents)
+        const inclusionColumns = projectionColumns(projection)
+        const detectedFields = inclusionColumns ?? detectColumns(documents)
         const detectedSet = new Set(detectedFields)
 
         // Preserve display modes for existing columns, add new ones as "normal"
@@ -205,6 +217,9 @@ export function useDocumentLoader({ state, dispatch, pageSize }: UseDocumentLoad
             : null
 
         const preserved = existingColumns.filter((c) => {
+          if (inclusionColumns) {
+            return false
+          } // the inclusion list is the whole column set
           if (detectedSet.has(c.field)) {
             return false
           } // already in newColumns

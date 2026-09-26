@@ -41,17 +41,28 @@ export function deserializeDocument(json: string): Document {
   return EJSON.deserialize(JSON.parse(json)) as Document
 }
 
-/** Walk a dot-notation path to retrieve a nested value from a document */
+/**
+ * Walk a dot-notation path to retrieve a nested value from a document.
+ * A non-numeric step into an array continues into each element and collects
+ * what it finds, as a MongoDB projection of the same path would — so
+ * `Items.Name` over `Items: [{ Name: "a" }, { Name: "b" }]` is `["a", "b"]`.
+ */
 export function getNestedValue(doc: Document, fieldPath: string): unknown {
-  const parts = fieldPath.split(".")
-  let current: unknown = doc
-  for (const part of parts) {
-    if (current === null || current === undefined || typeof current !== "object") {
-      return undefined
-    }
-    current = (current as Record<string, unknown>)[part]
+  return valueAtPath(doc, fieldPath.split("."))
+}
+
+function valueAtPath(current: unknown, parts: string[]): unknown {
+  if (parts.length === 0) {
+    return current
   }
-  return current
+  if (current === null || current === undefined || typeof current !== "object") {
+    return undefined
+  }
+  const [part, ...rest] = parts
+  if (Array.isArray(current) && !/^\d+$/.test(part)) {
+    return current.flatMap((item) => valueAtPath(item, parts) ?? [])
+  }
+  return valueAtPath((current as Record<string, unknown>)[part], rest)
 }
 
 /** Collect distinct values for a field path from loaded documents (capped at `max`) */

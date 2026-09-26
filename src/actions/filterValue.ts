@@ -7,7 +7,7 @@ import type { Dispatch } from "react"
 import { ObjectId } from "mongodb"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
-import { getNestedValue } from "../utils/format"
+import { getNestedValue } from "../utils/document"
 import { stageOf } from "../query/pipeline"
 
 export function filterBySelectedValue(state: AppState, dispatch: Dispatch<AppAction>): void {
