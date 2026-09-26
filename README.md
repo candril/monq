@@ -238,7 +238,7 @@ Author:Peter -_id -tags         → filter by Author, exclude _id and tags
 
 With any `+path` token the columns are exactly the included paths, in the order written. A nested path gets its own column with the bare value: `+TvContract.Username` shows a `TvContract.Username` column, not the wrapping object. A path through an array shows the collected values.
 
-`c` opens the column picker: every field the schema knows, nested ones under their parent. Type to filter, `Space` toggles, `Ctrl+A` toggles all filtered rows, `Ctrl+R` resets, `Shift+↑/↓` moves a column, `Enter` applies and `Esc` discards. It writes the shortest projection that shows your choice (none, `-field` exclusions, or a `+path` list when nested paths or a custom order need it), so the result stays visible in the bar. In pipeline mode it edits the `$project` stage.
+`c` opens the column picker: every field the schema knows, nested ones under their parent. Type to filter, `Space` toggles, `Ctrl+A` toggles all filtered rows, `Ctrl+X` hides them (then hand-pick with `Space`; columns follow pick order), `Ctrl+R` resets, `Shift+↑/↓` moves a column, `Enter` applies and `Esc` discards. It writes the shortest projection that shows your choice (none, `-field` exclusions, or a `+path` list when nested paths or a custom order need it), so the result stays visible in the bar. In pipeline mode it edits the `$project` stage.
 
 **Search terms** (bare words, live as you type):
 

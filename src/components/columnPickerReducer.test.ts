@@ -33,3 +33,27 @@ describe("pickerReducer", () => {
     expect(run({ type: "toggle" }, { type: "reset" }).checked).toEqual(defaults)
   })
 })
+
+describe("hide-all", () => {
+  test("hides only the filtered rows", () => {
+    const state = run({ type: "query", edit: () => "name" }, { type: "hide-all" })
+
+    expect(state.checked).toEqual(["_id", "address"])
+  })
+
+  test("then hand-picked rows become the columns, in pick order", () => {
+    const state = run(
+      { type: "hide-all" },
+      { type: "move", delta: 3 },
+      { type: "toggle" },
+      { type: "move", delta: -2 },
+      { type: "toggle" },
+    )
+
+    expect(state.checked).toEqual(["address.city", "name"])
+  })
+
+  test("Enter with nothing checked does not apply", () => {
+    expect(run({ type: "hide-all" }, { type: "apply" }).applied).toBe(false)
+  })
+})

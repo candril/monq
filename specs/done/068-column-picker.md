@@ -105,6 +105,10 @@ working.
 - **Bulk toggles.** Ctrl-A toggles all *filtered* rows: if any is unchecked,
   all are checked; otherwise all are unchecked. Rows are checked in list order,
   so of a parent and its child the child wins.
+- **Select none.** Ctrl-X hides every *filtered* row, so you can hand-pick a
+  few with Space. Picks append to the column order, so they become the columns
+  in the order they were checked. Enter does nothing while nothing is checked,
+  and the header then says "pick at least one".
 - **Reset.** Ctrl-R restores the default columns.
 - **Type hints.** Each row shows the schema type dimmed: `string`, `object`,
   `array<string>`.

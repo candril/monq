@@ -85,6 +85,8 @@ export function ColumnPicker({
       dispatch({ type: "move", delta: page })
     } else if (key.ctrl && key.name === "a") {
       dispatch({ type: "toggle-all" })
+    } else if (key.ctrl && key.name === "x") {
+      dispatch({ type: "hide-all" })
     } else if (key.ctrl && key.name === "r") {
       dispatch({ type: "reset" })
     } else if (key.ctrl && key.name === "w") {
@@ -126,6 +128,7 @@ export function ColumnPicker({
               {"  "}
               {checked.length}/{rows.length} shown
             </span>
+            {checked.length === 0 && <span fg={theme.warning}>{"  "}pick at least one</span>}
           </text>
         </box>
         <box height={1} />
@@ -159,7 +162,8 @@ export function ColumnPicker({
         <box paddingLeft={2} paddingTop={1} height={2}>
           <text>
             <span fg={theme.textMuted}>
-              space toggle · ^a all · ^r reset · shift+↑↓ reorder · enter apply · esc cancel
+              space toggle · ^a all · ^x none · ^r reset · shift+↑↓ reorder · enter apply · esc
+              cancel
             </span>
           </text>
         </box>

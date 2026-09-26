@@ -21,6 +21,7 @@ export type PickerAction =
   | { type: "move"; delta: number }
   | { type: "toggle" }
   | { type: "toggle-all" }
+  | { type: "hide-all" }
   | { type: "reorder"; delta: -1 | 1 }
   | { type: "reset" }
   | { type: "query"; edit: (query: string) => string }
@@ -61,11 +62,17 @@ export function pickerReducer(state: PickerState, action: PickerAction): PickerS
       const path = cursorPath(state)
       return path ? { ...state, checked: moveChecked(state.checked, path, action.delta) } : state
     }
+    case "hide-all": {
+      const hidden = new Set(visibleRows(state).map((row) => row.path))
+      return { ...state, checked: state.checked.filter((path) => !hidden.has(path)) }
+    }
     case "reset":
       return { ...state, checked: state.defaults }
     case "query":
       return { ...state, query: action.edit(state.query), cursor: 0 }
     case "apply":
-      return { ...state, applied: true }
+      // No columns at all is never what's wanted — typically a ^x before
+      // picking a few, with Enter pressed too early.
+      return state.checked.length > 0 ? { ...state, applied: true } : state
   }
 }

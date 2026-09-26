@@ -197,10 +197,13 @@ Press `c` for a list of every field the schema knows, nested paths indented unde
 | `↑` / `↓`, `Ctrl+P` / `Ctrl+N` | Move |
 | `Space` | Show / hide the field |
 | `Ctrl+A` | Show all filtered fields, or hide them if all are shown |
+| `Ctrl+X` | Hide all filtered fields — then pick the few you want with `Space` |
 | `Ctrl+R` | Back to the default columns |
 | `Shift+↑` / `Shift+↓` | Move the field one column earlier / later |
 | `Enter` | Apply |
 | `Esc` | Discard changes |
+
+Fields you check become columns in the order you check them, so `Ctrl+X` followed by a few `Space`s gives exactly those columns, in that order. `Enter` does nothing while no field is checked.
 
 Showing `a.b` hides `a` and the other way around, since MongoDB can't project a path and its parent together.
 
