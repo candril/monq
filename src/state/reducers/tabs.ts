@@ -22,6 +22,7 @@ export function makeFreshTab(id: string, collectionName: string): Tab {
     collectionName,
     query: "",
     queryMode: "simple",
+    searchEngine: "regex",
     bsonSort: "",
     bsonProjection: "",
     selectedIndex: 0,
@@ -90,6 +91,7 @@ export function snapshotTab(state: AppState, tabId: string, collectionName: stri
     collectionName,
     query: state.queryInput,
     queryMode: state.queryMode,
+    searchEngine: state.searchEngine,
     bsonSort: state.bsonSort,
     bsonProjection: state.bsonProjection,
     selectedIndex: state.selectedIndex,
@@ -117,6 +119,7 @@ export function restoreFromTab(_state: AppState, tab: Tab): Partial<AppState> {
   return {
     queryInput: tab.query,
     queryMode: tab.queryMode,
+    searchEngine: tab.searchEngine,
     bsonSort: tab.bsonSort,
     bsonProjection: tab.bsonProjection,
     bsonFocusedSection: "filter",

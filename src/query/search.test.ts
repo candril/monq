@@ -1,4 +1,5 @@
 import { describe, test, expect } from "bun:test"
+import { ObjectId } from "mongodb"
 import { buildSchemaMap } from "./schema"
 import {
   MAX_SEARCH_FIELDS,
@@ -41,8 +42,14 @@ describe("searchTermsOf", () => {
 })
 
 describe("searchableFields", () => {
-  test("string fields including nested paths", () => {
-    expect(searchableFields(schema)).toEqual(["_id", "name", "address.city"])
+  test("string fields including nested paths and arrays of strings", () => {
+    expect(searchableFields(schema)).toEqual(["_id", "name", "address.city", "tags"])
+  })
+
+  test("arrays of mixed items are not searched", () => {
+    const mixed = buildSchemaMap([{ tags: ["a", 1] }])
+
+    expect(searchableFields(mixed)).toEqual([])
   })
 
   test("caps the field count", () => {
@@ -65,6 +72,7 @@ describe("buildSearchFilter", () => {
         { _id: { $regex: "ali", $options: "i" } },
         { name: { $regex: "ali", $options: "i" } },
         { "address.city": { $regex: "ali", $options: "i" } },
+        { tags: { $regex: "ali", $options: "i" } },
       ],
     })
   })
@@ -81,6 +89,40 @@ describe("buildSearchFilter", () => {
     }
 
     expect(filter.$or[1].name.$regex).toBe("a\\.b\\(c\\)")
+  })
+
+  test("numeric term also matches number fields by equality", () => {
+    const filter = buildSearchFilter(["30"], schema) as { $or: object[] }
+
+    expect(filter.$or).toContainEqual({ age: 30 })
+  })
+
+  test("ObjectId hex also matches objectid fields", () => {
+    const hex = "0000000000000000000007d0"
+    const oidSchema = buildSchemaMap([{ _id: new ObjectId(hex), name: "x" }])
+
+    const filter = buildSearchFilter([hex], oidSchema) as { $or: object[] }
+
+    expect(filter.$or).toContainEqual({ _id: new ObjectId(hex) })
+  })
+
+  test("date term also matches that day on date fields", () => {
+    const dateSchema = buildSchemaMap([{ since: new Date("2026-01-01T10:00:00Z") }])
+
+    const filter = buildSearchFilter(["2026-01-15"], dateSchema) as { $or: object[] }
+
+    expect(filter.$or).toContainEqual({
+      since: {
+        $gte: new Date("2026-01-15T00:00:00.000Z"),
+        $lte: new Date("2026-01-15T23:59:59.999Z"),
+      },
+    })
+  })
+
+  test("text engine sends every term as a quoted phrase", () => {
+    expect(buildSearchFilter(["alice", "new york"], schema, "text")).toEqual({
+      $text: { $search: '"alice" "new york"' },
+    })
   })
 
   test("no searchable fields → matches nothing", () => {
@@ -103,6 +145,12 @@ describe("parseSimpleQueryFull with search terms", () => {
     expect(searchTerms).toEqual(["ali"])
     expect(filter).toMatchObject({ age: { $gt: 3 } })
     expect(filter).toHaveProperty("$or")
+  })
+
+  test("text engine combines with field tokens", () => {
+    const { filter } = parseSimpleQueryFull("ali age>3 +name", schema, undefined, "text")
+
+    expect(filter).toEqual({ age: { $gt: 3 }, $text: { $search: '"ali"' } })
   })
 
   test("half-typed operator token is not searched", () => {

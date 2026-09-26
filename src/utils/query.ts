@@ -75,6 +75,7 @@ export function resolveCurrentQuery(state: AppState): ResolvedQuery {
           state.queryInput,
           state.schemaMap,
           buildMarkIdMap(state),
+          state.searchEngine,
         )
         filter = parsed.filter
         projection = parsed.projection

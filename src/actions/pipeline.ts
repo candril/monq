@@ -15,6 +15,7 @@ import JSON5 from "json5"
 import { EJSON } from "bson"
 import type { SchemaMap } from "../query/schema"
 import { parseSimpleQueryFull, type MarkIdMap } from "../query/parser"
+import type { SearchEngine } from "../query/search"
 import { classifyPipeline } from "../query/pipeline"
 import { getEditor } from "../utils/editor"
 
@@ -72,6 +73,7 @@ export function _buildPipelineTemplate(
   sortField: string | null,
   sortDirection: 1 | -1,
   markIds?: MarkIdMap,
+  searchEngine?: SearchEngine,
 ): string {
   return buildTemplate(
     collectionName,
@@ -83,6 +85,7 @@ export function _buildPipelineTemplate(
     sortField,
     sortDirection,
     markIds,
+    searchEngine,
   )
 }
 
@@ -96,6 +99,7 @@ function buildTemplate(
   sortField: string | null,
   sortDirection: 1 | -1,
   markIds?: MarkIdMap,
+  searchEngine?: SearchEngine,
 ): string {
   const header = buildHeader(collectionName, dbName, schemaMap)
 
@@ -119,7 +123,7 @@ function buildTemplate(
   let projObj: Record<string, 0 | 1> | undefined
   if (simpleQuery.trim()) {
     try {
-      const parsed = parseSimpleQueryFull(simpleQuery, schemaMap, markIds)
+      const parsed = parseSimpleQueryFull(simpleQuery, schemaMap, markIds, searchEngine)
       matchObj = parsed.filter as Record<string, unknown>
       projObj = parsed.projection
     } catch {
@@ -380,6 +384,7 @@ export async function writePipelineFile(params: {
   sortField: string | null
   sortDirection: 1 | -1
   markIds?: MarkIdMap
+  searchEngine?: SearchEngine
 }): Promise<string> {
   const {
     collectionName,
@@ -392,6 +397,7 @@ export async function writePipelineFile(params: {
     sortField,
     sortDirection,
     markIds,
+    searchEngine,
   } = params
   const { dir, queryFile, schemaFile } = pipelineFilePaths(dbName, collectionName, tabId)
   await mkdir(dir, { recursive: true })
@@ -406,6 +412,7 @@ export async function writePipelineFile(params: {
     sortField,
     sortDirection,
     markIds,
+    searchEngine,
   )
   await Bun.write(queryFile, content)
   return queryFile
@@ -422,6 +429,7 @@ export async function openPipelineEditor(params: {
   sortField: string | null
   sortDirection: 1 | -1
   markIds?: MarkIdMap
+  searchEngine?: SearchEngine
 }): Promise<PipelineResult | null> {
   const {
     collectionName,
@@ -434,6 +442,7 @@ export async function openPipelineEditor(params: {
     sortField,
     sortDirection,
     markIds,
+    searchEngine,
   } = params
 
   // Stable temp dir scoped to db + collection + tab
@@ -454,6 +463,7 @@ export async function openPipelineEditor(params: {
     sortField,
     sortDirection,
     markIds,
+    searchEngine,
   )
   await Bun.write(queryFile, template)
 

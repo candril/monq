@@ -13,6 +13,7 @@ function tab(id: string): Tab {
     collectionName: "users",
     query: "",
     queryMode: "simple",
+    searchEngine: "regex",
     bsonSort: "",
     bsonProjection: "",
     selectedIndex: 0,
@@ -56,6 +57,7 @@ describe("TOGGLE_QUERY_MODE", () => {
   test("simple → bson preserves sort as bsonSort", () => {
     const s = state({
       queryMode: "simple",
+      searchEngine: "regex",
       queryInput: "",
       sortField: "age",
       sortDirection: -1,
@@ -82,6 +84,7 @@ describe("SUBMIT_QUERY", () => {
           collectionName: "users",
           query: "",
           queryMode: "simple",
+          searchEngine: "regex",
           bsonSort: "",
           bsonProjection: "",
           selectedIndex: 0,
@@ -148,6 +151,7 @@ describe("CLEAR_QUERY", () => {
           collectionName: "users",
           query: "status:active",
           queryMode: "simple",
+          searchEngine: "regex",
           bsonSort: "",
           bsonProjection: "",
           selectedIndex: 0,

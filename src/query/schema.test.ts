@@ -185,3 +185,23 @@ describe("buildSchemaMap", () => {
     expect(map.has("members.extra")).toBe(false)
   })
 })
+
+describe("buildSchemaMap itemType", () => {
+  test("arrays of one scalar type record it", () => {
+    const map = buildSchemaMap([{ tags: ["a", "b"] }, { tags: ["c"] }])
+
+    expect(map.get("tags")?.itemType).toBe("string")
+  })
+
+  test("differing item types across documents become mixed", () => {
+    const map = buildSchemaMap([{ tags: ["a"] }, { tags: [1] }])
+
+    expect(map.get("tags")?.itemType).toBe("mixed")
+  })
+
+  test("arrays of objects are mixed, not scalar", () => {
+    const map = buildSchemaMap([{ items: [{ name: "x" }] }])
+
+    expect(map.get("items")?.itemType).toBe("mixed")
+  })
+})

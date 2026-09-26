@@ -97,6 +97,7 @@ export function usePipelineKeys({ state, dispatch, renderer, keymap }: UsePipeli
         sortField: state.pipeline.length > 0 ? null : state.sortField,
         sortDirection: state.sortDirection,
         markIds: buildMarkIdMap(state),
+        searchEngine: state.searchEngine,
       })
         .then((result) => {
           if (!result) {
@@ -140,6 +141,7 @@ export function usePipelineKeys({ state, dispatch, renderer, keymap }: UsePipeli
         sortField: state.pipeline.length > 0 ? null : state.sortField,
         sortDirection: state.sortDirection,
         markIds: buildMarkIdMap(state),
+        searchEngine: state.searchEngine,
       })
         .then((queryFile) => {
           const result = openTmuxSplit(queryFile)

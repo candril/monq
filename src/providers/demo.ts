@@ -19,10 +19,17 @@ type Store = Map<string, Map<string, Coll>>
 
 // ── Query engine ─────────────────────────────────────────────────────────────
 
+/** Like MongoDB, a path through an array of objects collects each element's value. */
 function valueAt(doc: Document, path: string): unknown {
   return path.split(".").reduce<unknown>((value, key) => {
     if (value === null || typeof value !== "object") {
       return undefined
+    }
+    if (Array.isArray(value) && !/^\d+$/.test(key)) {
+      return value.flatMap((element) => {
+        const inner = valueAt(element as Document, key)
+        return inner === undefined ? [] : [inner]
+      })
     }
     return (value as Record<string, unknown>)[key]
   }, doc)
@@ -94,7 +101,8 @@ function matchesOperators(value: unknown, spec: Record<string, unknown>): boolea
       case "$regex": {
         const flags = typeof spec.$options === "string" ? spec.$options : undefined
         const pattern = operand instanceof RegExp ? operand : new RegExp(String(operand), flags)
-        return typeof value === "string" && pattern.test(value)
+        const candidates = Array.isArray(value) ? value : [value]
+        return candidates.some((c) => typeof c === "string" && pattern.test(c))
       }
       case "$options":
         return true
@@ -124,8 +132,42 @@ function isOperatorSpec(value: unknown): value is Record<string, unknown> {
   )
 }
 
+function stringsIn(value: unknown): string[] {
+  if (typeof value === "string") {
+    return [value]
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap(stringsIn)
+  }
+  if (value !== null && typeof value === "object" && !(value instanceof Date)) {
+    return Object.values(value).flatMap(stringsIn)
+  }
+  return []
+}
+
+/**
+ * `$text` as if every string field were in the text index: quoted phrases must
+ * all appear, and of the bare words at least one. No stemming or stop words.
+ */
+function matchesText(doc: Document, search: string): boolean {
+  const text = stringsIn(doc).join("\n").toLowerCase()
+  const phrases = [...search.matchAll(/"([^"]*)"/g)].map((m) => m[1].toLowerCase())
+  const words = search
+    .replace(/"[^"]*"/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.toLowerCase())
+  return (
+    phrases.every((phrase) => text.includes(phrase)) &&
+    (words.length === 0 || words.some((word) => text.includes(word)))
+  )
+}
+
 export function matches(doc: Document, filter: Document): boolean {
   return Object.entries(filter).every(([key, condition]) => {
+    if (key === "$text") {
+      return matchesText(doc, String((condition as { $search?: unknown }).$search ?? ""))
+    }
     if (key === "$and") {
       return (condition as Document[]).every((sub) => matches(doc, sub))
     }

@@ -157,6 +157,7 @@ monq                                        # shows saved connections or URI pro
 |-----|--------|
 | `/` | Open query bar (simple mode) |
 | `Tab` | Toggle simple ↔ BSON mode / switch to pipeline mode |
+| `Ctrl+T` | In the query bar: switch search between regex and `$text` (needs a text index) |
 | `f` | Filter by value under cursor |
 | `s` | Cycle sort on current column |
 | `-` | Hide current column (adds `-field` projection token) |
@@ -243,7 +244,9 @@ alice berlin                    → both words, possibly in different fields
 alice status:active             → search AND status=active
 ```
 
-A word with no `field:` is a search term. It becomes a case-insensitive substring `$regex` over every string field the sampled schema knows (up to 40), OR-ed together. The list updates 300 ms after you stop typing, once every term has two characters. Quote a term that contains `:`, `<`, `>`, `=` or `!`. Search can't use an index, so it scans the collection; searches time out after 10 s.
+A word with no `field:` is a search term. It becomes a case-insensitive substring `$regex` over every string field and array of strings the sampled schema knows (up to 40), OR-ed together. A term that looks like an ObjectId, a number or a `YYYY-MM-DD` date also matches objectid, number and date fields by value. The list updates 300 ms after you stop typing, once every term has two characters, and the filter bar shows how many fields are searched. Quote a term that contains `:`, `<`, `>`, `=` or `!`. Regex search can't use an index, so it scans the collection; searches time out after 10 s.
+
+On a collection with a text index, `Ctrl+T` in the query bar switches search to `$text`: indexed and fast, but it matches whole words rather than substrings. Field tokens still combine with it: `alice status:active` → `{ $text: …, status: "active" }`.
 
 **Mark register tokens** (inline, composable):
 

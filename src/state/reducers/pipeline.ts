@@ -51,6 +51,7 @@ export function pipelineReducer(state: AppState, action: AppAction): AppState | 
         state.queryInput,
         state.schemaMap,
         buildMarkIdMap(state),
+        state.searchEngine,
       )
       try {
         stages.push({ $match: enterFilter })

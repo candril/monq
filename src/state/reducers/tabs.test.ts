@@ -13,6 +13,7 @@ function makeTab(id: string, collection: string, overrides: Partial<Tab> = {}): 
     collectionName: collection,
     query: "",
     queryMode: "simple",
+    searchEngine: "regex",
     bsonSort: "",
     bsonProjection: "",
     selectedIndex: 0,

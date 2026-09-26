@@ -23,6 +23,8 @@ export interface FieldInfo {
   type: FieldType
   /** Direct child field names (for objects and array-of-objects) */
   children: string[]
+  /** For arrays of scalars: the one type every sampled item shares, else "mixed" */
+  itemType?: FieldType
 }
 
 /** Schema map: field path -> FieldInfo */
@@ -66,6 +68,25 @@ function detectType(value: unknown): FieldType {
 const MAX_DEPTH = 3
 const MAX_ARRAY_ITEMS = 5
 
+const SCALAR_TYPES: ReadonlySet<FieldType> = new Set([
+  "string",
+  "number",
+  "boolean",
+  "objectid",
+  "date",
+])
+
+function recordItemType(info: FieldInfo, items: unknown[]): void {
+  const types = new Set(items.map(detectType))
+  const [only] = types
+  const sampled = types.size === 1 && SCALAR_TYPES.has(only) ? only : "mixed"
+  if (info.itemType === undefined) {
+    info.itemType = sampled
+  } else if (info.itemType !== sampled) {
+    info.itemType = "mixed"
+  }
+}
+
 /** Build a schema map from a sample of documents */
 export function buildSchemaMap(documents: Document[]): SchemaMap {
   const map: SchemaMap = new Map()
@@ -100,6 +121,10 @@ export function buildSchemaMap(documents: Document[]): SchemaMap {
       // Recurse into objects
       if (type === "object" && value !== null) {
         walk(value as Record<string, unknown>, path, path, depth + 1)
+      }
+
+      if (type === "array" && Array.isArray(value) && value.length > 0) {
+        recordItemType(map.get(path)!, value.slice(0, MAX_ARRAY_ITEMS))
       }
 
       // Recurse into array-of-objects: sample up to MAX_ARRAY_ITEMS items.

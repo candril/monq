@@ -16,7 +16,15 @@ alice berlin                    → both words, possibly in different fields
 alice status:active             → search AND status=active
 ```
 
-Each term becomes a case-insensitive substring `$regex` over every string field in the sampled schema, nested paths included (up to 40 fields), OR-ed together. Several terms AND together.
+Each term becomes a case-insensitive substring `$regex` over every string field and array of strings in the sampled schema, nested paths included (up to 40 fields), OR-ed together. Several terms AND together.
+
+A term that parses as a value also matches fields of that type:
+
+| Term | Also matches |
+|------|--------------|
+| 24 hex characters | `objectid` fields, including `_id`, by equality |
+| A number (`42`, `-3.5`) | `number` fields by equality |
+| `YYYY-MM-DD` | `date` fields within that UTC day |
 
 | Detail | Behaviour |
 |--------|-----------|
@@ -25,7 +33,17 @@ Each term becomes a case-insensitive substring `$regex` over every string field 
 | Fields | Only fields the schema sample has seen. With none, the search matches nothing |
 | Cost | Regex search can't use an index; it scans the collection and times out after 10 s |
 
-Switch to BSON mode (`Tab`) to see the generated `$or`.
+The filter bar shows the engine and field count while a query searches, e.g. `⌕ regex · 12 fields`. Switch to BSON mode (`Tab`) to see the generated `$or`.
+
+### Full-text search
+
+If the collection has a text index, press `Ctrl+T` in the query bar to switch search to `$text`. The terms become one `$text: { $search: … }`, with each term sent as a quoted phrase so that every term must match, just as in regex mode. `$text` uses the index, but it matches whole words (stemmed), not substrings, and skips the type-aware matching. Field tokens still combine with it:
+
+```
+alice status:active             → { $text: { $search: "\"alice\"" }, status: "active" }
+```
+
+The choice is kept per tab. Without a text index, `Ctrl+T` shows a warning and search stays on regex.
 
 ## Filters
 

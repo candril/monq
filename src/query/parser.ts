@@ -33,7 +33,7 @@ import { ObjectId } from "mongodb"
 import { EJSON } from "bson"
 import { getArrayAncestor, type SchemaMap } from "./schema"
 import { tokenize } from "./tokenize"
-import { buildSearchFilter, isSearchToken, searchTermOf } from "./search"
+import { buildSearchFilter, isSearchToken, searchTermOf, type SearchEngine } from "./search"
 
 /**
  * Set a filter value, using $elemMatch if the field path crosses an array.
@@ -208,14 +208,16 @@ export function parseSimpleQuery(
   input: string,
   schemaMap?: SchemaMap,
   markIds?: MarkIdMap,
+  searchEngine?: SearchEngine,
 ): Filter<Document> {
-  return parseSimpleQueryFull(input, schemaMap, markIds).filter
+  return parseSimpleQueryFull(input, schemaMap, markIds, searchEngine).filter
 }
 
 export function parseSimpleQueryFull(
   input: string,
   schemaMap?: SchemaMap,
   markIds?: MarkIdMap,
+  searchEngine?: SearchEngine,
 ): ParsedSimpleQuery {
   const trimmed = input.trim()
   if (!trimmed) {
@@ -354,7 +356,7 @@ export function parseSimpleQueryFull(
     // Anything left is a half-typed operator token — skip it
   }
 
-  const searchClause = buildSearchFilter(searchTerms, schemaMap ?? new Map())
+  const searchClause = buildSearchFilter(searchTerms, schemaMap ?? new Map(), searchEngine)
   if (searchClause) {
     Object.assign(filter, searchClause)
   }
@@ -488,10 +490,13 @@ export function simpleToBson(
   sortDirection: 1 | -1,
   currentBsonSort: string,
   currentBsonProjection: string,
+  searchEngine?: SearchEngine,
 ): { bsonFilter: string; bsonSort: string; bsonProjection: string } {
   const { filter: migratedFilter, projection: migratedProjObj } = parseSimpleQueryFull(
     queryInput,
     schemaMap,
+    undefined,
+    searchEngine,
   )
   let bsonFilter = "{\n  \n}"
   try {

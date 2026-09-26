@@ -67,6 +67,7 @@ These operations are also available from the command palette, making them access
 | `Ctrl+F` | Open pipeline editor in `$EDITOR` |
 | `Ctrl+E` | Open pipeline file in tmux split (or copy path) |
 | `Ctrl+R` | Open query history picker |
+| `Ctrl+T` | Switch search between regex and `$text` (query bar open, needs a text index) |
 | `Backspace` | Clear query / pipeline |
 
 ## Documents

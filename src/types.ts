@@ -4,6 +4,7 @@
 
 import type { Document } from "mongodb"
 import type { SchemaMap } from "./query/schema"
+import type { SearchEngine } from "./query/search"
 import type { HistoryEntry } from "./utils/history"
 import type { MarkEntry } from "./utils/marks"
 
@@ -151,6 +152,7 @@ export interface Tab {
   /** Current query string */
   query: string
   queryMode: QueryMode
+  searchEngine: SearchEngine
   /** BSON sort expression (only used in bson mode) */
   bsonSort: string
   /** BSON projection expression (only used in bson mode) */
@@ -243,6 +245,8 @@ export interface AppState {
   filterBarVisible: boolean
   /** Whether the _id column shows ObjectId creation times instead of hex */
   idAsDate: boolean
+  /** How bare search terms are matched (spec 067) */
+  searchEngine: SearchEngine
   /** How many documents are currently loaded (for paging) */
   loadedCount: number
   /** True while a background page-append fetch is in flight */

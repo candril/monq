@@ -23,6 +23,7 @@ import { filterBySelectedValue } from "../actions/filterValue"
 import { yankDocument, yankCell } from "../actions/yank"
 import { hideColumn } from "../actions/hideColumn"
 import { toggleIdAsDate } from "../actions/idAsDate"
+import { toggleSearchEngine } from "../actions/searchEngine"
 import { toggleMarkOnSelection, jumpToMark, clearMarkJump } from "../actions/marks"
 import { handleSidebarEnter, closeTabsForSidebarCursor } from "../actions/sidebar"
 import { useDialogKeys } from "./useDialogKeys"
@@ -366,6 +367,10 @@ export function useKeyboardNav({
       if (matches(key, keymap["query.toggle_mode"])) {
         dispatch({ type: "CLOSE_QUERY" })
         dispatch({ type: "ENTER_PIPELINE_MODE" })
+        return
+      }
+      if (state.queryMode === "simple" && matches(key, keymap["query.toggle_search_engine"])) {
+        void toggleSearchEngine(state, dispatch)
         return
       }
       return

@@ -38,6 +38,7 @@ import { useMongoConnection } from "./hooks/useMongoConnection"
 import { useKeyboardNav } from "./hooks/useKeyboardNav"
 import { useDocumentLoader } from "./hooks/useDocumentLoader"
 import { useLiveSearch } from "./hooks/useLiveSearch"
+import { searchIndicator } from "./query/search"
 import { buildCommands } from "./commands/builder"
 import { loadHistory, appendHistory } from "./utils/history"
 import { loadMarks, marksForScope, lettersInScope } from "./utils/marks"
@@ -623,6 +624,11 @@ export function App({
           bsonProjectionVisible={state.bsonProjectionVisible}
           bsonExternalVersion={state.bsonExternalVersion}
           editing={state.queryVisible}
+          searchIndicator={
+            state.queryMode === "simple"
+              ? searchIndicator(state.queryInput, state.schemaMap, state.searchEngine)
+              : null
+          }
           onQueryChange={(q) => dispatch({ type: "SET_QUERY_INPUT", input: q })}
           onBsonSortChange={(v) => dispatch({ type: "SET_BSON_SORT", input: v })}
           onBsonProjectionChange={(v) => dispatch({ type: "SET_BSON_PROJECTION", input: v })}

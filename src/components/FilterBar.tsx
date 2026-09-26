@@ -51,6 +51,8 @@ interface FilterBarProps {
   /** Incremented by state on external BSON changes (migration, format) */
   bsonExternalVersion: number
   editing?: boolean
+  /** Search engine + field count, when the simple query has search terms */
+  searchIndicator?: string | null
 
   onQueryChange?: (value: string) => void
   onBsonSortChange?: (value: string) => void
@@ -179,6 +181,7 @@ export function FilterBar({
   bsonProjectionVisible,
   bsonExternalVersion,
   editing,
+  searchIndicator,
   onQueryChange,
   onBsonSortChange,
   onBsonProjectionChange,
@@ -256,6 +259,11 @@ export function FilterBar({
                 textColor={theme.text}
                 placeholderColor={theme.textDim}
               />
+              {searchIndicator && (
+                <text>
+                  <span fg={theme.textMuted}>{searchIndicator}</span>
+                </text>
+              )}
             </>
           )
         ) : queryMode === "simple" && hasProjTokens ? (
@@ -294,6 +302,14 @@ export function FilterBar({
           <text>
             <span fg={theme.text}>{query}</span>
           </text>
+        )}
+        {!editing && searchIndicator && (
+          <>
+            <box flexGrow={1} />
+            <text>
+              <span fg={theme.textMuted}>{searchIndicator}</span>
+            </text>
+          </>
         )}
       </box>
 

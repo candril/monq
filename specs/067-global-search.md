@@ -70,7 +70,7 @@ text index can opt into `$text` instead, which is indexed but matches whole word
 - **Simple → BSON** shows the generated `$or`/`$and`, so the search isn't a
   black box.
 
-### P2 - Should Have
+### P2 - Should Have — Done
 
 - **Type-aware terms (regex engine).** In addition to the string `$regex`, the
   same `$or` gets:
@@ -120,6 +120,10 @@ text index can opt into `$text` instead, which is indexed but matches whole word
 - `fetchDocuments` gains a `maxTimeMS` option. The demo provider ignores it.
 - The engine is stored as `searchEngine: "regex" | "text"` on `AppState` and on
   the tab snapshot.
-- Demo provider: its `$regex` matcher also tests array elements, which matches
-  MongoDB's behaviour for `tags: /x/`. It has no text indexes, so `text` is never
-  enabled there.
+- Demo provider, to match MongoDB's behaviour: `$regex` also tests array
+  elements (as with `tags: /x/`), and dot paths traverse arrays of objects. It
+  also implements `$text` over all string values, for a text index created in
+  the demo session.
+- `Ctrl+T` is the remappable `query.toggle_search_engine` action.
+- `$text` sits at the top level of the filter, so field tokens AND with it:
+  `alice status:active` → `{ $text: …, status: "active" }`.

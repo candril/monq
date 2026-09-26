@@ -59,6 +59,7 @@ const ACTION_NAMES = new Set<ActionName>([
   "query.open",
   "query.clear",
   "query.toggle_mode",
+  "query.toggle_search_engine",
   "pipeline.open",
   "pipeline.open_full",
   "selection.toggle",

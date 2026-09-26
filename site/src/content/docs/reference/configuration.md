@@ -59,6 +59,7 @@ All remappable actions:
 | `query.open` | `/` | Open query bar |
 | `query.clear` | `backspace` | Clear current query / pipeline |
 | `query.toggle_mode` | `tab` | Toggle simple ↔ BSON mode |
+| `query.toggle_search_engine` | `ctrl+t` | Switch search between regex and `$text` (query bar open) |
 | `pipeline.open` | `ctrl+f` | Open pipeline in `$EDITOR` |
 | `pipeline.open_full` | `ctrl+e` | Open pipeline in tmux split |
 | `selection.toggle` | `v` | Enter / freeze selection mode |

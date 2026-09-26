@@ -42,6 +42,7 @@ const DEFAULT_BINDINGS: Record<ActionName, string[]> = {
   "query.open": ["/"],
   "query.clear": ["backspace"],
   "query.toggle_mode": ["tab"],
+  "query.toggle_search_engine": ["ctrl+t"],
   "pipeline.open": ["ctrl+f"],
   "pipeline.open_full": ["ctrl+e"],
   "selection.toggle": ["v"],

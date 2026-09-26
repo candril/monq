@@ -101,6 +101,7 @@ export type AppAction =
   | { type: "FORMAT_BSON_SECTION" }
   | { type: "SUBMIT_QUERY" }
   | { type: "LIVE_QUERY" }
+  | { type: "SET_SEARCH_ENGINE"; engine: import("./query/search").SearchEngine }
   | { type: "CLEAR_QUERY" }
   // Pipeline
   | {
@@ -244,6 +245,7 @@ export function createInitialState(): AppState {
     pipelineWatching: false,
     filterBarVisible: true,
     idAsDate: false,
+    searchEngine: "regex",
     loadedCount: 0,
     loadingMore: false,
     previewPosition: null,

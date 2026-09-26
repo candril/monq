@@ -57,6 +57,7 @@ export function handleQueryCommand(cmdId: string, ctx: PaletteContext): boolean 
         sortField: state.sortField,
         sortDirection: state.sortDirection,
         markIds: buildMarkIdMap(state),
+        searchEngine: state.searchEngine,
       })
         .then((result) => {
           if (!result) {
@@ -99,6 +100,7 @@ export function handleQueryCommand(cmdId: string, ctx: PaletteContext): boolean 
         sortField: state.pipeline.length > 0 ? null : state.sortField,
         sortDirection: state.sortDirection,
         markIds: buildMarkIdMap(state),
+        searchEngine: state.searchEngine,
       })
         .then((queryFile) => {
           const result = openTmuxSplit(queryFile)

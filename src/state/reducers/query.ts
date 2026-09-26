@@ -25,6 +25,7 @@ export function queryReducer(state: AppState, action: AppAction): AppState | nul
         state.sortDirection,
         state.bsonSort,
         state.bsonProjection,
+        state.searchEngine,
       )
       return {
         ...state,
@@ -60,6 +61,7 @@ export function queryReducer(state: AppState, action: AppAction): AppState | nul
           state.sortDirection,
           state.bsonSort,
           state.bsonProjection,
+          state.searchEngine,
         )
         return {
           ...state,
@@ -183,6 +185,9 @@ export function queryReducer(state: AppState, action: AppAction): AppState | nul
             : t,
         ),
       }
+
+    case "SET_SEARCH_ENGINE":
+      return { ...state, searchEngine: action.engine }
 
     case "CLEAR_QUERY":
       return {

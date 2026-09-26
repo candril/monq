@@ -30,6 +30,20 @@ describe("filters", () => {
     expect(matches(doc, { $and: [{ price: { $gt: 100 } }, { name: "nope" }] })).toBe(false)
   })
 
+  test("$regex matches array elements and paths through arrays of objects", () => {
+    const order = { items: [{ name: "Mouse" }, { name: "Cable" }] }
+
+    expect(matches(doc, { tags: { $regex: "^sa" } })).toBe(true)
+    expect(matches(order, { "items.name": { $regex: "cab", $options: "i" } })).toBe(true)
+    expect(matches(order, { "items.name": "Mouse" })).toBe(true)
+  })
+
+  test("$text needs every phrase and one of the bare words", () => {
+    expect(matches(doc, { $text: { $search: '"keyboard" "sale"' } })).toBe(true)
+    expect(matches(doc, { $text: { $search: '"keyboard" "nope"' } })).toBe(false)
+    expect(matches(doc, { $text: { $search: "nope audio" } })).toBe(true)
+  })
+
   test("an operator the demo does not implement matches nothing", () => {
     expect(matches(doc, { price: { $mod: [2, 0] } })).toBe(false)
   })
