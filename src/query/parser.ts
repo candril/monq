@@ -12,6 +12,7 @@
  *   -field               -> projection exclude  (bare, no colon)
  *   @<letter>            -> _id: { $in: [...marked ids] } (mark register, vim @-style)
  *   word / "a phrase"    -> search across string fields (see ./search.ts)
+ *   !word / !"a phrase"  -> exclude documents where any string field contains it
  *
  * Examples:
  *   "Author:Peter"              -> filter: { "Author": "Peter" }
@@ -188,6 +189,7 @@ export interface ParsedSimpleQuery {
   filter: Filter<Document>
   projection: Record<string, 0 | 1> | undefined
   searchTerms: string[]
+  negatedSearchTerms: string[]
 }
 
 /**
@@ -221,19 +223,20 @@ export function parseSimpleQueryFull(
 ): ParsedSimpleQuery {
   const trimmed = input.trim()
   if (!trimmed) {
-    return { filter: {}, projection: undefined, searchTerms: [] }
+    return { filter: {}, projection: undefined, searchTerms: [], negatedSearchTerms: [] }
   }
 
   const tokens = tokenize(trimmed)
   const filter: Record<string, unknown> = {}
   const proj: Record<string, 0 | 1> = {}
   const searchTerms: string[] = []
+  const negatedSearchTerms: string[] = []
 
   for (let token of tokens) {
     if (isSearchToken(token)) {
-      const term = searchTermOf(token)
-      if (term) {
-        searchTerms.push(term)
+      const { text, negated } = searchTermOf(token)
+      if (text) {
+        ;(negated ? negatedSearchTerms : searchTerms).push(text)
       }
       continue
     }
@@ -356,7 +359,12 @@ export function parseSimpleQueryFull(
     // Anything left is a half-typed operator token — skip it
   }
 
-  const searchClause = buildSearchFilter(searchTerms, schemaMap ?? new Map(), searchEngine)
+  const searchClause = buildSearchFilter(
+    searchTerms,
+    schemaMap ?? new Map(),
+    searchEngine,
+    negatedSearchTerms,
+  )
   if (searchClause) {
     Object.assign(filter, searchClause)
   }
@@ -365,6 +373,7 @@ export function parseSimpleQueryFull(
     filter,
     projection: Object.keys(proj).length > 0 ? proj : undefined,
     searchTerms,
+    negatedSearchTerms,
   }
 }
 

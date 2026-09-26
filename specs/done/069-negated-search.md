@@ -1,6 +1,6 @@
 # Negated Search Terms
 
-**Status**: Draft
+**Status**: Done
 
 ## Description
 
@@ -21,7 +21,7 @@ search without any warning, so negation gets its own prefix.
 
 ## Capabilities
 
-### P1 - Must Have
+### P1 - Must Have — Done
 
 - **Token.** `!term` and `!"a phrase"` are negated search terms. A bare `!`
   is ignored, and so is `!` followed only by whitespace.
@@ -38,7 +38,7 @@ search without any warning, so negation gets its own prefix.
 - **Highlighting** skips negated terms. By construction they don't appear in
   the results.
 
-### P2 - Should Have
+### P2 - Should Have — Done
 
 - **Text engine.**
   - With at least one positive term, negated terms go into `$search` as
@@ -54,9 +54,11 @@ search without any warning, so negation gets its own prefix.
 - `search.ts`:
   - `isSearchToken` accepts a leading `!`, but only when no other operator
     character follows it.
-  - `searchTermsOf` returns `{ term, negated }`, or a separate
-    `negatedTermsOf`. Highlighting and the indicator read positive terms only.
+  - `allSearchTermsOf` returns `{ text, negated }[]`; `searchTermsOf` keeps
+    returning positive terms only, for highlighting. `searchKeyOf` is what
+    live search compares, so adding or removing a `!` re-runs the query.
   - `buildSearchFilter` takes both lists.
-- `parser.ts` needs no new branch. Today a `!word` token falls through the
-  field-token patterns and is dropped, which is the gap this fills.
-- The demo provider needs `$nor` if it lacks it.
+- `parser.ts` collects negated terms next to positive ones; `ParsedSimpleQuery`
+  gains `negatedSearchTerms`.
+- The demo provider already had `$nor`; its `$text` matcher learned `-word` and
+  `-"phrase"`.

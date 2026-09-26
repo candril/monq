@@ -33,7 +33,6 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 062 | [BSON Type Preservation](./062-bson-type-preservation.md) | In Progress | Stop edits changing Long→Int32; unify the write/edit JSON format |
 | 063 | [Optimistic Concurrency](./063-optimistic-concurrency.md) | In Progress | Abort document writes when the doc changed remotely since open |
 | 068 | [Column Picker](./068-column-picker.md) | Draft | `c` quick-pick for columns; nested `+a.b` projections flatten into their own column |
-| 069 | [Negated Search](./069-negated-search.md) | Draft | `!term` hides documents containing the term in any searchable field |
 
 ## Done Specs
 
@@ -99,3 +98,4 @@ Specs are numbered sequentially: `NNN-feature-name.md`
 | 060 | [Tmux Document Preview](./done/060-tmux-document-preview.md) | External tmux/nvim document editor that follows row navigation |
 | 066 | [Date Display](./done/066-date-display.md) | Full UTC timestamps in date cells, `Shift+T` shows `_id` as ObjectId creation date |
 | 067 | [Global Search](./done/067-global-search.md) | Bare words in the simple bar search all string fields, live as you type |
+| 069 | [Negated Search](./done/069-negated-search.md) | `!term` hides documents containing the term in any searchable field |

@@ -68,7 +68,7 @@ Define named profiles in `~/.config/monq/config.toml`. Use `uri_cmd` to fetch UR
 
 ## Features
 
-- **Global search** — bare words search every string field, live as you type
+- **Global search** — bare words search every string field, live as you type; `!word` excludes
 - **Expressive filter bar** — `field:value`, ranges (`price:10..200`), dates (`createdAt>ago(7d)`), regex, arrays, nested fields, relative expressions
 - **Two query modes** — simple filter bar or raw BSON JSON, switch with `Tab`
 - **Inline projection** — `+field` / `-field` directly in the query bar, no separate step
@@ -242,9 +242,12 @@ alice                           → "alice" in any string field (case-insensitiv
 alice berlin                    → both words, possibly in different fields
 "new york"                      → one phrase
 alice status:active             → search AND status=active
+alice !berlin                   → "alice" somewhere, "berlin" nowhere
 ```
 
 A word with no `field:` is a search term. It becomes a case-insensitive substring `$regex` over every string field and array of strings the sampled schema knows (up to 40), OR-ed together. A term that looks like an ObjectId, a number or a `YYYY-MM-DD` date also matches objectid, number and date fields by value. The list updates 300 ms after you stop typing, once every term has two characters. Matches are highlighted in the cells, and the filter bar shows how many fields are searched. Quote a term that contains `:`, `<`, `>`, `=` or `!`. Regex search can't use an index, so it scans the collection; searches time out after 10 s.
+
+Prefix a term with `!` to exclude documents that contain it in any searchable field (`$nor` of the same branches). It's `!`, not `-`, because a bare `-word` excludes the field `word` from the projection.
 
 On a collection with a text index, `Ctrl+T` in the query bar switches search to `$text`: indexed and fast, but it matches whole words rather than substrings. Field tokens still combine with it: `alice status:active` → `{ $text: …, status: "active" }`.
 

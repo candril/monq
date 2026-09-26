@@ -79,7 +79,7 @@ export function resolveCurrentQuery(state: AppState): ResolvedQuery {
         )
         filter = parsed.filter
         projection = parsed.projection
-        searching = parsed.searchTerms.length > 0
+        searching = parsed.searchTerms.length + parsed.negatedSearchTerms.length > 0
       }
     }
   } catch {

@@ -5,6 +5,8 @@ import {
   MAX_SEARCH_FIELDS,
   buildSearchFilter,
   isSearchToken,
+  searchIndicator,
+  searchKeyOf,
   searchTermsOf,
   searchableFields,
   termsReadyForLive,
@@ -29,6 +31,17 @@ describe("isSearchToken", () => {
   test("quoted token is a search token even with operator characters", () => {
     expect(isSearchToken('"a:b"')).toBe(true)
   })
+
+  test('!word and !"phrase" are negated search tokens', () => {
+    expect(isSearchToken("!alice")).toBe(true)
+    expect(isSearchToken('!"new york"')).toBe(true)
+  })
+
+  test("! without a plain term is not a search token", () => {
+    for (const token of ["!", "!!a", "!a:b", "!+name", "!-name"]) {
+      expect(isSearchToken(token)).toBe(false)
+    }
+  })
 })
 
 describe("searchTermsOf", () => {
@@ -38,6 +51,26 @@ describe("searchTermsOf", () => {
 
   test("drops empty quotes", () => {
     expect(searchTermsOf('""')).toEqual([])
+  })
+
+  test("leaves out negated terms", () => {
+    expect(searchTermsOf("alice !bob")).toEqual(["alice"])
+  })
+})
+
+describe("searchKeyOf", () => {
+  test("tells a negated term from a positive one", () => {
+    expect(searchKeyOf("!bob")).not.toBe(searchKeyOf("bob"))
+  })
+})
+
+describe("searchIndicator", () => {
+  test("counts excluded terms", () => {
+    expect(searchIndicator("alice !bob", schema, "regex")).toBe("⌕ regex · 4 fields · 1 excluded")
+  })
+
+  test("negations alone fall back to regex under the text engine", () => {
+    expect(searchIndicator("!bob", schema, "text")).toBe("⌕ regex · 4 fields · 1 excluded")
   })
 })
 
@@ -128,6 +161,33 @@ describe("buildSearchFilter", () => {
   test("no searchable fields → matches nothing", () => {
     expect(buildSearchFilter(["x"], new Map())).toEqual({ $expr: false })
   })
+
+  test("negated term → $nor of the same branches", () => {
+    const filter = buildSearchFilter([], schema, "regex", ["ali"]) as { $nor: object[] }
+
+    expect(filter.$nor).toContainEqual({ name: { $regex: "ali", $options: "i" } })
+  })
+
+  test("positive and negated terms AND together", () => {
+    const filter = buildSearchFilter(["a"], schema, "regex", ["b"]) as { $and: object[] }
+
+    expect(filter.$and).toHaveLength(2)
+    expect(filter.$and[1]).toHaveProperty("$nor")
+  })
+
+  test("negated term with no searchable fields is dropped", () => {
+    expect(buildSearchFilter([], new Map(), "regex", ["x"])).toBeNull()
+  })
+
+  test("text engine negates with a leading minus", () => {
+    expect(buildSearchFilter(["alice"], schema, "text", ["new york"])).toEqual({
+      $text: { $search: '"alice" -"new york"' },
+    })
+  })
+
+  test("text engine with only negations uses regex", () => {
+    expect(buildSearchFilter([], schema, "text", ["bob"])).toHaveProperty("$nor")
+  })
 })
 
 describe("termsReadyForLive", () => {
@@ -151,6 +211,13 @@ describe("parseSimpleQueryFull with search terms", () => {
     const { filter } = parseSimpleQueryFull("ali age>3 +name", schema, undefined, "text")
 
     expect(filter).toEqual({ age: { $gt: 3 }, $text: { $search: '"ali"' } })
+  })
+
+  test("!word becomes a negated search term", () => {
+    const { searchTerms, negatedSearchTerms } = parseSimpleQueryFull('ali !"new york"', schema)
+
+    expect(searchTerms).toEqual(["ali"])
+    expect(negatedSearchTerms).toEqual(["new york"])
   })
 
   test("half-typed operator token is not searched", () => {

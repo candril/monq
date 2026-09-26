@@ -8,7 +8,7 @@ import type { Dispatch } from "react"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
 import type { SearchEngine } from "../query/search"
-import { isTextIndex, searchTermsOf } from "../query/search"
+import { allSearchTermsOf, isTextIndex } from "../query/search"
 import { listIndexes } from "../providers/mongodb"
 
 export async function toggleSearchEngine(
@@ -52,7 +52,7 @@ export async function toggleSearchEngine(
       message: engine === "text" ? "Search uses the text index" : "Search uses regex",
       kind: "info",
     })
-    if (searchTermsOf(state.queryInput).length > 0) {
+    if (allSearchTermsOf(state.queryInput).length > 0) {
       dispatch({ type: "LIVE_QUERY" })
     }
   }

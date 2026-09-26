@@ -14,6 +14,7 @@ alice                           → "alice" in any string field (case-insensitiv
 alice berlin                    → both words, possibly in different fields
 "new york"                      → one phrase
 alice status:active             → search AND status=active
+alice !berlin                   → "alice" somewhere, "berlin" nowhere
 ```
 
 Each term becomes a case-insensitive substring `$regex` over every string field and array of strings in the sampled schema, nested paths included (up to 40 fields), OR-ed together. Several terms AND together.
@@ -33,6 +34,12 @@ A term that parses as a value also matches fields of that type:
 | Fields | Only fields the schema sample has seen. With none, the search matches nothing |
 | Cost | Regex search can't use an index; it scans the collection and times out after 10 s |
 
+### Excluding terms
+
+Prefix a term with `!` to hide documents that contain it: `!stefan`, `!"new york"`. The term becomes `{ $nor: [ … ] }` over the same fields a positive term searches, type-aware matches included, and ANDs with everything else. A document without any of those fields is kept. The prefix is `!` rather than `-` because a bare `-word` excludes the field `word` from the projection.
+
+Excluded terms aren't highlighted, and the filter bar counts them: `⌕ regex · 12 fields · 1 excluded`.
+
 Matches are highlighted in the document list. The filter bar shows the engine and field count while a query searches, e.g. `⌕ regex · 12 fields`. Switch to BSON mode (`Tab`) to see the generated `$or`.
 
 ### Full-text search
@@ -42,6 +49,8 @@ If the collection has a text index, press `Ctrl+T` in the query bar to switch se
 ```
 alice status:active             → { $text: { $search: "\"alice\"" }, status: "active" }
 ```
+
+Excluded terms become `-"term"` inside `$search`. `$text` needs at least one positive term, so a query with only excluded terms uses the regex `$nor` even when `$text` is on.
 
 The choice is kept per tab. Without a text index, `Ctrl+T` shows a warning and search stays on regex.
 

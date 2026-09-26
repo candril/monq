@@ -44,6 +44,11 @@ describe("filters", () => {
     expect(matches(doc, { $text: { $search: "nope audio" } })).toBe(true)
   })
 
+  test("$text excludes negated words and phrases", () => {
+    expect(matches(doc, { $text: { $search: '"keyboard" -"sale"' } })).toBe(false)
+    expect(matches(doc, { $text: { $search: '"keyboard" -nope' } })).toBe(true)
+  })
+
   test("an operator the demo does not implement matches nothing", () => {
     expect(matches(doc, { price: { $mod: [2, 0] } })).toBe(false)
   })

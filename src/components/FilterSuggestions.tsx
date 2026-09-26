@@ -298,6 +298,12 @@ function buildFieldSuggestions(
     return buildMarkRegisterSuggestions(prefix, lastToken.slice(1), markCounts)
   }
 
+  // `!term` is a negated search, not a field — completing a field name there
+  // would turn it into something else.
+  if (lastToken.startsWith("!")) {
+    return []
+  }
+
   // Determine token mode
   const isProjectionInclude = lastToken.startsWith("+")
   const isProjectionExclude = lastToken.startsWith("-") && !/[><!:]/.test(lastToken.slice(1))

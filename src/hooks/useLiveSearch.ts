@@ -12,7 +12,7 @@ import { useEffect } from "react"
 import type { Dispatch } from "react"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
-import { searchTermsOf, termsReadyForLive } from "../query/search"
+import { allSearchTermsOf, searchKeyOf, termsReadyForLive } from "../query/search"
 
 const LIVE_SEARCH_DEBOUNCE_MS = 300
 
@@ -21,11 +21,10 @@ export function useLiveSearch(state: AppState, dispatch: Dispatch<AppAction>): v
   const live =
     state.queryVisible && state.queryMode === "simple" && !state.pipelineMode && activeTab != null
 
-  const typedTerms = live ? searchTermsOf(state.queryInput) : []
-  const appliedTerms =
-    live && activeTab.queryMode === "simple" ? searchTermsOf(activeTab.query) : []
-  const typedKey = typedTerms.join("\u0000")
-  const stale = live && typedKey !== appliedTerms.join("\u0000") && termsReadyForLive(typedTerms)
+  const typedTerms = live ? allSearchTermsOf(state.queryInput).map((term) => term.text) : []
+  const typedKey = live ? searchKeyOf(state.queryInput) : ""
+  const appliedKey = live && activeTab.queryMode === "simple" ? searchKeyOf(activeTab.query) : ""
+  const stale = live && typedKey !== appliedKey && termsReadyForLive(typedTerms)
 
   useEffect(() => {
     if (!stale) {

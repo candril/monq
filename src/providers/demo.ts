@@ -151,15 +151,24 @@ function stringsIn(value: unknown): string[] {
  */
 function matchesText(doc: Document, search: string): boolean {
   const text = stringsIn(doc).join("\n").toLowerCase()
-  const phrases = [...search.matchAll(/"([^"]*)"/g)].map((m) => m[1].toLowerCase())
-  const words = search
-    .replace(/"[^"]*"/g, " ")
+  const phrases = [...search.matchAll(/(-?)"([^"]*)"/g)].map((m) => ({
+    text: m[2].toLowerCase(),
+    negated: m[1] === "-",
+  }))
+  const tokens = search
+    .replace(/-?"[^"]*"/g, " ")
     .split(/\s+/)
     .filter(Boolean)
     .map((w) => w.toLowerCase())
+  const words = tokens.filter((w) => !w.startsWith("-"))
+  const excluded = [
+    ...phrases.filter((p) => p.negated).map((p) => p.text),
+    ...tokens.filter((w) => w.startsWith("-") && w.length > 1).map((w) => w.slice(1)),
+  ]
   return (
-    phrases.every((phrase) => text.includes(phrase)) &&
-    (words.length === 0 || words.some((word) => text.includes(word)))
+    phrases.filter((p) => !p.negated).every((phrase) => text.includes(phrase.text)) &&
+    (words.length === 0 || words.some((word) => text.includes(word))) &&
+    !excluded.some((term) => text.includes(term))
   )
 }
 

@@ -5,6 +5,7 @@
  *   "alice"         -> { $or: [{ name: /alice/i }, { email: /alice/i }, ...] }
  *   "alice berlin"  -> { $and: [{ $or: [...alice] }, { $or: [...berlin] }] }
  *   '"new york"'    -> one phrase term
+ *   "!berlin"       -> { $nor: [...berlin] } — no searchable field contains it (spec 069)
  *
  * The regex engine also matches a term by type where it parses as one: an
  * ObjectId hex against objectid fields, a number against number fields, a
@@ -40,24 +41,53 @@ function isQuoted(token: string): boolean {
  * syntax. Operator characters are excluded so a half-typed `status:` or
  * `age>` never turns into a search while the user is still typing it; to
  * search for such text, quote it.
+ *
+ * Negation is `!term` rather than `-term` because a bare `-word` already
+ * excludes the field `word` from the projection.
  */
 export function isSearchToken(token: string): boolean {
+  const body = token.startsWith("!") ? token.slice(1) : token
+  return body.length > 0 && isPositiveSearchToken(body)
+}
+
+function isPositiveSearchToken(token: string): boolean {
   if (isQuoted(token)) {
     return true
   }
-  return !/^[+\-@]/.test(token) && !/[:<>=!]/.test(token)
+  return !/^[+\-@!]/.test(token) && !/[:<>=!]/.test(token)
 }
 
-export function searchTermOf(token: string): string {
-  return isQuoted(token) ? token.slice(1, -1) : token
+export interface SearchTerm {
+  text: string
+  negated: boolean
 }
 
-/** The search terms of a simple query string, in input order. */
-export function searchTermsOf(input: string): string[] {
+export function searchTermOf(token: string): SearchTerm {
+  const negated = token.startsWith("!")
+  const body = negated ? token.slice(1) : token
+  return { text: isQuoted(body) ? body.slice(1, -1) : body, negated }
+}
+
+/** Positive and negated search terms of a simple query string, in input order. */
+export function allSearchTermsOf(input: string): SearchTerm[] {
   return tokenize(input.trim())
     .filter(isSearchToken)
     .map(searchTermOf)
-    .filter((term) => term.length > 0)
+    .filter((term) => term.text.length > 0)
+}
+
+/** The positive search terms — the ones a result row can contain. */
+export function searchTermsOf(input: string): string[] {
+  return allSearchTermsOf(input)
+    .filter((term) => !term.negated)
+    .map((term) => term.text)
+}
+
+/** Identity of a query's search terms, for telling whether results are stale. */
+export function searchKeyOf(input: string): string {
+  return allSearchTermsOf(input)
+    .map((term) => (term.negated ? "!" : "") + term.text)
+    .join("\u0000")
 }
 
 /** The scalar type a query condition on this field compares against. */
@@ -121,30 +151,52 @@ function termBranches(term: string, schemaMap: SchemaMap): Document[] {
  * phrases, and AND is what the regex engine does — adding a word should
  * narrow the result in both.
  */
-function textSearchFilter(terms: string[]): Document {
-  return { $text: { $search: terms.map((term) => `"${term.replace(/"/g, "")}"`).join(" ") } }
+function textSearchFilter(terms: string[], negated: string[]): Document {
+  const phrase = (term: string) => `"${term.replace(/"/g, "")}"`
+  const search = [...terms.map(phrase), ...negated.map((term) => `-${phrase(term)}`)]
+  return { $text: { $search: search.join(" ") } }
+}
+
+/**
+ * `$text` needs at least one positive term; negations alone return nothing,
+ * so they go through the regex engine instead.
+ */
+export function effectiveEngine(terms: string[], engine: SearchEngine): SearchEngine {
+  return engine === "text" && terms.length > 0 ? "text" : "regex"
 }
 
 /**
  * The filter clause for a set of search terms, or null when there are none.
- * A term with nothing to match against matches nothing — `$or: []` is
- * rejected by the server, and dropping the term would return everything.
+ * A positive term with nothing to match against matches nothing — `$or: []`
+ * is rejected by the server, and dropping the term would return everything.
+ * A negated term with nothing to match against excludes nothing, so it's
+ * dropped.
  */
 export function buildSearchFilter(
   terms: string[],
   schemaMap: SchemaMap,
   engine: SearchEngine = "regex",
+  negated: string[] = [],
 ): Document | null {
-  if (terms.length === 0) {
+  if (terms.length === 0 && negated.length === 0) {
     return null
   }
-  if (engine === "text") {
-    return textSearchFilter(terms)
+  if (effectiveEngine(terms, engine) === "text") {
+    return textSearchFilter(terms, negated)
   }
-  const clauses = terms.map((term) => {
+  const clauses: Document[] = terms.map((term) => {
     const branches = termBranches(term, schemaMap)
     return branches.length > 0 ? { $or: branches } : { $expr: false }
   })
+  for (const term of negated) {
+    const branches = termBranches(term, schemaMap)
+    if (branches.length > 0) {
+      clauses.push({ $nor: branches })
+    }
+  }
+  if (clauses.length === 0) {
+    return null
+  }
   return clauses.length === 1 ? clauses[0] : { $and: clauses }
 }
 
@@ -154,14 +206,18 @@ export function searchIndicator(
   schemaMap: SchemaMap,
   engine: SearchEngine,
 ): string | null {
-  if (searchTermsOf(input).length === 0) {
+  const all = allSearchTermsOf(input)
+  if (all.length === 0) {
     return null
   }
-  if (engine === "text") {
-    return "⌕ text index"
+  const terms = all.filter((term) => !term.negated).map((term) => term.text)
+  const excluded = all.length - terms.length
+  const suffix = excluded > 0 ? ` · ${excluded} excluded` : ""
+  if (effectiveEngine(terms, engine) === "text") {
+    return `⌕ text index${suffix}`
   }
   const count = searchableFields(schemaMap).length
-  return `⌕ regex · ${count} ${count === 1 ? "field" : "fields"}`
+  return `⌕ regex · ${count} ${count === 1 ? "field" : "fields"}${suffix}`
 }
 
 export function isTextIndex(index: { key: Record<string, unknown> }): boolean {
