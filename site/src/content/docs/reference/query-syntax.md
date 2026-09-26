@@ -174,6 +174,38 @@ Author:Peter -_id -tags         → filter by Author, exclude _id and tags
 
 Projection tokens carry through automatically when you switch to BSON mode or the pipeline editor.
 
+### Nested paths flatten
+
+With any `+path` token, the columns are exactly `_id` plus the included paths, in the order you wrote them. A nested path becomes its own column holding the bare value:
+
+```
++Status +TvContract.Username    → columns _id, Status, TvContract.Username
++items.sku                      → items.sku shows ["A-1", "B-2", …], one value per array element
+```
+
+Without `+path` tokens the columns are detected from the documents, as before. A trailing 0/1 `$project` in a pipeline, and an inclusion in BSON mode's projection field, flatten the same way.
+
+MongoDB rejects a projection that mixes inclusions and exclusions, so `-` on a column under `+path` tokens removes that column's `+` token instead of adding a `-` one.
+
+### Column picker
+
+Press `c` for a list of every field the schema knows, nested paths indented under their parent, each with its type.
+
+| Key | Action |
+|-----|--------|
+| typing | Filter the fields (fuzzy, full path) |
+| `↑` / `↓`, `Ctrl+P` / `Ctrl+N` | Move |
+| `Space` | Show / hide the field |
+| `Ctrl+A` | Show all filtered fields, or hide them if all are shown |
+| `Ctrl+R` | Back to the default columns |
+| `Shift+↑` / `Shift+↓` | Move the field one column earlier / later |
+| `Enter` | Apply |
+| `Esc` | Discard changes |
+
+Showing `a.b` hides `a` and the other way around, since MongoDB can't project a path and its parent together.
+
+On `Enter` the picker writes the shortest projection that shows your choice: nothing for the default columns, `-field` tokens when only top-level fields are hidden, or a `+path` list when a nested path or a custom order needs one, or when that list is shorter. The result is in the query bar like any projection you typed. In pipeline mode it edits the pipeline's `$project` stage; in BSON mode, use the projection field.
+
 ## Mark register tokens
 
 `@<letter>` resolves to `_id: { $in: [...] }` from the marks registered for the active collection. The sigil prefix means the token can never collide with a field literally called `marks`.

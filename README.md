@@ -81,7 +81,7 @@ Define named profiles in `~/.config/monq/config.toml`. Use `uri_cmd` to fetch UR
 - **Collection tabs** — open multiple collections side by side, switch with `1–9` or `[`/`]`
 - **Per-collection query history** — `Ctrl+R` opens a fuzzy picker over past queries, scoped to the active collection
 - **Schema-aware suggestions** — field name autocomplete with dot-notation drill-down
-- **Smart columns** — auto-detects fields, horizontal scroll, sort, column sizing, hide via `-`
+- **Smart columns** — auto-detects fields, horizontal scroll, sort, column sizing, hide via `-`, pick with `c` (nested paths flatten into their own column)
 - **Saved connections** — named profiles with `uri_cmd` for secret-fetching (Vault, 1Password, etc.)
 - **Theme presets** — 11 built-in themes (Tokyo Night, Catppuccin, Gruvbox, Nord, Dracula, and more), switch live via `Ctrl+P`
 - **Remappable keybindings** — customise any action in `~/.config/monq/config.toml`
@@ -160,7 +160,8 @@ monq                                        # shows saved connections or URI pro
 | `Ctrl+T` | In the query bar: switch search between regex and `$text` (needs a text index) |
 | `f` | Filter by value under cursor |
 | `s` | Cycle sort on current column |
-| `-` | Hide current column (adds `-field` projection token) |
+| `-` | Hide current column (adds `-field`, or drops its `+field`) |
+| `c` | Choose columns: filter, `Space` toggle, `Shift+↑/↓` reorder, `Enter` apply |
 | `w` | Cycle column width mode |
 | `Shift+T` | Toggle `_id` column between ObjectId and creation date (UTC) |
 | `Ctrl+F` | Open pipeline editor in `$EDITOR` |
@@ -234,6 +235,10 @@ Author:Peter -_id -tags         → filter by Author, exclude _id and tags
 ```
 
 `+field` = include, bare `-field` = exclude. `-field:value` is still a `$ne` filter.
+
+With any `+path` token the columns are exactly the included paths, in the order written. A nested path gets its own column with the bare value: `+TvContract.Username` shows a `TvContract.Username` column, not the wrapping object. A path through an array shows the collected values.
+
+`c` opens the column picker: every field the schema knows, nested ones under their parent. Type to filter, `Space` toggles, `Ctrl+A` toggles all filtered rows, `Ctrl+R` resets, `Shift+↑/↓` moves a column, `Enter` applies and `Esc` discards. It writes the shortest projection that shows your choice (none, `-field` exclusions, or a `+path` list when nested paths or a custom order need it), so the result stays visible in the bar. In pipeline mode it edits the `$project` stage.
 
 **Search terms** (bare words, live as you type):
 

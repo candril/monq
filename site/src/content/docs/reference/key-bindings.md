@@ -60,7 +60,8 @@ These operations are also available from the command palette, making them access
 | `Tab` | Toggle simple ↔ BSON mode / switch to pipeline mode |
 | `f` | Filter by value under cursor |
 | `s` | Cycle sort on current column |
-| `-` | Hide current column (adds `-field` projection token) |
+| `-` | Hide current column (adds `-field`, or drops its `+field`) |
+| `c` | Choose columns (see [Column picker](/reference/query-syntax/#column-picker)) |
 | `w` | Cycle column width mode |
 | `Shift+F` | Show / hide filter bar |
 | `Shift+T` | Toggle `_id` column between ObjectId and creation date (UTC) |

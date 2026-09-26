@@ -45,6 +45,7 @@ All remappable actions:
 | `doc.reload` | `r` | Reload documents |
 | `doc.filter_value` | `f` | Filter by current cell value |
 | `doc.hide_column` | `-` | Hide current column |
+| `doc.column_picker` | `c` | Choose columns |
 | `doc.sort` | `s` | Cycle sort on current column |
 | `doc.edit` | `e` | Edit document in `$EDITOR` |
 | `doc.insert` | `i` | Insert new document |
