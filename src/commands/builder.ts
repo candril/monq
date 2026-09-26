@@ -158,7 +158,13 @@ export function buildCommands(state: AppState, keymap: Keymap): Command[] {
       category: "view",
       shortcut: hintFor(keymap, "nav.column_mode"),
     })
-    if (!state.pipelineMode && state.queryMode !== "bson" && state.documents.length > 0) {
+    if ((state.pipelineMode || state.queryMode !== "bson") && state.documents.length > 0) {
+      commands.push({
+        id: "view:column-picker",
+        label: "Choose Columns…",
+        category: "view",
+        shortcut: hintFor(keymap, "doc.column_picker"),
+      })
       commands.push({
         id: "view:toggle-column-exclude",
         label: "Hide/Show Column (projection)",

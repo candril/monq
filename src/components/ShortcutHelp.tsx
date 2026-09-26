@@ -46,6 +46,8 @@ const GROUPS: Array<[title: string, items: ShortcutItem[]]> = [
       ["doc.insert", "insert document"],
       ["doc.delete", "delete tab/row"],
       ["doc.sort", "sort column"],
+      ["doc.column_picker", "choose columns"],
+      ["doc.hide_column", "hide column"],
       ["doc.toggle_id_date", "_id as creation date"],
     ],
   ],

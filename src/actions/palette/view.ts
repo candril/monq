@@ -9,6 +9,7 @@ import { explainFind, explainAggregate } from "../../providers/mongodb"
 import { copyToClipboard } from "../../utils/clipboard"
 import { yankDocument, yankCell } from "../yank"
 import { hideColumn } from "../hideColumn"
+import { openColumnPicker } from "../columnPicker"
 import { toggleIdAsDate } from "../idAsDate"
 import { openDocumentPreviewSplit } from "../documentPreviewSplit"
 
@@ -232,6 +233,10 @@ export function handleViewCommand(cmdId: string, ctx: PaletteContext): boolean {
     case "view:cycle-column-mode":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })
       dispatch({ type: "CYCLE_COLUMN_MODE" })
+      return true
+    case "view:column-picker":
+      dispatch({ type: "CLOSE_COMMAND_PALETTE" })
+      openColumnPicker(state, dispatch)
       return true
     case "view:toggle-column-exclude":
       dispatch({ type: "CLOSE_COMMAND_PALETTE" })

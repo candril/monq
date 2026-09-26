@@ -16,7 +16,7 @@ export type Projection = Record<string, 0 | 1>
  * Only 0/1 maps: a pipeline `$project` can compute fields (`{ x: "$a.b" }`),
  * and those don't name a path to show.
  */
-function isPlainProjection(projection: Document | undefined): projection is Projection {
+export function isPlainProjection(projection: Document | undefined): projection is Projection {
   return projection != null && Object.values(projection).every((v) => v === 0 || v === 1)
 }
 

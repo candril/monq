@@ -314,6 +314,8 @@ export interface AppState {
   commandPaletteVisible: boolean
   /** Whether the keyboard shortcut help overlay is open */
   shortcutHelpVisible: boolean
+  /** Whether the column picker overlay is open (spec 068) */
+  columnPickerVisible: boolean
 
   // Messages
   message: { text: string; kind: "info" | "success" | "warning" | "error" } | null

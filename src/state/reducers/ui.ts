@@ -57,6 +57,12 @@ export function uiReducer(state: AppState, action: AppAction): AppState | null {
     case "CLOSE_SHORTCUT_HELP":
       return { ...state, shortcutHelpVisible: false }
 
+    case "OPEN_COLUMN_PICKER":
+      return { ...state, columnPickerVisible: true }
+
+    case "CLOSE_COLUMN_PICKER":
+      return { ...state, columnPickerVisible: false }
+
     // Messages
     case "SHOW_MESSAGE":
       return { ...state, message: { text: action.message, kind: action.kind ?? "info" } }

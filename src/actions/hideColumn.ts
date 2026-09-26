@@ -3,82 +3,42 @@
  */
 
 import type { Dispatch } from "react"
-import type { Document } from "mongodb"
 import type { AppState } from "../types"
 import type { AppAction } from "../state"
-import { parseSimpleQueryFull } from "../query/parser"
-import { isInclusion, replaceProjectionTokens, type Projection } from "../query/projection"
-import { classifyPipeline, stageOf } from "../query/pipeline"
-import { serializePipelineSource } from "../utils/document"
+import { isInclusion, isPlainProjection } from "../query/projection"
+import { applyProjection, currentProjection, projectionTarget } from "./projectionEdit"
 
 /** Toggle column hidden/shown for the currently selected column. */
 export function hideColumn(state: AppState, dispatch: Dispatch<AppAction>): void {
   const visCols = state.columns.filter((c) => c.visible)
   const col = visCols[state.selectedColumnIndex]
-  if (!col) {
+  if (!col || projectionTarget(state) === null) {
+    return
+  }
+  const current = currentProjection(state)
+  if (current && !isPlainProjection(current)) {
+    dispatch({
+      type: "SHOW_MESSAGE",
+      message: "$project computes fields — edit the pipeline instead",
+      kind: "warning",
+    })
     return
   }
 
-  if (state.pipelineMode) {
-    hideColumnPipeline(state, dispatch, col.field)
-  } else if (state.queryMode !== "bson") {
-    hideColumnSimple(state, dispatch, col.field)
-  }
-}
-
-function hideColumnPipeline(state: AppState, dispatch: Dispatch<AppAction>, field: string): void {
-  const existingProjIdx = state.pipeline.findIndex((s) => "$project" in s)
-  const existingProj: Record<string, 0 | 1> =
-    existingProjIdx !== -1
-      ? { ...(stageOf(state.pipeline[existingProjIdx]).$project as Record<string, 0 | 1>) }
-      : {}
-
-  if (existingProj[field] === 0) {
-    delete existingProj[field]
-    dispatch({ type: "SHOW_MESSAGE", message: `Showing ${field}`, kind: "info" })
-  } else {
-    existingProj[field] = 0
-    dispatch({ type: "SHOW_MESSAGE", message: `Hiding ${field}`, kind: "info" })
-  }
-
-  let newPipeline: Document[]
-  if (Object.keys(existingProj).length === 0) {
-    newPipeline = state.pipeline.filter((_, i) => i !== existingProjIdx)
-  } else if (existingProjIdx !== -1) {
-    newPipeline = state.pipeline.map((s, i) =>
-      i === existingProjIdx ? { $project: existingProj } : s,
-    )
-  } else {
-    newPipeline = [...state.pipeline, { $project: existingProj }]
-  }
-
-  const newSource = serializePipelineSource(newPipeline)
-  dispatch({
-    type: "SET_PIPELINE",
-    pipeline: newPipeline,
-    source: newSource,
-    isAggregate: classifyPipeline(newPipeline),
-  })
-}
-
-function hideColumnSimple(state: AppState, dispatch: Dispatch<AppAction>, field: string): void {
-  const { projection } = parseSimpleQueryFull(state.queryInput)
-  const proj: Projection = { ...projection }
-
+  const field = col.field
+  const projection = { ...current }
   // MongoDB rejects a projection that mixes inclusions and exclusions (except
-  // `_id`), so under `+field` tokens hiding a column means dropping its token.
-  if (isInclusion(proj) && field !== "_id") {
-    delete proj[field]
+  // `_id`), so under an inclusion hiding a column means dropping its path.
+  if (isInclusion(projection) && field !== "_id") {
+    delete projection[field]
     dispatch({ type: "SHOW_MESSAGE", message: `Hiding ${field}`, kind: "info" })
-  } else if (proj[field] === 0) {
-    delete proj[field]
+  } else if (projection[field] === 0) {
+    delete projection[field]
     dispatch({ type: "SHOW_MESSAGE", message: `Showing ${field}`, kind: "info" })
   } else {
-    delete proj[field]
-    proj[field] = 0
+    delete projection[field]
+    projection[field] = 0
     dispatch({ type: "SHOW_MESSAGE", message: `Hiding ${field}`, kind: "info" })
   }
-
-  dispatch({ type: "SET_QUERY_INPUT", input: replaceProjectionTokens(state.queryInput, proj) })
-  dispatch({ type: "SUBMIT_QUERY" })
+  applyProjection(state, dispatch, projection)
 }

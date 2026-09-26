@@ -28,6 +28,7 @@ const DEFAULT_BINDINGS: Record<ActionName, string[]> = {
   "doc.reload": ["r"],
   "doc.filter_value": ["f", "*", "shift+8"],
   "doc.hide_column": ["-"],
+  "doc.column_picker": ["c"],
   "doc.sort": ["s"],
   "doc.edit": ["e"],
   "doc.insert": ["i"],

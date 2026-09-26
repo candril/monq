@@ -135,6 +135,8 @@ export type AppAction =
   | { type: "CLOSE_COMMAND_PALETTE" }
   | { type: "OPEN_SHORTCUT_HELP" }
   | { type: "CLOSE_SHORTCUT_HELP" }
+  | { type: "OPEN_COLUMN_PICKER" }
+  | { type: "CLOSE_COLUMN_PICKER" }
   // Messages
   | { type: "SHOW_MESSAGE"; message: string; kind?: "info" | "success" | "warning" | "error" }
   | { type: "CLEAR_MESSAGE" }
@@ -256,6 +258,7 @@ export function createInitialState(): AppState {
     explainLoading: false,
     commandPaletteVisible: false,
     shortcutHelpVisible: false,
+    columnPickerVisible: false,
     message: null,
     error: null,
     selectionMode: "none",

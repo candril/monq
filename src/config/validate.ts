@@ -48,6 +48,7 @@ const ACTION_NAMES = new Set<ActionName>([
   "doc.reload",
   "doc.filter_value",
   "doc.hide_column",
+  "doc.column_picker",
   "doc.sort",
   "doc.edit",
   "doc.insert",

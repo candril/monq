@@ -33,6 +33,7 @@ import { WelcomeScreen } from "./components/WelcomeScreen"
 import { TabBar } from "./components/TabBar"
 import { CollectionSidebar, SIDEBAR_WIDTH } from "./components/CollectionSidebar"
 import { ShortcutHelp } from "./components/ShortcutHelp"
+import { ColumnPickerOverlay } from "./components/ColumnPickerOverlay"
 import { appReducer, createInitialState } from "./state"
 import { useMongoConnection } from "./hooks/useMongoConnection"
 import { useKeyboardNav } from "./hooks/useKeyboardNav"
@@ -651,6 +652,8 @@ export function App({
         placeholder={effectivePlaceholder}
         title={effectiveTitle}
       />
+
+      {state.columnPickerVisible && <ColumnPickerOverlay state={state} dispatch={dispatch} />}
 
       <ShortcutHelp
         visible={state.shortcutHelpVisible}

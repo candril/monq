@@ -22,6 +22,7 @@ import { getExportAbort } from "../actions/palette/document"
 import { filterBySelectedValue } from "../actions/filterValue"
 import { yankDocument, yankCell } from "../actions/yank"
 import { hideColumn } from "../actions/hideColumn"
+import { openColumnPicker } from "../actions/columnPicker"
 import { toggleIdAsDate } from "../actions/idAsDate"
 import { toggleSearchEngine } from "../actions/searchEngine"
 import { toggleMarkOnSelection, jumpToMark, clearMarkJump } from "../actions/marks"
@@ -167,6 +168,7 @@ export function useKeyboardNav({
     ["doc.yank_cell", () => yankCell(state, dispatch)],
     ["doc.filter_value", () => filterBySelectedValue(state, dispatch)],
     ["doc.hide_column", () => hideColumn(state, dispatch)],
+    ["doc.column_picker", () => openColumnPicker(state, dispatch)],
   ]
 
   /** Scroll half a page up or down, or scroll preview when preview is focused. */
@@ -243,6 +245,7 @@ export function useKeyboardNav({
       !state.queryVisible &&
       !state.historyPickerOpen &&
       !state.commandPaletteVisible &&
+      !state.columnPickerVisible &&
       !state.pipelineConfirm &&
       !state.bulkEditConfirmation &&
       !state.deleteConfirmation &&
@@ -273,7 +276,7 @@ export function useKeyboardNav({
 
     // ── Global intercepts (order-dependent) ────────────────────────────
 
-    if (state.shortcutHelpVisible) {
+    if (state.shortcutHelpVisible || state.columnPickerVisible) {
       return
     }
 
