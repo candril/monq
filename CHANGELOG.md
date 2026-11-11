@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-11
+
+### Added
+
+- **Global search** — a bare word in the simple query bar searches every string field and array
+  of strings the schema knows, case-insensitively, and the list updates as you type (300 ms after
+  the terms change, once each has two characters). `"new york"` is one phrase, several terms AND
+  together, and `alice status:active` combines search with field filters. A term that looks like
+  an ObjectId, a number or a `YYYY-MM-DD` date also matches those fields by value. Matches are
+  highlighted in the cells, and the filter bar shows `⌕ regex · 12 fields`. Searches time out
+  after 10 s (spec 067).
+- **`Ctrl+T` in the query bar switches search to `$text`** on a collection with a text index:
+  indexed and fast, but whole words rather than substrings. Kept per tab (spec 067).
+- **`!term` excludes documents** that contain the term in any searchable field: `alice !berlin`
+  finds "alice" somewhere and "berlin" nowhere (spec 069).
+- **Column picker (`c`)** — every field the schema knows, nested ones under their parent: type to
+  filter, `Space` toggles, `Ctrl+A` toggles the filtered rows, `Ctrl+X` hides them so you can
+  hand-pick a few in order, `Ctrl+R` resets, `Shift+↑/↓` reorders, `Enter` applies. It writes the
+  shortest projection to the query bar, or to the pipeline's `$project` (spec 068).
+
+### Changed
+
+- **A nested inclusion is its own column.** `+TvContract.Username` shows a `TvContract.Username`
+  column with the bare value instead of a `TvContract` column holding the wrapping object, and
+  `+path` tokens set the columns in the order written. A path through an array shows the
+  collected values. The same goes for BSON mode's projection and a trailing 0/1 `$project`
+  (spec 068).
+- A dotted column header too wide for its column is cut at the start (`~ct.Username`), keeping the
+  leaf.
+
+### Fixed
+
+- `-` on a column under `+field` tokens drops its `+` token instead of adding a `-field` exclusion
+  next to the inclusions, which MongoDB rejects. The same holds in a pipeline's `$project`.
+
 ## [0.8.1] - 2026-09-25
 
 ### Changed
